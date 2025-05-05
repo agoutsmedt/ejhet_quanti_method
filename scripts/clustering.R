@@ -4,8 +4,13 @@ source(file.path("scripts", "paths_and_packages.R"))
 
 # ------------------------- load data --------------------------- #
 
-df <- arrow::read_feather(file.path(jstor_raw_data, "bert_vectors", "paragraphs_with_concat_embeddings.feather"))
+df <- arrow::read_feather(file.path(jstor_raw_data, "paragraphs_with_concat_embeddings.feather"))
 setDT(df)
+
+# remove heavy columns
+df[, c("paragraph_text") := NULL]
+
+
 # ------------------------- K mean and PCA --------------------------- #
 
 library(cluster)  # silhouette
@@ -46,7 +51,7 @@ matrix_vectors <- do.call(rbind, df$bert_embedding_concat)
 # silhouette_scores <- furrr::future_map_dbl(k_range, get_best_kmeans_silhouette, data = matrix_vectors)
 
 
-best_k <- 5 # Set the best k manually for now
+best_k <- 7 # Set the best k manually for now
 
 final_kmeans <- kmeans(matrix_vectors, centers = best_k, nstart = 25)
 

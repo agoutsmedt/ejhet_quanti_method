@@ -15,7 +15,7 @@ import torch
 # --------------------------- PARAMÈTRES --------------------------- #
 
 # Chemin d'accès
-file_path = os.path.join(jstor_raw_data, "bert_vectors", "paragraphs_with_target_word.rds")
+file_path = os.path.join(paths.jstor_raw_data, "paragraphs_with_target_word.rds")
 
 # Modèle BERT
 bert_model_name = 'bert-base-uncased'
@@ -24,29 +24,31 @@ layers_to_use = [-4, -3, -2, -1]  # Dernières 4 couches
 # Liste des variations du mot cible
 target_words = ["rational", "irrational", "rationality", "irrationality"]
 
-# --------------------------- LECTURE DES DONNÉES --------------------------- #
+
+# --------------------------- DATA  --------------------------- #
 
 # Lire le .rds
 result = pyreadr.read_r(file_path)
 paragraphs = result[None]
 
-# --------------------------- BERT MODEL --------------------------- #
+# ---------------------- BERT MODEL --------------------------- #
 
-# Chargement modèle et tokenizer
+# Détecter GPU (cuda) ou fallback sur CPU
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"✅ Modèle BERT chargé sur : {device}")
+
+# Charger modèle et tokenizer
 tokenizer = AutoTokenizer.from_pretrained(bert_model_name)
 model = AutoModel.from_pretrained(bert_model_name)
+model.to(device)  # send to gpu/cpu 
 model.eval()
 
-# --------------------------- VECTORISATION --------------------------- #
 
-# test with sample 
+# ----------------------- VECTORISATION ----------------------- #
 
-
-
-# Pour stocker les embeddings
+# init loop
 target_embeddings = []
-
-texts = paragraphs['paragraph_text'].tolist()
+texts = paragraphs['windows'].tolist()
 target_tokens = paragraphs['target_word'].tolist()
 
 for text, target in tqdm.tqdm(zip(texts, target_tokens), total=len(texts)):
@@ -111,4 +113,5 @@ for text, target in tqdm.tqdm(zip(texts, target_tokens), total=len(texts)):
 
 paragraphs['bert_embedding_concat'] = target_embeddings
 
-feather.write_feather(paragraphs, os.path.join(paths.jstor_raw_data, "bert_vectors", "paragraphs_with_concat_embeddings.feather"))
+# save 
+feather.write_feather(paragraphs, os.path.join(paths.jstor_raw_data, "paragraphs_with_concat_embeddings.feather"))

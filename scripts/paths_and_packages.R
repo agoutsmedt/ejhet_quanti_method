@@ -3,6 +3,7 @@ if(! "pacman" %in% rownames(installed.packages())) {
 }
 
 library(pacman)
+
 p_load(RSQLite,
        DBI,
        dplyr,
@@ -39,4 +40,4 @@ if(str_detect(getwd(), "goutsmed")){
 print(paste("The path for data is", data_path))
 
 # increasing parallelization for data.table
-setDTthreads(percent = 80)
+setDTthreads(percent = 50)
