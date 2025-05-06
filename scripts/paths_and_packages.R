@@ -16,7 +16,8 @@ p_load(RSQLite,
        cli,
        tidyfast,
        tidytext,
-       word2vec)
+       word2vec,
+       arrow)
 
 #original text path stored in google drive 
 if(str_detect(getwd(), "goutsmed")){
@@ -29,6 +30,7 @@ if(str_detect(getwd(), "goutsmed")){
   }
 } else if(str_detect(getwd(), "D:/Dropbox/8")){
   data_path <- "D:/Dropbox/8-Projets Quanti/1-R_Projects/Data/ejhet_quanti_method"
+  general_data_path <- "D:/Dropbox/8-Projets Quanti/1-R_Projects/Data/1-General_data"
 } else {
   if(str_detect(getwd(), "Admin")) {
     data_path <- "C:/Users/Admin/MEGA/data/jstor"
