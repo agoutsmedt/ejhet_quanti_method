@@ -17,7 +17,8 @@ p_load(RSQLite,
        tidyfast,
        tidytext,
        word2vec,
-       arrow)
+       arrow,
+       cld2)
 
 #original text path stored in google drive 
 if(str_detect(getwd(), "goutsmed")){
