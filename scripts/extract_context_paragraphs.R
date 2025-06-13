@@ -121,3 +121,8 @@ ggplot(paragraphs, aes(x = publicationYear)) +
        y = "Count") +
   theme_minimal()
 
+# Add embeddings -------------------------
+glove <- read_rds(file.path(data_path, glue("glove_model_jstor.rds")))
+wv_main <- read_rds(file.path(data_path, glue("word_vectors_300d.rds")))
+wv_context <- glove$components
+word_vectors <- wv_main + t(wv_context)

@@ -45,4 +45,4 @@ if(str_detect(getwd(), "goutsmed")){
 print(paste("The path for data is", data_path))
 
 # increasing parallelization for data.table
-setDTthreads(percent = 50)
+setDTthreads(percent = 20)
