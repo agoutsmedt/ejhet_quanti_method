@@ -24,7 +24,7 @@ import plotly.express as px
 
 # --------------------------- DATA --------------------------- #
 
-file_path = os.path.join(paths.jstor_raw_data, "paragraphs_with_concat_embeddings.feather")
+file_path = os.path.join(paths.jstor_raw_data, "paragraphs_with_concat_embeddings_batch.feather")
 df = feather.read_feather(file_path)
 
 # convert to numpy array for efficient processing

@@ -52,20 +52,24 @@ top_per_cluster = (
 cols_to_keep = ['id', 'cluster', "windows", 'distance_to_centroid', 'target_word']  # Ajouter 'paragraph_text' si besoin
 top_per_cluster = top_per_cluster[cols_to_keep]
 
+# filter cluster in cluster 0 and select text col 
+
+top_per_cluster[top_per_cluster['cluster']  == 0]['windows']
+
 # name 20 clusters 
 cluster_names = pd.DataFrame({
     'cluster': list(range(10)),
     'name': [
-        "Cluster 0: Calculation", 
-        "Cluster 1: Expectations", 
-        "Cluster 2: References",
-        "Cluster 3: Sense",
-        "Cluster 4: Deviations",
-        "Cluster 5: Game",
-        "Cluster 6: Agents",
-        "Cluster 7: Bounded",
-        "Cluster 8: Bounded 2",
-        "Cluster 9: Expectations 2"
+        "Théorie des jeux",              # Cluster 0 
+        "Anticipations Rationnelles",      # Cluster 1
+        "Rationalité Limitée",      # Cluster 2
+        "Équilibres rationnels",    # Cluster 3
+        "Références",  # Cluster 4
+        "Critique de la rationalité",     # Cluster 5
+        "Incertitude Cognitive",    # Cluster 6
+        "Rationalité des institutions",    # Cluster 7
+        "Incertitude Ontologique",  # Cluster 8 
+        "Rationalité des agents"  # Cluster 9
     ]
 })
 
@@ -75,32 +79,33 @@ df = df.merge(cluster_names, on='cluster', how = 'left')
 
 # ------------------------- PLOT AREA --------------------------- #
 
+# filter cluster "Références"
+
 # Assurer que l'année est bien en int
 df['year'] = df['publicationYear'].astype(int)
 
-# Compter les clusters par année
-cluster_freq = (
-    df.groupby(['year', 'name'])
-      .size()
-      .reset_index(name='count')
+# Moyenne mobile sur 3 ans
+cluster_freq['count_smooth'] = (
+    cluster_freq
+    .groupby('name')['count']
+    .transform(lambda x: x.rolling(window=3, center=True, min_periods=1).mean())
 )
 
-# Fréquence normalisée par année
-cluster_freq['freq'] = cluster_freq.groupby('year')['count'].transform(lambda x: x / x.sum())
+
 cluster_freq['name'] = cluster_freq['name'].astype(str)  # Pour couleurs plotly
 
-# filter before 1920
+# Filtrer avant 1920
 cluster_freq = cluster_freq[cluster_freq['year'] >= 1920]
 
-# Plot interactif area empilé
+# Plot interactif area empilé (valeurs absolues)
 fig_area = px.area(
     cluster_freq,
     x='year',
-    y='freq',
+    y='count_smooth',  # courbe lissée
     color='name',
     line_group='name',
-    title='Évolution temporelle des clusters',
-    labels={'freq': 'Fréquence', 'year': 'Année'},
+    title='Évolution temporelle des clusters (en nombre de paragraphes)',
+    labels={'count': 'Nombre de paragraphes', 'year': 'Année'},
     line_shape="spline"
 )
 
@@ -120,7 +125,7 @@ df['pca_2'] = pca_result[:, 1]
 
 # Scatter plot
 fig_pca = px.scatter(
-    df, x='pca_1', y='pca_2', color='name',
+    df, x='pca_1', y='pca_2', color='name_x',
     title='Projection PCA des paragraphes par cluster',
     labels={'name': 'Cluster'},
     hover_data=['id', 'cluster', 'distance_to_centroid'],
