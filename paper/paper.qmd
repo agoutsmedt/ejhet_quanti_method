@@ -6,6 +6,9 @@ author:
   - name: "Aurelien Goutsmedt"
     affiliation: "UC Louvain; ICHEC"
     email: "aurelien.goutsmedt[at]uclouvain.be" 
+  - name: "Alexandre Truc"
+    affiliation: "Université du CNRS"
+    email: "Alexandre.truc[at]auCNRSpointFr"
 format:
   pdf: 
     abstract: "abstract"
