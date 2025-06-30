@@ -29,7 +29,7 @@ df = feather.read_feather(file_path)
 
 # convert to numpy array for efficient processing
 matrix_vectors = np.vstack(df['bert_embedding_concat'])
-
+ 
 
 # ------------------- Compute silhouette scores --------------------------- #
 
@@ -69,7 +69,7 @@ matrix_vectors = np.vstack(df['bert_embedding_concat'])
 
 # --------------------------- CLUSTER FINAL --------------------------- #
 
-best_k = 10
+best_k = 5
 
 # Entraîner le KMeans final avec le meilleur K
 final_kmeans = KMeans(n_clusters=best_k, n_init=25, random_state=42)
