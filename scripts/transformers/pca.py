@@ -1,9 +1,15 @@
+# data management  
+
 import os
 import paths
 import pandas as pd
 import numpy as np
 import pyarrow.feather as feather
+
+# ML 
 from sklearn.decomposition import PCA
+
+# Plotting 
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
@@ -31,6 +37,17 @@ basic_bert_vectors['pca_2'] = basic_pca_result[:, 1]
 
 econbert_vectors['pca_1'] = econ_pca_result[:, 0]
 econbert_vectors['pca_2'] = econ_pca_result[:, 1]
+
+# For BERT base
+explained_variance_basic = pca_basic.explained_variance_ratio_
+print("BERT base PCA - Dim 1: {:.2%}, Dim 2: {:.2%}, Total: {:.2%}".format(
+    explained_variance_basic[0], explained_variance_basic[1], explained_variance_basic[:2].sum()))
+
+# For EconBERT
+explained_variance_econ = pca_econ.explained_variance_ratio_
+print("EconBERT PCA - Dim 1: {:.2%}, Dim 2: {:.2%}, Total: {:.2%}".format(
+    explained_variance_econ[0], explained_variance_econ[1], explained_variance_econ[:2].sum()))
+
 
 # ------------------------- PLOT --------------------------- #
 
@@ -65,11 +82,8 @@ fig.add_trace(
 fig.update_layout(
     title_text="PCA des paragraphes : BERT vs EconBERT",
     showlegend=False,
-    height=500,
-    width=1000
+    height=800,   # Increased from 500
+    width=1600    # Increased from 1000
 )
 
 fig.show()
-
-
-
