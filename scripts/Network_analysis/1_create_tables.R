@@ -1,0 +1,268 @@
+require(here)
+source(here("scripts", "paths_and_packages.R"))
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+#### Function ####
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+
+layout_fa2_javaV3 <- function(tbl=tbl,niter=3000, barneshut="true", path = here(dirname(dirname(data_path)), "Home", "2-External_tools", "GephiLayouts-1.0.jar"), data_path = data_path)
+{
+  #Layout
+  graph_before <- tbl %>% activate(nodes) %>% mutate(id=as.character(Id))
+  nodes_before <- tbl %>% activate(nodes) %>% as.data.table()
+  
+  if("x" %in% colnames(nodes_before)){
+    graph_before <- graph_before %>% activate(nodes) %>% mutate(x = ifelse(is.na(x)==TRUE,sample(1:100),x))
+    graph_before <- graph_before %>% activate(nodes) %>% mutate(y = ifelse(is.na(y)==TRUE,sample(1:100),y))
+    graph_before <- graph_before %>% activate(nodes) %>% select(c(id,ID_Art,x,y,size))
+  } else {
+    graph_before <- graph_before %>% activate(nodes) %>% select(c(id,ID_Art,size))
+  }
+  
+  write.graph(graph = graph_before, file = here(data_path,'tidy.graphml'), format = 'graphml')
+  system(paste0('java -jar \"', path,'\" forceatlas2 -i "/', here(data_path,'tidy.graphml'),'" -o "/', here(data_path,'forceatlas2.graphml'),'" -threads 16 -maxiters ',niter,' -barneshut ',barneshut,' -adjustsizes true -gravity 1'))
+  
+  
+  gml <- read.graph(here(data_path,'forceatlas2.graphml'), format="graphml")
+  graph_after <- as_tbl_graph(gml)
+  graph_after <- graph_after %>% activate(nodes) %>% as.data.table() %>% .[,.(x,y,ID_Art)]
+  
+  if("x" %in% colnames(nodes_before)){
+    tbl <- tbl %>% activate(nodes) %>% select(-c(x,y)) %>% left_join(graph_after)
+  } else {
+    tbl <- tbl %>% activate(nodes) %>% left_join(graph_after)
+  }
+  
+  return (tbl)
+}
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+#### Introduction ####
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+
+# matching bd
+matching <- readRDS(here(data_path, "final_match.RDS"))
+
+# Similarity scores
+rationality_score <- readRDS(here(data_path, "rationality_similarity_scores.RDS"))
+rationality_score[,sum:=sum(similarity), doc_id]
+
+# wos
+wos_art <- arrow::read_parquet(here(general_data_path,"all_art.parquet"), arrow.unsafe_metadata = TRUE)
+journal_wos <- fread(here(general_data_path,"all_journals.csv"))
+wos_aut <- readRDS(here(general_data_path, "all_aut.RDS"))
+wos_refs <- arrow::read_parquet(here(general_data_path,"all_ref.parquet"), arrow.unsafe_metadata = TRUE)
+
+# Add variables
+wos_art <- merge(wos_art, wos_aut[Ordre==1, .(Nom, ID_Art)], by = "ID_Art", all.x = TRUE)
+wos_art <- wos_art[, name_short:=  gsub("-.*","",Nom)]
+wos_art$name_short <- toupper(wos_art$name_short)
+wos_art <- wos_art[,Label:=paste0(name_short,",",Annee_Bibliographique)]
+wos_art[, c("name_short"):=NULL]
+
+wos_refs[,aut_date:=paste0(Nom,", ",Annee)]
+
+# Filtering
+ids_rationality<- matching[id_jstor %in% rationality_score[sum>=0.5]$jstor_id]
+
+wos_art <- wos_art[Annee_Bibliographique>=1970 & Annee_Bibliographique<=2014]
+wos_art <- wos_art[ID_Art %in% ids_rationality$id_match_final]
+
+wos_refs <- wos_refs[ItemID_Ref!=0]
+wos_refs <- wos_refs[ID_Art %in% ids_rationality$id_match_final]
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+#### Parameters ####
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+
+time_window_var <- 10
+length_cl_var <- 2
+share_cl_max_var <- 0.05
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+#### Publications - Coupling ####
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+
+nodes <- copy(wos_art)
+edges <- copy(wos_refs)
+
+coup_network <- networkflow::build_dynamic_networks(nodes = nodes,
+                                                    directed_edges = edges,
+                                                    source_id  = "ID_Art", 
+                                                    target_id  = "ItemID_Ref",
+                                                    time_variable = "Annee_Bibliographique",
+                                                    time_window = time_window_var,
+                                                    cooccurrence_method = "coupling_strength",
+                                                    overlapping_window = TRUE,
+                                                    compute_size = TRUE,
+                                                    edges_threshold = 2)
+
+tbl_coup_list <- networkflow::filter_components(coup_network)
+tbl_coup_list <- networkflow::add_clusters(tbl_coup_list, clustering_method = "leiden", objective_function = "modularity")
+tbl_coup_list <- networkflow::merge_dynamic_clusters(
+  list_graph = tbl_coup_list,
+  cluster_id = "cluster_leiden",
+  node_id = "ID_Art",
+  threshold_similarity = 0.51,
+  similarity_type = "partial")
+
+# Position
+tbl_coup_list <- lapply(tbl_coup_list, function(tbl) tbl %N>% mutate(Id=as.character(ID_Art), ID_Art=as.character(ID_Art)))
+tbl_coup_list <- lapply(tbl_coup_list, function(tbl) tbl %N>% mutate(size=node_size))
+tbl_coup_list <- lapply(tbl_coup_list, function(tbl) tbl %N>% mutate(size = ifelse(is.na(size), 0, size)))
+
+names(tbl_coup_list) <- substr(names(tbl_coup_list),1,4)
+
+list_graph_position <- list()
+for (Year in names(tbl_coup_list) %>% as.integer) {
+  if(is.null(tbl_coup_list[[paste0(Year-1)]])){
+    list_graph_position[[paste0(Year)]] <- layout_fa2_javaV3(tbl_coup_list[[paste0(Year)]], niter=20000, barneshut = "true", path = here(dirname(dirname(data_path)), "Home", "2-External_tools", "GephiLayouts-1.0.jar"), data_path = data_path)
+  }
+  if(!is.null(tbl_coup_list[[paste0(Year-1)]])){
+    past_position <- list_graph_position[[paste0(Year-1)]] %>% activate(nodes) %>% as.data.table()
+    past_position <- past_position[,.(Id,x,y)]
+    
+    tbl <- tbl_coup_list[[paste0(Year)]] %>% activate(nodes) %>% left_join(past_position)
+    
+    list_graph_position[[paste0(Year)]] <- layout_fa2_javaV3(tbl, niter=20000, barneshut = "true", path = here(dirname(dirname(data_path)), "Home", "2-External_tools", "GephiLayouts-1.0.jar"), data_path = data_path)
+  }
+}
+list_position <- lapply(list_graph_position, function(tbl) tbl %N>% as.data.table() %>% .[,.(ID_Art,x,y)])
+
+tbl_coup_list <- lapply(names(tbl_coup_list), function(Year) tbl_coup_list[[paste0(Year)]] %N>% left_join(list_position[[paste0(Year)]]))
+names(tbl_coup_list) <- names(list_position)
+
+# Alluvial
+alluv_dt <- networkflow::networks_to_alluv(tbl_coup_list, intertemporal_cluster_column = "dynamic_cluster_leiden", node_key = "ID_Art", summary_cl_stats = TRUE)
+alluv_dt <- networkflow::minimize_crossing_alluvial(alluv_dt, intertemporal_cluster_column = "dynamic_cluster_leiden", node_key = "ID_Art", window_column  = "Window")
+
+# Colors with some filtering based on alluvial
+color <- as.character(paletteer::paletteer_d("ggsci::default_igv")) %>% as.data.table()
+color2 <- brewer.pal(7, name = "Dark2") %>% as.data.table()
+color3 <- brewer.pal(7, name = "Set1") %>% as.data.table()
+color4 <- brewer.pal(12, name = "Paired") %>% as.data.table()
+main_colors <- rbind(color,color2,color3,color4)
+n_colors <- alluv_dt[length_cluster>=length_cl_var & share_cluster_max >= share_cl_max_var, .N, dynamic_cluster_leiden][,.N]
+
+main_colors_table <- data.table(
+  dynamic_cluster_leiden = alluv_dt[length_cluster>=length_cl_var & share_cluster_max >= share_cl_max_var, .N, dynamic_cluster_leiden][,dynamic_cluster_leiden], 
+  main_colors = rep(main_colors$., length.out = n_colors))
+
+# Networks plot (colors and label)
+tbl_networks <- lapply(tbl_coup_list, function(tbl) tbl %N>% left_join(main_colors_table) %>% mutate(main_colors = ifelse(is.na(main_colors), "grey", main_colors)))
+
+tbl_networks <- lapply(tbl_networks, function(tbl) tbl %>% 
+                         activate(edges) %>%
+                         mutate(com_ID_to = .N()$main_colors[to], com_ID_from = .N()$main_colors[from]) %>%
+                         mutate(color_edges = MixColor(com_ID_to, com_ID_from, amount1 = 0.5)))
+
+# Alluvial plot (colors and label)
+label_mean <- copy(alluv_dt)
+label_mean[, Label := dynamic_cluster_leiden]
+label_mean <- label_mean[,Window:=round(mean(as.numeric(Window))),dynamic_cluster_leiden][, head(.SD, 1), .(dynamic_cluster_leiden)]
+alluv_dt <- merge(alluv_dt, label_mean[,.(dynamic_cluster_leiden, Window, Label)], by = c("dynamic_cluster_leiden","Window"), all.x = TRUE)
+
+alluv_dt <- alluv_dt %>% left_join(main_colors_table) %>% mutate(main_colors = ifelse(is.na(main_colors), "grey", main_colors))
+alluv_dt[main_colors=="grey", Label:=NA]
+
+alluv_dt$dynamic_cluster_leiden <- forcats::fct_reorder(alluv_dt$dynamic_cluster_leiden, alluv_dt$minimize_crossing_order,min, .desc = TRUE)
+
+ggplot(alluv_dt, aes(x = Window, y= y_alluv, stratum = dynamic_cluster_leiden, alluvium = ID_Art, fill = main_colors, label = dynamic_cluster_leiden)) +
+  geom_stratum(alpha =1, size=1/10) +
+  geom_flow() +
+  theme(legend.position = "none") +
+  theme_minimal() +
+  scale_fill_identity() +
+  ggtitle("") +
+  ggrepel::geom_label_repel(stat = "stratum", size = 6, aes(label = Label)) 
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+#### AI name cluster ####
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+cluster_list <- alluv_dt[share_cluster_alluv>=0.1,.N,dynamic_cluster_leiden][,dynamic_cluster_leiden]
+
+list_clusters_ai_names <- list()
+counter <- 0
+for (cl in cluster_list) {
+art <- alluv_dt[dynamic_cluster_leiden==cl]
+
+top_20_refs <- wos_refs[ID_Art %in% art$ID_Art][,.N,ItemID_Ref][order(-N)][1:20]
+top_20_refs <- wos_refs[ItemID_Ref %in% top_20_refs$ItemID_Ref][,.N, .(aut_date, ItemID_Ref)][order(-N)]
+top_20_refs <- merge(top_20_refs, wos_art[,.(ItemID_Ref,Titre)], by = "ItemID_Ref", all.x = TRUE)
+
+top_20_authors <- wos_aut[ID_Art %in% art$ID_Art]
+top_20_authors <- top_20_authors[,.N,Nom][order(-N)][1:20]
+
+
+DT <- data.table(top_20_references = top_20_refs$aut_date,
+                 top_20_references_title = top_20_refs$Titre,
+                 top_20_authors = top_20_authors$Nom)
+
+txt <- generate("llama3.1", 
+                paste0("Here is a cluster or scientific articles in economics made using bibliographic coupling. 
+                       You can find in the following text the top 20 most common references in the cluster, their title when available, and the 20 most prolific authors in the cluster.
+                       Using this information to name cluster using no more than 5 words. 
+                       Your output should start with the name of the cluster followed by a full stop.
+                       Your output should only be the name of the cluster, nothing else. I insist: output only the name of the cluster. 
+                       Here is the data: ",
+                       toJSON(DT, pretty=TRUE)), 
+                output = "text")
+
+list_clusters_ai_names[[as.character(cl)]] <- txt
+
+counter <- counter + 1
+print(paste0("cluster ", counter, " out of ", length(cluster_list)))
+
+}
+
+test <- data.table(
+  id_col = names(list_clusters_ai_names),
+  value_col = unlist(list_clusters_ai_names, use.names = FALSE) # use.names = FALSE to avoid issues if names had patterns
+)
+
+alluv_named <- merge(alluv_dt, test, by.x = "Label", by.y = "id_col", all.x = TRUE)
+
+ggplot(alluv_named, aes(x = Window, y= y_alluv, stratum = dynamic_cluster_leiden, alluvium = ID_Art, fill = main_colors, label = dynamic_cluster_leiden)) +
+  geom_stratum(alpha =1, size=1/10) +
+  geom_flow() +
+  theme(legend.position = "none") +
+  theme_minimal() +
+  scale_fill_identity() +
+  ggtitle("") +
+  ggrepel::geom_label_repel(stat = "stratum", size = 6, aes(label = value_col)) 
+
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+#### Networks ####
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+main_labels_table <- data.table(
+  dynamic_cluster_leiden = as.character(alluv_named[main_colors!="grey", .N, dynamic_cluster_leiden][,dynamic_cluster_leiden]))
+
+main_labels_table <- merge(main_labels_table, test, by.x = "dynamic_cluster_leiden", by.y = "id_col", all.x = TRUE)
+main_labels_table <- merge(main_labels_table, alluv_named[,.N, .(dynamic_cluster_leiden, main_colors)], by = "dynamic_cluster_leiden", all.x = TRUE)
+
+tbl_networks <- lapply(tbl_networks, function(tbl)
+  tbl %N>% left_join(main_labels_table)) 
+  
+list_ggplot_com <- list()
+for (Year in names(tbl_networks) %>% as.integer) {
+  label_com <- tbl_networks[[paste0(Year)]] %N>% as.data.table()
+  label_com <- label_com[,mean_coord_x:=mean(x), dynamic_cluster_leiden]
+  label_com <- label_com[,mean_coord_y:=mean(y), dynamic_cluster_leiden]
+  label_com <- label_com[main_colors!="grey", head(.SD, 1), dynamic_cluster_leiden]
+  
+  list_ggplot_com[[as.character(Year)]] <- ggraph(filter_components(tbl_networks[[paste0(Year)]]), "manual", x = x, y = y) +
+    geom_edge_arc(aes(color = color_edges, width = weight), alpha = 0.5, strength =0.2) +
+    geom_node_point(aes(fill = main_colors, size = size), pch=21) +
+    scale_edge_width_continuous(range = c(0.5, 1)) +
+    theme_graph() +
+    ggrepel::geom_label_repel(data = label_com, aes(x = mean_coord_x, y = mean_coord_y, label = as.character(value_col), fill = main_colors)) +
+    # geom_node_text(aes(label = nom, size = size^2)) +
+    theme(legend.position = "none") +
+    scale_fill_identity() +
+    scale_edge_colour_identity() +
+    labs(title = paste0(as.character(Year),"-",as.character(Year+time_window_var-1)))
+  # ggsave("Networks/coup_2000.png", width=30, height=20, units = "cm")
+  
+}

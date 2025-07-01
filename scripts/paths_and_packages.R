@@ -18,7 +18,15 @@ p_load(RSQLite,
        tidytext,
        word2vec,
        arrow,
-       cld2)
+       cld2,
+       ggrepel,
+       RColorBrewer,
+       ggalluvial,
+       ggraph,
+       tidygraph,
+       igraph,
+       DescTools,
+       jsonlite)
 
 #original text path stored in google drive 
 if(str_detect(getwd(), "goutsmed")){
@@ -29,9 +37,12 @@ if(str_detect(getwd(), "goutsmed")){
     data_path <- file.path(path.expand("~"), "data", "jstor")
     jstor_raw_data <- data_path
   }
-} else if(str_detect(getwd(), "D:/Dropbox/8")){
+} else if (str_detect(getwd(), "D:/Dropbox/8")){
   data_path <- "D:/Dropbox/8-Projets Quanti/1-R_Projects/Data/ejhet_quanti_method"
   general_data_path <- "D:/Dropbox/8-Projets Quanti/1-R_Projects/Data/1-General_data"
+} else if (str_detect(getwd(), "E:/Dropbox/8")){
+  data_path <- "E:/Dropbox/8-Projets Quanti/1-R_Projects/Data/ejhet_quanti_method"
+  general_data_path <- "E:/Dropbox/8-Projets Quanti/1-R_Projects/Data/1-General_data"
 } else {
   if(str_detect(getwd(), "Admin")) {
     data_path <- "C:/Users/Admin/MEGA/data/jstor"
