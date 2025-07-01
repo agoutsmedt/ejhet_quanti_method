@@ -49,27 +49,26 @@ top_per_cluster = (
 )
 
 # Colonnes utiles à garder
-cols_to_keep = ['id', 'cluster', "windows", 'distance_to_centroid', 'target_word']  # Ajouter 'paragraph_text' si besoin
+cols_to_keep = ['id', 'cluster', "window", 'distance_to_centroid', 'target_word']  # Ajouter 'paragraph_text' si besoin
 top_per_cluster = top_per_cluster[cols_to_keep]
 
 # filter cluster in cluster 0 and select text col 
 
-top_per_cluster[top_per_cluster['cluster']  == 0]['windows']
 
-# name 20 clusters 
+# name  clusters 
 cluster_names = pd.DataFrame({
     'cluster': list(range(10)),
     'name': [
-        "Théorie des jeux",              # Cluster 0 
-        "Anticipations Rationnelles",      # Cluster 1
-        "Rationalité Limitée",      # Cluster 2
-        "Équilibres rationnels",    # Cluster 3
-        "Références",  # Cluster 4
-        "Critique de la rationalité",     # Cluster 5
-        "Incertitude Cognitive",    # Cluster 6
-        "Rationalité des institutions",    # Cluster 7
-        "Incertitude Ontologique",  # Cluster 8 
-        "Rationalité des agents"  # Cluster 9
+        'Rational Expectations', # Cluster 0
+        'Bounded Rationality',   # Cluster 1
+        'Game Theory',           # Cluster 2
+        'Macroeconomic Models',  # Cluster 3
+        'Rational Actor',        # Cluster 4
+        None,                    # Cluster 5 
+        None,                    # Cluster 6
+        None,                    # Cluster 7
+        None,                    # Cluster 8
+        None                     # Cluster 9
     ]
 })
 
@@ -79,39 +78,40 @@ df = df.merge(cluster_names, on='cluster', how = 'left')
 
 # ------------------------- PLOT AREA --------------------------- #
 
-# filter cluster "Références"
+# Compter le nombre de paragraphes par cluster et par année
+cluster_year_counts = df.groupby(['publicationYear', 'name']).size().reset_index(name='count')
 
-# Assurer que l'année est bien en int
-df['year'] = df['publicationYear'].astype(int)
+# Calculer la fréquence relative pour chaque année
+cluster_year_counts['total_per_year'] = cluster_year_counts.groupby('publicationYear')['count'].transform('sum')
+cluster_year_counts['relative_freq'] = cluster_year_counts['count'] / cluster_year_counts['total_per_year']
 
-# Moyenne mobile sur 3 ans
-cluster_freq['count_smooth'] = (
-    cluster_freq
-    .groupby('name')['count']
-    .transform(lambda x: x.rolling(window=3, center=True, min_periods=1).mean())
-)
+# Supprimer les clusters non nommés (optionnel)
+cluster_year_counts = cluster_year_counts[cluster_year_counts['name'].notna()]
 
 
-cluster_freq['name'] = cluster_freq['name'].astype(str)  # Pour couleurs plotly
+cluster_year_counts = cluster_year_counts[cluster_year_counts['publicationYear'] > 1920]
 
-# Filtrer avant 1920
-cluster_freq = cluster_freq[cluster_freq['year'] >= 1920]
-
-# Plot interactif area empilé (valeurs absolues)
+# Plot: Area chart des fréquences relatives
 fig_area = px.area(
-    cluster_freq,
-    x='year',
-    y='count_smooth',  # courbe lissée
+    cluster_year_counts,
+    x='publicationYear',
+    y='relative_freq',
     color='name',
-    line_group='name',
-    title='Évolution temporelle des clusters (en nombre de paragraphes)',
-    labels={'count': 'Nombre de paragraphes', 'year': 'Année'},
-    line_shape="spline"
+    title='Distribution temporelle des clusters (fréquences relatives)',
+    labels={
+        'relative_freq': 'Fréquence relative',
+        'publicationYear': 'Année',
+        'name': 'Cluster'
+    }
 )
 
-fig_area.update_layout(legend_title_text='Cluster')
-fig_area.show()
+fig_area.update_layout(
+    plot_bgcolor='white',
+    xaxis=dict(showgrid=False),
+    yaxis=dict(showgrid=True, gridcolor='lightgray')
+)
 
+fig_area.show()
 
 # ------------------------- PCA --------------------------- #
 
@@ -123,29 +123,37 @@ pca_result = pca.fit_transform(matrix_vectors)
 df['pca_1'] = pca_result[:, 0]
 df['pca_2'] = pca_result[:, 1]
 
-# Scatter plot
 fig_pca = px.scatter(
-    df, x='pca_1', y='pca_2', color='name_x',
+    df, x='pca_1', y='pca_2', color='name',
     title='Projection PCA des paragraphes par cluster',
     labels={'name': 'Cluster'},
     hover_data=['id', 'cluster', 'distance_to_centroid'],
-    opacity=0.4  # <- ici l'équivalent de alpha
+    opacity=0.3,
+    render_mode='webgl'  # indispensable si beaucoup de points
 )
+
+# Modifier la taille des marqueurs (tous pareils)
+fig_pca.update_traces(marker=dict(size=3))
 
 # Enlever axes et grilles (équivalent theme_void)
 fig_pca.update_layout(
     legend_title_text='Cluster',
     plot_bgcolor='white',
+    margin=dict(l=60, r=60, t=60, b=60),  # marges autour du graphique
     xaxis=dict(
         showgrid=False,
         zeroline=False,
-        showticklabels=False
+        showticklabels=False,
+        range=[df['pca_1'].min() - 5, df['pca_1'].max() + 5]  # un peu d’espace autour
     ),
     yaxis=dict(
         showgrid=False,
         zeroline=False,
-        showticklabels=False
-    )
+        showticklabels=False,
+        range=[df['pca_2'].min() - 5, df['pca_2'].max() + 5]
+    ),
+    height=800,  # taille plus grande
+    width=1400
 )
 
 fig_pca.show()

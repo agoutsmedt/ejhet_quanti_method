@@ -1,0 +1,56 @@
+---
+author: 
+  - name: "Thomas Delcey"
+    affiliation: "Université de Bourgogne"
+    email: "Thomas.delcey@u-bourgogne.fr"
+  - name: "Aurelien Goutsmedt"
+    affiliation: "UC Louvain; ICHEC"
+    email: "aurelien.goutsmedt[at]uclouvain.be" 
+  - name: "Alexandre Truc"
+    affiliation: "Université du CNRS"
+    email: "Alexandre.truc[at]auCNRSpointFr"
+format:
+  pdf: 
+    abstract: "abstract"
+    date: "`r format(Sys.Date(), '%d %B %Y')`" 
+    indent: true 
+    section-numbering: true
+    fig-width: 8
+    fig-height: 4.5
+    fig-retina: 2
+    # fig-pos: 'h'
+    fig-cap-location: 'bottom'
+    tbl-cap-location: 'bottom'
+crossref: 
+    fig-prefix: figure   
+    tbl-prefix: table
+biblio-style: apalike
+execute:
+  echo: false
+editor_options: 
+  chunk_output_type: console
+---
+
+
+```{r}
+#| echo: false
+#| warning: false
+
+source(here::here("scripts", "paths_and_packages.R"))
+```
+
+
+# Introduction
+
+# Languages models and their applications for the history of economic thought 
+
+# Literature review on rationality
+
+# Results 
+
+# Appendix
+
+# References
+
+
+

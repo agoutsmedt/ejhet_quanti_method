@@ -2,7 +2,10 @@
 
 import os
 import pandas as pd
-import pyreadr
+
+import pyarrow.feather as feather
+import numpy as np
+
 import torch
 import tqdm
 
@@ -18,12 +21,11 @@ except ImportError:
     print("⚠️ The 'paths' module was not found.")
     JSTOR_RAW_DATA_PATH = "your/path/to/data"  # fallback to be manually updated
 
-INPUT_FILE = os.path.join(JSTOR_RAW_DATA_PATH, "paragraphs_with_target_word.rds")
+INPUT_FILE = os.path.join(JSTOR_RAW_DATA_PATH, "paragraphs_with_target_word.parquet")
 OUTPUT_FILE = os.path.join(JSTOR_RAW_DATA_PATH, "paragraphs_with_concat_embeddings_batch.feather")
-
 # ---- model ----
 # BERT_MODEL_NAME = "bert-base-uncased"  
-BERT_MODEL_NAME = "climatebert/econbert"
+model_name = "bert-base-uncased"
 
 LAYERS_TO_USE = [-4, -3, -2, -1]  # last 4 layers
 
@@ -34,8 +36,8 @@ BATCH_SIZE = 16
 
 print("1️⃣  Loading data...")
 
-result = pyreadr.read_r(INPUT_FILE)
-paragraphs = result[None]
+INPUT_FILE = os.path.join(JSTOR_RAW_DATA_PATH, "paragraphs_with_target_word.parquet")
+paragraphs = pd.read_parquet(INPUT_FILE)
 
 print(f"✅ Data loaded: {len(paragraphs)} paragraphs.")
 
@@ -44,16 +46,18 @@ print(f"✅ Data loaded: {len(paragraphs)} paragraphs.")
 print("\n2️⃣  Loading BERT model...")
 
 # download them locally first 
-from huggingface_hub import snapshot_download
-snapshot_download(repo_id="climatebert/econbert", local_dir="econbert", local_dir_use_symlinks=False)
+# from huggingface_hub import snapshot_download
+# snapshot_download(repo_id="climatebert/econbert", local_dir="econbert", local_dir_use_symlinks=False)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-tokenizer = AutoTokenizer.from_pretrained(BERT_MODEL_NAME)
-model = AutoModel.from_pretrained(BERT_MODEL_NAME)
+
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModel.from_pretrained(model_name)
+
 model.to(device)
 model.eval()
 
-print(f"✅ Model '{BERT_MODEL_NAME}' loaded on: {device}")
+print(f"✅ Model '{model_name}' loaded on: {device}")
 
 # --------------------------- VECTORIZATION --------------------------- #
 
@@ -63,7 +67,7 @@ all_target_embeddings = []
 
 # To test on a small sample, uncomment below
 
-texts = paragraphs['windows'].tolist()
+texts = paragraphs['window'].tolist()
 targets = paragraphs['target_word'].tolist()
 
 for i in tqdm.tqdm(range(0, len(paragraphs), BATCH_SIZE), desc="Vectorization"):
@@ -132,9 +136,11 @@ print("\n4️⃣  Saving results...")
 
 paragraphs = paragraphs.reset_index(drop=True)
 paragraphs['bert_embedding_concat'] = all_target_embeddings
-valid_embeddings = paragraphs['bert_embedding_concat'].notna().sum()
 
+valid_embeddings = paragraphs['bert_embedding_concat'].notna().sum()
 print(f"✅ Extraction complete. {valid_embeddings}/{len(paragraphs)} embeddings were successfully generated.")
 
+
 paragraphs.to_feather(OUTPUT_FILE)
+
 print(f" ✅  Results saved to: {OUTPUT_FILE}")

@@ -26,7 +26,9 @@ p_load(RSQLite,
        tidygraph,
        igraph,
        DescTools,
-       jsonlite)
+       jsonlite,
+       progress,
+       tictoc)
 
 #original text path stored in google drive 
 if(str_detect(getwd(), "goutsmed")){

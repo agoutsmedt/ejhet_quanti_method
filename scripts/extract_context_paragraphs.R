@@ -1,128 +1,123 @@
-# ------------------------- load libraries --------------------------- #
+# -------------------- Load libs --------------------
 
 source(file.path("scripts", "paths_and_packages.R"))
+library(furrr)
+library(data.table)
+library(stringr)
+library(tokenizers)
+library(tictoc)
+library(progress)
+library(here)
 
-# ------------------------ load data --------------------------------- #
+# -------------------- Load metadata --------------------
 
-# Connect to the SQLite database and reference the "text" table
-con <- dbConnect(SQLite(), file.path(jstor_raw_data, "jstor_journals.sqlite"))
-text_db <- tbl(con, "text_cleaned")
-
-# load relevant metadata
-metadata <- read_rds(file.path(data_path, "full_metadata_journals.rds")) %>% 
-  # Only keep research articles, other are messy 
-  .[docSubType == "research-article" & language == "eng", .(id, isPartOf, title, publicationYear)] %>% 
-  .[order(publicationYear)]
-
-
-# ------------------------ extract vectors ------------------------ #
-
-# Function use in loop to extract 128-token window around target_word
-
-extract_window <- function(text, target_word, window_size = 128) {
+metadata <- read_rds(file.path(data_path, "full_metadata_journals.rds")) %>%
+  as.data.table() %>%
+  .[docSubType == "research-article" & language == "eng", .(id, isPartOf, title, publicationYear)] %>%
+  .[order(publicationYear)] %>% 
+  # remove "http://www.jstor.org/stable/" from id 
+  .[, id := str_remove_all(id, "http://www.jstor.org/stable/")]
   
-  tokens <- unlist(tokenizers::tokenize_words(text, lowercase = TRUE))
+
+# -------------------- Extraction function --------------------
+
+extract_windows_df <- function(text, target_word, window_size = 128) {
+  tokens <- unlist(tokenize_words(text, lowercase = TRUE))
   positions <- which(str_detect(tokens, target_word))
+  if (length(positions) == 0) return(NULL)
   
-  if (length(positions) == 0) return(NULL) 
-  
-  windows <- lapply(positions, function(pos) {
+  out <- lapply(positions, function(pos) {
     start <- max(1, pos - window_size %/% 2)
     end <- min(length(tokens), pos + window_size %/% 2)
-    list(
-      window = paste(tokens[start:end], collapse = " "),
-      target = tokens[pos]
-    )
+    window_text <- paste(tokens[start:end], collapse = " ")
+    data.frame(window = window_text, target_word = tokens[pos], stringsAsFactors = FALSE)
   })
   
-  return(windows)
+  rbindlist(out)
 }
 
-# ----------------------------- get paragraphs with target words -------------------------------- #
+# -------------------- Setup --------------------
+
+con <- DBI::dbConnect(RSQLite::SQLite(), file.path(jstor_raw_data, "jstor_journals.sqlite"))
+text_db <- tbl(con, "text_cleaned")
 
 target_word <- "\\b(irrational|rational)\\w*\\b"
-paragraphs_list <- list()
+temp_data_path <- here(jstor_raw_data, "paragraphs")
 
-temp_data_path <- here::here(jstor_raw_data, "paragraphs")
+years <- as.character(1886:2020)
 
-# test
+# Parallélisme
+plan(multisession, workers = parallel::detectCores() - 1)
 
-for (year in seq(2016, 2020, by = 1)) {
+pb <- progress_bar$new(
+  format = "[:bar] :current/:total (:percent) | ETA: :eta | Year: :message",
+  total = length(years), clear = FALSE, width = 80
+)
+
+# -------------------- Loop --------------------
+
+for (year in years) {
+  pb$tick(0)
+  pb$message(year)
+  tic(paste("Year", year))
   
-  cli::cli_alert_info("Processing year {year}")
-
-    # get the text for the year
-  ids <- metadata[publicationYear == year]$id
+  ids <- metadata[publicationYear == year, id]
   
   df_text <- text_db %>%
     filter(id %in% ids) %>%
     collect() %>%
     as.data.table()
   
-  # delete pages for target word close to start/end pages 
-  df_text <- df_text %>% 
-    group_by(id) %>%
-    summarise(text = paste(text, collapse = " "), .groups = "drop") %>% 
-    as.data.table()
+  if (nrow(df_text) == 0) next
   
-  # df_text[, text := paste(text, collapse = " "), by = .(id)] # create a fatal error 
-  # df_text <- unique(df_text)
-  
-  # detect target word 
+  df_text <- df_text[, .(text = paste(text, collapse = " ")), by = id]
   df_text <- df_text[stri_detect_regex(text, regex(target_word, ignore_case = TRUE))]
   
-  # extract windows
-  df_text[, windows := map(text, extract_window, target_word = target_word)]
-  df_text[, text := NULL]
-  df_text <- df_text[!is.na(windows)]
-  df_text <- df_text[, .(windows = unlist(windows, recursive = FALSE)), by = id]
-  df_text[, `:=`(
-    windows = sapply(windows, `[[`, "window"),
-    target_word = sapply(windows, `[[`, "target")
-  )]
+  if (nrow(df_text) == 0) next
   
-  # add an id and the year 
-  df_text[, paragraph_id := seq_len(.N), by = id]
-  df_text <- merge(df_text, metadata[, .(id, publicationYear)], by = "id", all.x = TRUE)
+  # Future_map version: extraction des paragraphes
+  df_text[, extracted := future_map(text, extract_windows_df, target_word = target_word)]
   
-  # Save immediately
-  saveRDS(df_text, file = here::here(temp_data_path, paste0("paragraphs_year_", year, ".rds")))
+  # Retirer les NULL
+  df_text <- df_text[!sapply(extracted, is.null)]
   
-  rm(df_text)  # remove to free memory
-  gc()         # force garbage collection
+  if (nrow(df_text) == 0) next
+  
+  # Aplatir
+  df_flat <- df_text[, .(id, extracted)] %>%.[, rbindlist(extracted, idcol = FALSE), by = id]
+  
+  df_flat[, paragraph_id := seq_len(.N), by = id]
+  df_flat <- merge(df_flat, metadata[, .(id, publicationYear)], by = "id", all.x = TRUE)
+  
+  saveRDS(df_flat, file = file.path(temp_data_path, paste0("paragraphs_year_", year, ".rds")))
+  
+  rm(df_flat, df_text); gc()
+  toc(log = TRUE)
+  pb$tick()
 }
 
-# then after the loop load and bind 
-file_list <- list.files(here::here(temp_data_path), pattern = "^paragraphs_year_\\d+\\.rds$", full.names = TRUE)
+
+# ------------------------ Merge All Years ------------------------ #
+
+file_list <- list.files(temp_data_path, pattern = "^paragraphs_year_\\d+\\.rds$", full.names = TRUE)
 paragraphs <- rbindlist(lapply(file_list, readRDS), use.names = TRUE, fill = TRUE)
 
-# ----------------------------- clean paragraphs  -------------------------------- #
+# Filter only rational / irrational core forms
+paragraphs <- paragraphs %>%
+  filter(target_word %in% c("rational", "rationality"))
 
-# keep only rational and rationality 
-
-paragraphs <- paragraphs %>% 
-  filter(target_word %in% c("rational", "rationality")) 
-
-# remove duplicate paragraphs, if the same, keep only the first row
-
-paragraphs <- paragraphs %>% 
-  group_by(windows) %>% 
-  slice(1) %>% 
+# Remove duplicates
+paragraphs <- paragraphs %>%
+  group_by(window) %>%
+  slice(1) %>%
   ungroup()
 
-# Save full
-saveRDS(paragraphs, file = here::here(jstor_raw_data, "paragraphs_with_target_word.rds"))
+# Save cleaned version
+arrow::write_parquet(paragraphs, sink = file.path(jstor_raw_data, "paragraphs_with_target_word.parquet"))
 
-# plot distribution
+# Plot distribution
 ggplot(paragraphs, aes(x = publicationYear)) +
   geom_histogram(binwidth = 1) +
   labs(title = "Distribution of Paragraphs with Target Word by Year",
-       x = "Publication Year",
-       y = "Count") +
+       x = "Publication Year", y = "Count") +
   theme_minimal()
-
-# Add embeddings -------------------------
-glove <- read_rds(file.path(data_path, glue("glove_model_jstor.rds")))
-wv_main <- read_rds(file.path(data_path, glue("word_vectors_300d.rds")))
-wv_context <- glove$components
-word_vectors <- wv_main + t(wv_context)
