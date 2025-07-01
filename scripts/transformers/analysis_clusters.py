@@ -8,18 +8,13 @@ import os
 import pyarrow.feather as feather
 import pandas as pd
 import numpy as np
-
-# loop management 
 import tqdm
 
-# for saving model object
-import joblib
-
 # machine learning
+import joblib
 from sklearn.decomposition import PCA
 
 
-# plotting 
 import plotly.express as px
 
 # load data and model 
@@ -44,7 +39,7 @@ df['distance_to_centroid'] = np.linalg.norm(matrix_vectors - assigned_centroids,
 top_per_cluster = (
     df.sort_values(['cluster', 'distance_to_centroid'])
       .groupby('cluster')
-      .head(10)
+      .head(20)
       .reset_index(drop=True)
 )
 
@@ -56,24 +51,25 @@ top_per_cluster = top_per_cluster[cols_to_keep]
 
 
 # name  clusters 
-cluster_names = pd.DataFrame({
-    'cluster': list(range(10)),
+cluster_names = {
+    'cluster': [0, 1, 2, 3, 4, 5, 6],
     'name': [
-        'Rational Expectations', # Cluster 0
-        'Bounded Rationality',   # Cluster 1
-        'Game Theory',           # Cluster 2
-        'Macroeconomic Models',  # Cluster 3
-        'Rational Actor',        # Cluster 4
-        None,                    # Cluster 5 
-        None,                    # Cluster 6
-        None,                    # Cluster 7
-        None,                    # Cluster 8
-        None                     # Cluster 9
+        'Theoretical Models',
+        'Applied Rationality',
+        'Market Dynamics',
+        'Rational Expectations',
+        'Rational Process',
+        'Bounded Rationality',
+        'Formal Rationality'
     ]
-})
+}
+
+# Create the DataFrame
+df_cluster_names = pd.DataFrame(cluster_names)
+
 
 # Merge (équivalent de merge avec `by = "cluster", all.x = TRUE`)
-df = df.merge(cluster_names, on='cluster', how = 'left')
+df = df.merge(df_cluster_names, on= 'cluster', how = 'left')
 
 
 # ------------------------- PLOT AREA --------------------------- #
@@ -89,7 +85,7 @@ cluster_year_counts['relative_freq'] = cluster_year_counts['count'] / cluster_ye
 cluster_year_counts = cluster_year_counts[cluster_year_counts['name'].notna()]
 
 
-cluster_year_counts = cluster_year_counts[cluster_year_counts['publicationYear'] > 1920]
+# cluster_year_counts = cluster_year_counts[cluster_year_counts['publicationYear'] > 1920]
 
 # Plot: Area chart des fréquences relatives
 fig_area = px.area(
@@ -119,6 +115,13 @@ fig_area.show()
 pca = PCA(n_components=2)
 pca_result = pca.fit_transform(matrix_vectors)
 
+
+# Afficher la variance expliquée
+print("Variance expliquée par PC1 :", round(pca.explained_variance_ratio_[0] * 100, 2), "%")
+print("Variance expliquée par PC2 :", round(pca.explained_variance_ratio_[1] * 100, 2), "%")
+print("Variance totale expliquée :", round(sum(pca.explained_variance_ratio_) * 100, 2), "%")
+
+
 # Ajouter les deux composantes principales au DataFrame
 df['pca_1'] = pca_result[:, 0]
 df['pca_2'] = pca_result[:, 1]
@@ -133,27 +136,7 @@ fig_pca = px.scatter(
 )
 
 # Modifier la taille des marqueurs (tous pareils)
-fig_pca.update_traces(marker=dict(size=3))
+fig_pca.update_traces(marker=dict(size=1))
 
 # Enlever axes et grilles (équivalent theme_void)
-fig_pca.update_layout(
-    legend_title_text='Cluster',
-    plot_bgcolor='white',
-    margin=dict(l=60, r=60, t=60, b=60),  # marges autour du graphique
-    xaxis=dict(
-        showgrid=False,
-        zeroline=False,
-        showticklabels=False,
-        range=[df['pca_1'].min() - 5, df['pca_1'].max() + 5]  # un peu d’espace autour
-    ),
-    yaxis=dict(
-        showgrid=False,
-        zeroline=False,
-        showticklabels=False,
-        range=[df['pca_2'].min() - 5, df['pca_2'].max() + 5]
-    ),
-    height=800,  # taille plus grande
-    width=1400
-)
-
 fig_pca.show()

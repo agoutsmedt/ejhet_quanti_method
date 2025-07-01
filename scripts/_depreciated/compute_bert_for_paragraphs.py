@@ -9,7 +9,7 @@ import numpy as np
 import torch
 import tqdm
 
-from transformers import AutoTokenizer, AutoModel
+from transformers import RobertaTokenizer, RobertaModel
 
 # --------------------------- PARAMETERS --------------------------- #
 
@@ -22,11 +22,15 @@ except ImportError:
     JSTOR_RAW_DATA_PATH = "your/path/to/data"  # fallback to be manually updated
 
 INPUT_FILE = os.path.join(JSTOR_RAW_DATA_PATH, "paragraphs_with_target_word.parquet")
-OUTPUT_FILE = os.path.join(JSTOR_RAW_DATA_PATH, "paragraphs_with_concat_embeddings_batch.feather")
-# ---- model ----
-# BERT_MODEL_NAME = "bert-base-uncased"  
-model_name = "bert-base-uncased"
+OUTPUT_FILE = os.path.join(JSTOR_RAW_DATA_PATH, "paragraphs_with_concat_embeddings.feather")
 
+# current path 
+CURRENT_PATH = os.getcwd()
+
+
+# ---- model ----
+model_name = "bert-base-uncased"
+# model_name = "climatebert/econbert"
 LAYERS_TO_USE = [-4, -3, -2, -1]  # last 4 layers
 
 # ---- batch size ----
@@ -45,17 +49,15 @@ print(f"✅ Data loaded: {len(paragraphs)} paragraphs.")
 
 print("\n2️⃣  Loading BERT model...")
 
-# download them locally first 
-# from huggingface_hub import snapshot_download
-# snapshot_download(repo_id="climatebert/econbert", local_dir="econbert", local_dir_use_symlinks=False)
+# download the model locally first 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModel.from_pretrained(model_name)
+tokenizer = RobertaTokenizer.from_pretrained(os.path.join(CURRENT_PATH, "econbert/EconBERT_Model/econbert_tokenizer"), use_fast=True)
+model = RobertaModel.from_pretrained(os.path.join(CURRENT_PATH, "econbert/EconBERT_Model/econbert_weights"))
 
 model.to(device)
-model.eval()
+# model.eval()
 
 print(f"✅ Model '{model_name}' loaded on: {device}")
 
@@ -80,12 +82,9 @@ for i in tqdm.tqdm(range(0, len(paragraphs), BATCH_SIZE), desc="Vectorization"):
         padding=True,
         truncation=True,
         max_length=512,
-        return_tensors="pt",
-        return_offsets_mapping=True
-    )
+        return_tensors="pt")
 
-    # Offset mappings are not needed here
-    offsets = inputs.pop("offset_mapping")
+    # Move inputs to the same device as the model
     inputs = {k: v.to(device) for k, v in inputs.items()}
 
     with torch.no_grad():

@@ -10,11 +10,10 @@ library(progress)
 library(here)
 
 # -------------------- Load metadata --------------------
-
-metadata <- read_rds(file.path(data_path, "full_metadata_journals.rds")) %>%
-  as.data.table() %>%
-  .[docSubType == "research-article" & language == "eng", .(id, isPartOf, title, publicationYear)] %>%
-  .[order(publicationYear)] %>% 
+metadata <- read_rds(file.path(data_path, "full_metadata_journals_cleaned.rds")) %>% 
+  # Only keep research articles for now because other types are quite messy and avoid overloading the memory
+  .[ refined_sub_type == "research-article" & language == "eng", .(id, is_part_of, title, creator, publication_year)] %>% 
+  .[order(publication_year)] %>% 
   # remove "http://www.jstor.org/stable/" from id 
   .[, id := str_remove_all(id, "http://www.jstor.org/stable/")]
   
@@ -39,6 +38,7 @@ extract_windows_df <- function(text, target_word, window_size = 128) {
 # -------------------- Setup --------------------
 
 con <- DBI::dbConnect(RSQLite::SQLite(), file.path(jstor_raw_data, "jstor_journals.sqlite"))
+
 text_db <- tbl(con, "text_cleaned")
 
 target_word <- "\\b(irrational|rational)\\w*\\b"
@@ -50,21 +50,25 @@ years <- as.character(1886:2020)
 plan(multisession, workers = parallel::detectCores() - 1)
 
 pb <- progress_bar$new(
-  format = "[:bar] :current/:total (:percent) | ETA: :eta | Year: :message",
+  format = "[:bar] :current/:total (:percent) | ETA: :eta",
   total = length(years), clear = FALSE, width = 80
 )
 
 # -------------------- Loop --------------------
 
 for (year in years) {
+  
   pb$tick(0)
   pb$message(year)
   tic(paste("Year", year))
   
-  ids <- metadata[publicationYear == year, id]
+  ids <- metadata[publication_year == year, id]
   
   df_text <- text_db %>%
-    filter(id %in% ids) %>%
+    filter(type == "main_text",
+           id %in% ids,
+           # remove na in text
+           !is.na(text)) %>%
     collect() %>%
     as.data.table()
   
@@ -87,13 +91,14 @@ for (year in years) {
   df_flat <- df_text[, .(id, extracted)] %>%.[, rbindlist(extracted, idcol = FALSE), by = id]
   
   df_flat[, paragraph_id := seq_len(.N), by = id]
-  df_flat <- merge(df_flat, metadata[, .(id, publicationYear)], by = "id", all.x = TRUE)
+  df_flat <- merge(df_flat, metadata[, .(id, publication_year)], by = "id", all.x = TRUE)
   
   saveRDS(df_flat, file = file.path(temp_data_path, paste0("paragraphs_year_", year, ".rds")))
   
   rm(df_flat, df_text); gc()
   toc(log = TRUE)
   pb$tick()
+  
 }
 
 
@@ -116,7 +121,7 @@ paragraphs <- paragraphs %>%
 arrow::write_parquet(paragraphs, sink = file.path(jstor_raw_data, "paragraphs_with_target_word.parquet"))
 
 # Plot distribution
-ggplot(paragraphs, aes(x = publicationYear)) +
+ggplot(paragraphs, aes(x = publication_year)) +
   geom_histogram(binwidth = 1) +
   labs(title = "Distribution of Paragraphs with Target Word by Year",
        x = "Publication Year", y = "Count") +
