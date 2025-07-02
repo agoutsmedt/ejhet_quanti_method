@@ -28,7 +28,8 @@ p_load(RSQLite,
        DescTools,
        jsonlite,
        progress,
-       tictoc)
+       tictoc,
+       ollamar)
 
 #original text path stored in google drive 
 if(str_detect(getwd(), "goutsmed")){
