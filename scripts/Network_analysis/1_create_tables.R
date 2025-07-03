@@ -46,7 +46,7 @@ share_cl_max_var <- 0.05
 year_high <- 2014
 year_low <- 1970
 rationality_score_filter <- 0.05
-rationality_prop_filter <- 0.15
+rationality_prop_filter <- 0.25
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 #### Introduction ####
@@ -190,7 +190,7 @@ ggplot(alluv_dt, aes(x = window, y= y_alluv, stratum = dynamic_cluster_leiden, a
 #### 6 tf-idf ####
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 tf_idf <- copy(tbl_networks)
-tf_idf <- networkflow::extract_tfidf(tf_idf, "Titre", "dynamic_cluster_leiden", grouping_across_list = FALSE, clean_word_method = "lemmatize")
+tf_idf <- networkflow::extract_tfidf(tf_idf, "Titre", "dynamic_cluster_leiden", grouping_across_list = FALSE, clean_word_method = "lemmatize", nb_terms = 20)
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 #### AI name cluster ####
@@ -209,13 +209,13 @@ for (cl in cluster_list) {
   top_20_authors <- top_20_authors[,.N,Nom][order(-N)][1:20]
 
   top_20_tfidf <- tf_idf[dynamic_cluster_leiden==cl]
-  top_20_tfidf <- top_20_tfidf[,.N,Nom][order(-N)][1:20]
+  top_20_tfidf <- top_20_tfidf[order(-tf_idf)][1:20]
   
   DT <- data.table(top_20_references_title = top_20_refs[order(-N)]$Titre,
                    top_20_authors = top_20_authors$Nom,
-                   )
+                   top_20_tfidf = top_20_tfidf$term)
   
-  txt <- generate("llama3.1", 
+  txt <- ollamar::generate("llama3.1", 
                   paste0("Here is a cluster or scientific articles in economics made using bibliographic coupling. 
                        You can find in the following text the top 20 most common references in the cluster, their title when available, and the 20 most prolific authors in the cluster.
                        Using this information to name cluster using no more than 5 words. 
@@ -237,18 +237,6 @@ names_ai <- data.table(
   value_col = unlist(list_clusters_ai_names, use.names = FALSE) # use.names = FALSE to avoid issues if names had patterns
 )
 
-alluv_named <- merge(alluv_dt, names_ai, by.x = "Label", by.y = "id_col", all.x = TRUE)
-
-ggplot(alluv_named, aes(x = Window, y= y_alluv, stratum = dynamic_cluster_leiden, alluvium = ID_Art, fill = main_colors, label = dynamic_cluster_leiden)) +
-  geom_stratum(alpha =1, size=1/10) +
-  geom_flow() +
-  theme(legend.position = "none") +
-  theme_minimal() +
-  scale_fill_identity() +
-  ggtitle("") +
-  ggrepel::geom_label_repel(stat = "stratum", size = 6, aes(label = value_col)) 
-
-
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 #### 8 Saving ####
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
@@ -258,6 +246,8 @@ saveRDS(alluv_dt, here(data_path,"Networks",
                        paste("alluv", year_low, year_high,time_window_var,"year_windows",rationality_prop_filter,"rationality_score.RDS", sep= "_")))
 saveRDS(tbl_networks, here(data_path,"Networks", 
                             paste("networks", year_low, year_high,time_window_var,"year_windows",rationality_prop_filter,"rationality_score.RDS", sep= "_")))
+saveRDS(names_ai, here(data_path,"Networks", 
+                           paste("label_ai", year_low, year_high,time_window_var,"year_windows",rationality_prop_filter,"rationality_score.RDS", sep= "_")))
 
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
