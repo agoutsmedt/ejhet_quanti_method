@@ -27,7 +27,11 @@ rm(wv_context,
 con <- DBI::dbConnect(RSQLite::SQLite(), file.path(jstor_raw_data, "jstor_journals.sqlite"))
 text_db <- tbl(con, "text_cleaned")
 
+<<<<<<< HEAD:scripts/_depreciated/clustering_rationality_use.R
+ids <- metadata[between(publication_year, 1975, 1980),]$id
+=======
 # ids <- metadata[between(publication_year, 1950, 1980),]$id
+>>>>>>> d1984cd203e67467553a464e27ec35b842baa1c4:scripts/clustering_rationality_use.R
 df_text <- text_db %>%
   filter(!is.na(text),
          type == "main_text") %>%
@@ -131,18 +135,22 @@ pca_result <- prcomp(as.matrix(embeddings[, -c("doc_id")]), center = TRUE, scale
 # reduced_embeddings <- as.data.frame(pca_result$x[, 1:n_components])
 # documents <- bind_cols(embeddings[, .(doc_id)], reduced_embeddings)    
 
-# p_load(dbscan)
-# # Find nearest neighbor distances
-# # Set minPts (recommended: minPts = 2 * number of PCA components)
-# minPts <- 2 * ncol(embeddings)  # Example
-# kNNdistplot(as.matrix(embeddings[, -c("doc_id")]), k = 10)  # k = minPts - 1, so here minPts = 6 is a good start
-# abline(h = 0.2, col = "red")  # Example, adjust based on the elbow point you see
-# 
-# # Choose eps based on your kNN plot
-# dbscan_result <- dbscan(as.matrix(embeddings[, -c("doc_id")]), eps = 0.2, minPts = 10)
+p_load(dbscan)
+# Find nearest neighbor distances
+# Set minPts (recommended: minPts = 2 * number of PCA components)
+minPts <- 2 * ncol(embeddings)  # Example
+kNNdistplot(as.matrix(embeddings[, -c("doc_id")]), k = 10)  # k = minPts - 1, so here minPts = 6 is a good start
+abline(h = 0.2, col = "red")  # Example, adjust based on the elbow point you see
+
+# Choose eps based on your kNN plot
+dbscan_result <- dbscan(as.matrix(embeddings[, -c("doc_id")]), eps = 0.5, minPts = 5)
 # 
 # # Add DBSCAN cluster labels to your table
-# embeddings$cluster <- dbscan_result$cluster
+rational_texts$dbscan_cluster <- dbscan_result$cluster
+
+p_load(mclust)
+gmm_result <- Mclust(as.matrix(embeddings[, -c("doc_id")]), G = 5)
+clusters <- gmm_result$classification
 
 # kmeans cluster
 kmeans_result <- kmeans(as.matrix(embeddings[, -c("doc_id")]), centers = 10, nstart = 50, iter.max = 1000)
@@ -201,15 +209,31 @@ similarity_dt$centroid <- 1:nrow(similarities)
 
 # Reshape to long format for easy sorting
 similarity_long <- melt(similarity_dt, id.vars = "centroid", variable.name = "word", value.name = "similarity")
+
+# 1. Precompute the total similarity per word
+similarity_long[, total_similarity := sum(similarity), by = word]
+
+# 2. Calculate other_similarity by simple subtraction (vectorized)
+similarity_long[, other_similarity := total_similarity - similarity]
+
+# Get global importance (from your token table)
+# Assume you have a table: tokens_total_occurrence (word, total_occurrence)
+# Merge importance into similarity table
+similarity_long <- merge(similarity_long, unique(tokens[, .(word = term, total_occurrence)]), by = "word", all.x = TRUE)
+
+# Calculate the composite score
+similarity_long[, composite_score := (similarity / other_similarity) * total_occurrence]
+top_composite_words <- similarity_long[, .SD[order(-composite_score)][1:25], by = centroid]
+
 similarity_long[, total_similarity := sum(similarity), by = word]
 top_n_words <- similarity_long[, .SD[order(-similarity)][1:500], by = centroid]
 
 # Calculate relative similarity
 top_n_words[, relative_similarity := similarity / total_similarity]
 # For each centroid, get top N most similar words
-top_n_words <- top_n_words[, .SD[order(-relative_similarity)][1:15], by = centroid]
+top_n_words <- top_n_words[, .SD[order(-relative_similarity)][1:25], by = centroid]
 
-ggplot(top_n_words, aes(x = reorder_within(word, relative_similarity, centroid), y = relative_similarity, fill = factor(centroid))) +
+ggplot(top_composite_words, aes(x = reorder_within(word, composite_score, centroid), y = composite_score, fill = factor(centroid))) +
   geom_bar(stat = "identity") +
   coord_flip() +
   facet_wrap(~ centroid, scales = "free") +
@@ -221,7 +245,7 @@ ggplot(top_n_words, aes(x = reorder_within(word, relative_similarity, centroid),
 # Variance explained by PCA
 variance_explained <- pca_result$sdev^2 / sum(pca_result$sdev^2)
 # For axis 1 and 2
-variance_explained[1:2] * 100
+variance_explained[1:5] * 100
 
 # Top documents
 rational_texts <- rational_texts %>%
