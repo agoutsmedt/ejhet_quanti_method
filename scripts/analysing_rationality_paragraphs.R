@@ -1,6 +1,5 @@
 ################## Analysing Inter-Temporal Clusters##################
 
-
 # LOADING DATA AND LIBRARIES----------------------
 source(file.path("scripts", "paths_and_packages.R"))
 
@@ -9,10 +8,6 @@ bert_df <- read_feather(here::here(jstor_raw_data, "embeddings_bert-base-uncased
   filter(between(publication_year, 1900, 2019)) %>% 
   mutate(doc_id = str_c(id, "_", paragraph_id)) %>% 
   arrange(doc_id)  
-
-# Join cluster info to bert_df
-bert_clustered <- bert_df %>%
-  left_join(documents_cluster %>% select(doc_id, new_cluster), by = c("doc_id"))
 
 metadata <- read_rds(file.path(data_path, "full_metadata_journals_cleaned.rds")) %>% 
   # Only keep research articles for now because other types are quite messy and avoid overloading the memory
@@ -24,10 +19,13 @@ documents_cluster <- readRDS(file.path(data_path, "paragraphs_intertemporal_clus
   mutate(id = str_remove(doc_id, "_\\d+$")) %>% 
   left_join(metadata)
 
+# Join cluster info to bert_df
+bert_df <- bert_df %>%
+  left_join(documents_cluster %>% select(doc_id, new_cluster, time_window = window, is_part_of, title), by = c("doc_id")) 
 
 # Distribution by year-------------
 # Plot distribution by year and cluster
-bert_clustered %>%
+bert_df %>%
   count(publication_year, new_cluster) %>%
   ggplot(aes(x = publication_year, y = n, color = new_cluster)) +
   geom_line() +
@@ -37,7 +35,7 @@ bert_clustered %>%
   scale_color_see()
 
 # Calculate proportions per year
-yearly_cluster_dist <- bert_clustered %>%
+yearly_cluster_dist <- bert_df %>%
   count(publication_year, new_cluster) %>%
   mutate(proportion = n / sum(n), .by = publication_year)
 
@@ -51,7 +49,6 @@ ggplot(bert_clustered, aes(x = publication_year, y = after_stat(count), fill = n
   scale_y_continuous(labels = scales::percent_format()) +
   theme(legend.position = "bottom") +
   scale_fill_see()
-
 
 # Top Journals----------
 # Join journal info with cluster assignments
@@ -102,13 +99,12 @@ ggplot(top_words_cluster, aes(x = reorder(target_word, proportion), y = proporti
 # Build embedding matrix
 
 # Convert to data.table
-bert_dt <- as.data.table(bert_clustered)
+bert_dt <- as.data.table(bert_df)
 
 # Expand bert_embedding_concat list into separate columns
 # Assume each embedding is length 3072
 bert_dt <- bert_dt[, as.data.table(do.call(rbind, bert_embedding_concat))]
-bert_dt$new_cluster <- bert_clustered$new_cluster
-bert_dt$doc_id <- bert_clustered$doc_id
+bert_dt$new_cluster <- bert_df$new_cluster
 
 # Calculate mean of each dimension by new_cluster
 cluster_centroids <- bert_dt[, lapply(.SD, mean), by = new_cluster]
@@ -133,30 +129,49 @@ clusters <- unique(bert_dt$new_cluster)
 # Set how many top paragraphs you want
 top_n <- 10
 
-# Run the similarity search per cluster
-top_paragraphs_per_cluster <- map_dfr(clusters, function(cluster) {
+# Run similarity search per cluster and per window
+top_paragraphs_per_cluster_window <- map_dfr(clusters, function(cluster) {
   
-  # Select paragraphs from this cluster
+  # Filter paragraphs for this cluster
+  bert_dt$time_window <- bert_df$time_window
+  bert_dt$doc_id <- bert_df$doc_id
   cluster_paragraphs <- bert_dt[new_cluster == cluster]
-  cluster_mat <- as.matrix(cluster_paragraphs[, ..embedding_cols])
-  rownames(cluster_mat) <- cluster_paragraphs$doc_id
+  
+  # Get unique time windows in this cluster
+  time_windows <- unique(bert_df$time_window)
   
   # Extract the centroid for this cluster
   centroid_vec <- centroid_mat[cluster, , drop = FALSE]
   
-  # Calculate cosine similarity for this cluster
-  sim_vec <- text2vec::sim2(x = cluster_mat, y = centroid_vec, method = "cosine", norm = "l2")[, 1]
-  
-  # Get top N most similar paragraphs
-  top_idx <- order(sim_vec, decreasing = TRUE)[1:top_n]
-  
-  data.table(
-    new_cluster = cluster,
-    doc_id = names(sim_vec)[top_idx],
-    similarity = sim_vec[top_idx],
-    rank = 1:top_n
-  )
+  # Run similarity search per time window
+  map_dfr(time_windows, function(window) {
+    
+    # Select paragraphs in this window
+    window_paragraphs <- cluster_paragraphs[time_window == window]
+    if (nrow(window_paragraphs) == 0) return(NULL)  # Skip empty groups
+    
+    window_mat <- as.matrix(window_paragraphs[, ..embedding_cols])
+    rownames(window_mat) <- window_paragraphs$doc_id
+    
+    # Calculate cosine similarity for this window
+    sim_vec <- text2vec::sim2(x = window_mat, y = centroid_vec, method = "cosine", norm = "l2")[, 1]
+    
+    # Get top N most similar paragraphs in this window
+    top_idx <- order(sim_vec, decreasing = TRUE)[1:min(5, length(sim_vec))]
+    
+    data.table(
+      new_cluster = cluster,
+      time_window = window,
+      doc_id = names(sim_vec)[top_idx],
+      similarity = sim_vec[top_idx],
+      rank = 1:length(top_idx)
+    )
+  })
 })
 
-top_paragraphs_per_cluster <- top_paragraphs_per_cluster  %>% 
+top_paragraphs_per_cluster_window <- top_paragraphs_per_cluster_window  %>% 
   left_join(select(bert_df, doc_id, window, publication_year))
+
+# Now we just keep the n most important paragraphs for the whole cluster (among the selection of top_n per window)
+top_paragraphs_per_cluster <- top_paragraphs_per_cluster_window %>% 
+  slice_max(order_by = similarity, by = new_cluster, n = 10)

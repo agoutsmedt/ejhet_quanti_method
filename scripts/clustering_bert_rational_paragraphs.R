@@ -16,7 +16,7 @@ pacman::p_load(tidymodels,
                see) # Color scales
 
 # Set up parallel processing (using half of available cores)
-n_cores <- floor(parallel::detectCores() /2.5)  
+n_cores <- floor(parallel::detectCores() /2)  
 registerDoParallel(cores = n_cores)
 
 ## Bert rational paragraph loading--------------------
@@ -71,7 +71,7 @@ process_window <- function(years, df) {
   tune_res <- tune_cluster(
     kmeans_wf,
     resamples = vfold_cv(bert_tbl, v = 3),
-    grid = tibble(num_clusters = 2:8),
+    grid = tibble(num_clusters = 3:8),
     metrics = cluster_metric_set(sse_ratio),
     control = control_grid(parallel_over = "everything")
   )
@@ -140,7 +140,7 @@ window_order <- data.frame(
   window_index = seq_along(time_windows)
 )
 
-similarity_threshold <- 0.98
+similarity_threshold <- 0.97
 cosine_tbl <- as.data.frame(cosine_sim) %>%
   mutate(cluster_A = centroids$cluster_original_id) %>%
   pivot_longer(-cluster_A, names_to = "cluster_B", values_to = "similarity") %>%
@@ -152,7 +152,7 @@ cosine_tbl <- as.data.frame(cosine_sim) %>%
   rename(index_A = window_index) %>%
   left_join(window_order, by = c("window_B" = "window")) %>%
   rename(index_B = window_index) %>%
- filter(similarity > similarity_threshold, abs(index_A - index_B) == 1) %>%
+  filter(similarity > similarity_threshold, abs(index_A - index_B) == 1) %>%
   # we don't want to merge clusters from the same window
   distinct(cluster_A, window_A, window_B, .keep_all = TRUE) %>% # We merge only with the closest cluster in the window, to avoid merging to cluster together in a window
   distinct(cluster_B, window_A, window_B, .keep_all = TRUE) # We merge only with the closest cluster in the window, to avoid merging to cluster together in a window
@@ -211,7 +211,7 @@ saveRDS(documents_partition, file.path(data_path, "paragraphs_intertemporal_clus
 set.seed(1989)
 all_clusters <- levels(factor(documents_partition$new_cluster)) %>% sample()
 # Preview the default 'see' palette to get the colors
-palette_colors <- see::see_colors()  # Example for the see_d palette
+palette_colors <- c(see::see_colors(), see::oi_colors())  # Example for the see_d palette
 # If you use another palette, replace accordingly
 # Let's say you use 8 clusters and 8 colors from the palette
 cluster_colors <- palette_colors[1:length(all_clusters)]
@@ -250,12 +250,13 @@ documents_partition %>%
        y = "Percentage of Documents",
        fill = "Intertemporal Cluster") +
   theme_minimal() +
+  theme(legend.position = "bottom") +
   scale_fill_manual(values = cluster_colors)  # HARD color lock
 
 ggsave(file.path("pictures", "intertemporal_clusters_alluvial.png"),
        units = "cm",
-       width = 25,
-       height = 18,
+       width = 30,
+       height = 30,
        dpi = 300)
 
 # 3. PCA visualization of all documents
@@ -267,8 +268,7 @@ pca <- prcomp_irlba(bert_mat, n = 2, center = TRUE, scale. = TRUE)
 top_clusters <- documents_partition %>% 
   count(new_cluster) %>% 
   mutate(share = n/sum(n)) %>% 
-  filter(share > 0.05)
-
+  filter(share > 0.03)
 
 # Create tibble with results
 all_articles_pca <- tibble(
@@ -291,6 +291,7 @@ plot_bert <- ggplot(all_articles_pca, aes(x = PC1, y = PC2, color = label_cluste
 ggsave(file.path("pictures", "intertemporal_clusters_pca.png"),
        plot_bert,
        units = "cm",
-       width = 25,
-       height = 20,
+       width = 30,
+       height = 30,
        dpi = 300)
+
