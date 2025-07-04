@@ -22,7 +22,7 @@ p_load(RSQLite,
        ggalluvial,
        igraph,
        tidygraph,
-       DescTools,
+     #  DescTools,
        jsonlite,
        progress,
        tictoc)
