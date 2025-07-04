@@ -19,19 +19,18 @@ rm(wv_context,
    glove,
    word_vectors)
 
-metadata <- read_rds(file.path(data_path, "full_metadata_journals_cleaned.rds")) %>% 
-    .[refined_sub_type == "research-article" & language == "eng", .(id, is_part_of, title, publication_year)] %>%
-    .[order(publication_year)]
+# metadata <- read_rds(file.path(data_path, "full_metadata_journals_cleaned.rds")) %>% 
+#     .[refined_sub_type == "research-article" & language == "eng", .(id, is_part_of, title, publication_year)] %>%
+#     .[order(publication_year)]
 
 # Collecting text
 con <- DBI::dbConnect(RSQLite::SQLite(), file.path(jstor_raw_data, "jstor_journals.sqlite"))
 text_db <- tbl(con, "text_cleaned")
 
-ids <- metadata[between(publication_year, 1950, 1980),]$id
+# ids <- metadata[between(publication_year, 1950, 1980),]$id
 df_text <- text_db %>%
   filter(!is.na(text),
-         type == "main_text",
-         id %in% ids) %>%
+         type == "main_text") %>%
   collect() %>%
   as.data.table()
 dbDisconnect(con)
@@ -69,6 +68,8 @@ rational_texts <- df_text[! is.na(rational_text), .(id, rational_text)]
 rational_texts <- rational_texts[, .(rational_text = unlist(rational_text)), by = id]
 rational_texts[, doc_id := paste0(id, "_", seq_len(.N)), by = id]  # Create a unique doc_id for each rational text
 rational_texts[, rational_text := str_replace_all(rational_text, "'s|'s", "")]
+
+saveRDS(rational_texts, file.path(data_path, "rational_texts.rds"))
 
 # Creating the embeddings of rational texts----------
 
@@ -120,6 +121,8 @@ embeddings[, (vector_cols) := lapply(.SD, mean), by = doc_id, .SDcols = vector_c
 embeddings <- embeddings[order(doc_id), -c("n", "term", "position", "target_pos", "distance", "distance_weight", "total_occurrence", "tf_idf")] %>% 
   unique()
 
+saveRDS(embeddings, file.path(data_path, "embeddings_rational_texts.rds"))
+
 # Clustering the rational texts----------
 
 pca_result <- prcomp(as.matrix(embeddings[, -c("doc_id")]), center = TRUE, scale. = TRUE)
@@ -142,7 +145,7 @@ pca_result <- prcomp(as.matrix(embeddings[, -c("doc_id")]), center = TRUE, scale
 # embeddings$cluster <- dbscan_result$cluster
 
 # kmeans cluster
-kmeans_result <- kmeans(as.matrix(embeddings[, -c("doc_id")]), centers = 5, nstart = 5, iter.max = 1000)
+kmeans_result <- kmeans(as.matrix(embeddings[, -c("doc_id")]), centers = 10, nstart = 50, iter.max = 1000)
 
 # embeddings$kmeans_cluster <- kmeans_result$cluster
 rational_texts$kmeans_cluster <- kmeans_result$cluster
@@ -165,13 +168,22 @@ ggplot(pca_df, aes(x = PC1, y = PC2, color = cluster)) +
 
 # Top words of clusters
 tokens_clusters <- rational_texts %>% 
-  unnest_tokens(term, rational_text, token = "ngrams", n_min = 1, n = 1) %>%
+  unnest_tokens(term, rational_text, token = "ngrams", n_min = 1, n = 3) %>%
   filter(! term %in% stop_words$word) %>% 
   count(kmeans_cluster, term, sort = TRUE) %>%
   mutate(total_occurence = sum(n), .by = term) %>%
   filter(total_occurence > 15 & n > 5) %>%
   bind_tf_idf(term, kmeans_cluster, n) %>% 
   slice_max(order_by = tf_idf, n = 15, by = kmeans_cluster, with_ties = FALSE)
+
+ggplot(tokens_clusters, aes(x = reorder_within(term, tf_idf, kmeans_cluster), y = tf_idf, fill = factor(kmeans_cluster))) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  facet_wrap(~ kmeans_cluster, scales = "free") +
+  theme_minimal() +
+  tidytext::scale_x_reordered() +
+  see::scale_fill_oi() +
+  labs(title = "Top Distinctive Words per Centroid (Relative Similarity)", x = "Word", y = "Relative Similarity")
 
 # closest words 
 kmeans_centroids <- kmeans_result$centers
@@ -190,7 +202,7 @@ similarity_dt$centroid <- 1:nrow(similarities)
 # Reshape to long format for easy sorting
 similarity_long <- melt(similarity_dt, id.vars = "centroid", variable.name = "word", value.name = "similarity")
 similarity_long[, total_similarity := sum(similarity), by = word]
-top_n_words <- similarity_long[, .SD[order(-similarity)][1:100], by = centroid]
+top_n_words <- similarity_long[, .SD[order(-similarity)][1:500], by = centroid]
 
 # Calculate relative similarity
 top_n_words[, relative_similarity := similarity / total_similarity]
