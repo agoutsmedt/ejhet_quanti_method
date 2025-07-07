@@ -37,6 +37,18 @@ layout_fa2_javaV3 <- function(tbl=tbl,niter=3000, barneshut="true", path = here(
 }
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+#### Parameters ####
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+
+time_window_var <- 10
+length_cl_var <- 2
+share_cl_max_var <- 0.05
+year_high <- 2014
+year_low <- 1970
+rationality_score_filter <- 0.05
+rationality_prop_filter <- 0.25
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 #### Introduction ####
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
@@ -45,13 +57,17 @@ matching <- readRDS(here(data_path, "final_match.RDS"))
 
 # Similarity scores
 rationality_score <- readRDS(here(data_path, "rationality_similarity_scores.RDS"))
-rationality_score[,sum:=sum(similarity), doc_id]
+
+mean_three_pages <- rationality_score[order(jstor_id,-similarity)][, head(.SD, 3), by = jstor_id]
+mean_three_pages[,mean_3_p:=mean(similarity), jstor_id]
+mean_three_pages <- mean_three_pages[,.N,.(jstor_id,mean_3_p)]
 
 # wos
 wos_art <- arrow::read_parquet(here(general_data_path,"all_art.parquet"), arrow.unsafe_metadata = TRUE)
 journal_wos <- fread(here(general_data_path,"all_journals.csv"))
 wos_aut <- readRDS(here(general_data_path, "all_aut.RDS"))
 wos_refs <- arrow::read_parquet(here(general_data_path,"all_ref.parquet"), arrow.unsafe_metadata = TRUE)
+refs_info <- copy(wos_art)
 
 # Add variables
 wos_art <- merge(wos_art, wos_aut[Ordre==1, .(Nom, ID_Art)], by = "ID_Art", all.x = TRUE)
@@ -60,24 +76,16 @@ wos_art$name_short <- toupper(wos_art$name_short)
 wos_art <- wos_art[,Label:=paste0(name_short,",",Annee_Bibliographique)]
 wos_art[, c("name_short"):=NULL]
 
-wos_refs[,aut_date:=paste0(Nom,", ",Annee)]
-
 # Filtering
-ids_rationality<- matching[id_jstor %in% rationality_score[sum>=0.5]$jstor_id]
+# ids_rationality <- matching[id_jstor %in% rationality_score[sum>=0.5]$jstor_id]
+ids_jstor <- mean_three_pages %>% slice_max(mean_3_p, prop = rationality_prop_filter) 
+ids_rationality <- matching[id_jstor %in% ids_jstor$jstor_id]
 
-wos_art <- wos_art[Annee_Bibliographique>=1970 & Annee_Bibliographique<=2014]
+wos_art <- wos_art[Annee_Bibliographique>=year_low & Annee_Bibliographique<=year_high]
 wos_art <- wos_art[ID_Art %in% ids_rationality$id_match_final]
 
 wos_refs <- wos_refs[ItemID_Ref!=0]
-wos_refs <- wos_refs[ID_Art %in% ids_rationality$id_match_final]
-
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
-#### Parameters ####
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
-
-time_window_var <- 10
-length_cl_var <- 2
-share_cl_max_var <- 0.05
+wos_refs <- wos_refs[ID_Art %in% wos_art$ID_Art]
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 #### Publications - Coupling ####
@@ -98,12 +106,13 @@ coup_network <- networkflow::build_dynamic_networks(nodes = nodes,
                                                     edges_threshold = 2)
 
 tbl_coup_list <- networkflow::filter_components(coup_network)
+set.seed(1858545)
 tbl_coup_list <- networkflow::add_clusters(tbl_coup_list, clustering_method = "leiden", objective_function = "modularity")
 tbl_coup_list <- networkflow::merge_dynamic_clusters(
   list_graph = tbl_coup_list,
   cluster_id = "cluster_leiden",
   node_id = "ID_Art",
-  threshold_similarity = 0.51,
+  threshold_similarity = 0.501,
   similarity_type = "partial")
 
 # Position
@@ -133,8 +142,8 @@ tbl_coup_list <- lapply(names(tbl_coup_list), function(Year) tbl_coup_list[[past
 names(tbl_coup_list) <- names(list_position)
 
 # Alluvial
-alluv_dt <- networkflow::networks_to_alluv(tbl_coup_list, intertemporal_cluster_column = "dynamic_cluster_leiden", node_key = "ID_Art", summary_cl_stats = TRUE)
-alluv_dt <- networkflow::minimize_crossing_alluvial(alluv_dt, intertemporal_cluster_column = "dynamic_cluster_leiden", node_key = "ID_Art", window_column  = "Window")
+alluv_dt <- networkflow::networks_to_alluv(tbl_coup_list, intertemporal_cluster_column = "dynamic_cluster_leiden", node_id = "ID_Art", summary_cluster_stats = TRUE)
+alluv_dt <- networkflow::minimize_crossing_alluvial(alluv_dt, intertemporal_cluster_column = "dynamic_cluster_leiden", node_id = "ID_Art", window_column  = "window")
 
 # Colors with some filtering based on alluvial
 color <- as.character(paletteer::paletteer_d("ggsci::default_igv")) %>% as.data.table()
@@ -159,15 +168,15 @@ tbl_networks <- lapply(tbl_networks, function(tbl) tbl %>%
 # Alluvial plot (colors and label)
 label_mean <- copy(alluv_dt)
 label_mean[, Label := dynamic_cluster_leiden]
-label_mean <- label_mean[,Window:=round(mean(as.numeric(Window))),dynamic_cluster_leiden][, head(.SD, 1), .(dynamic_cluster_leiden)]
-alluv_dt <- merge(alluv_dt, label_mean[,.(dynamic_cluster_leiden, Window, Label)], by = c("dynamic_cluster_leiden","Window"), all.x = TRUE)
+label_mean <- label_mean[,window:=round(mean(as.numeric(window))),dynamic_cluster_leiden][, head(.SD, 1), .(dynamic_cluster_leiden)]
+alluv_dt <- merge(alluv_dt, label_mean[,.(dynamic_cluster_leiden, window, Label)], by = c("dynamic_cluster_leiden","window"), all.x = TRUE)
 
 alluv_dt <- alluv_dt %>% left_join(main_colors_table) %>% mutate(main_colors = ifelse(is.na(main_colors), "grey", main_colors))
 alluv_dt[main_colors=="grey", Label:=NA]
 
 alluv_dt$dynamic_cluster_leiden <- forcats::fct_reorder(alluv_dt$dynamic_cluster_leiden, alluv_dt$minimize_crossing_order,min, .desc = TRUE)
 
-ggplot(alluv_dt, aes(x = Window, y= y_alluv, stratum = dynamic_cluster_leiden, alluvium = ID_Art, fill = main_colors, label = dynamic_cluster_leiden)) +
+ggplot(alluv_dt, aes(x = window, y= y_alluv, stratum = dynamic_cluster_leiden, alluvium = ID_Art, fill = main_colors, label = dynamic_cluster_leiden)) +
   geom_stratum(alpha =1, size=1/10) +
   geom_flow() +
   theme(legend.position = "none") +
@@ -175,6 +184,13 @@ ggplot(alluv_dt, aes(x = Window, y= y_alluv, stratum = dynamic_cluster_leiden, a
   scale_fill_identity() +
   ggtitle("") +
   ggrepel::geom_label_repel(stat = "stratum", size = 6, aes(label = Label)) 
+
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+#### 6 tf-idf ####
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+tf_idf <- copy(tbl_networks)
+tf_idf <- networkflow::extract_tfidf(tf_idf, "Titre", "dynamic_cluster_leiden", grouping_across_list = FALSE, clean_word_method = "lemmatize", nb_terms = 20)
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 #### AI name cluster ####
@@ -184,52 +200,54 @@ cluster_list <- alluv_dt[share_cluster_alluv>=0.1,.N,dynamic_cluster_leiden][,dy
 list_clusters_ai_names <- list()
 counter <- 0
 for (cl in cluster_list) {
-art <- alluv_dt[dynamic_cluster_leiden==cl]
+  art <- alluv_dt[dynamic_cluster_leiden==cl]
+  
+  top_20_refs <- wos_refs[ID_Art %in% art$ID_Art][,.N,.(ItemID_Ref)][order(-N)][1:40]
+  top_20_refs <- merge(top_20_refs, refs_info [,.(ItemID_Ref,Titre)], by = "ItemID_Ref", all.x = TRUE)
+  
+  top_20_authors <- wos_aut[ID_Art %in% art$ID_Art]
+  top_20_authors <- top_20_authors[,.N,Nom][order(-N)][1:20]
 
-top_20_refs <- wos_refs[ID_Art %in% art$ID_Art][,.N,ItemID_Ref][order(-N)][1:20]
-top_20_refs <- wos_refs[ItemID_Ref %in% top_20_refs$ItemID_Ref][,.N, .(aut_date, ItemID_Ref)][order(-N)]
-top_20_refs <- merge(top_20_refs, wos_art[,.(ItemID_Ref,Titre)], by = "ItemID_Ref", all.x = TRUE)
-
-top_20_authors <- wos_aut[ID_Art %in% art$ID_Art]
-top_20_authors <- top_20_authors[,.N,Nom][order(-N)][1:20]
-
-
-DT <- data.table(top_20_references = top_20_refs$aut_date,
-                 top_20_references_title = top_20_refs$Titre,
-                 top_20_authors = top_20_authors$Nom)
-
-txt <- generate("llama3.1", 
-                paste0("Here is a cluster or scientific articles in economics made using bibliographic coupling. 
+  top_20_tfidf <- tf_idf[dynamic_cluster_leiden==cl]
+  top_20_tfidf <- top_20_tfidf[order(-tf_idf)][1:20]
+  
+  DT <- data.table(top_20_references_title = top_20_refs[order(-N)]$Titre,
+                   top_20_authors = top_20_authors$Nom,
+                   top_20_tfidf = top_20_tfidf$term)
+  
+  txt <- ollamar::generate("llama3.1", 
+                  paste0("Here is a cluster or scientific articles in economics made using bibliographic coupling. 
                        You can find in the following text the top 20 most common references in the cluster, their title when available, and the 20 most prolific authors in the cluster.
                        Using this information to name cluster using no more than 5 words. 
                        Your output should start with the name of the cluster followed by a full stop.
                        Your output should only be the name of the cluster, nothing else. I insist: output only the name of the cluster. 
                        Here is the data: ",
-                       toJSON(DT, pretty=TRUE)), 
-                output = "text")
-
-list_clusters_ai_names[[as.character(cl)]] <- txt
-
-counter <- counter + 1
-print(paste0("cluster ", counter, " out of ", length(cluster_list)))
-
+                         toJSON(DT, pretty=TRUE)), 
+                  output = "text")
+  
+  list_clusters_ai_names[[as.character(cl)]] <- txt
+  
+  counter <- counter + 1
+  print(paste0("cluster ", counter, " out of ", length(cluster_list)))
+  
 }
 
-test <- data.table(
+names_ai <- data.table(
   id_col = names(list_clusters_ai_names),
   value_col = unlist(list_clusters_ai_names, use.names = FALSE) # use.names = FALSE to avoid issues if names had patterns
 )
 
-alluv_named <- merge(alluv_dt, test, by.x = "Label", by.y = "id_col", all.x = TRUE)
-
-ggplot(alluv_named, aes(x = Window, y= y_alluv, stratum = dynamic_cluster_leiden, alluvium = ID_Art, fill = main_colors, label = dynamic_cluster_leiden)) +
-  geom_stratum(alpha =1, size=1/10) +
-  geom_flow() +
-  theme(legend.position = "none") +
-  theme_minimal() +
-  scale_fill_identity() +
-  ggtitle("") +
-  ggrepel::geom_label_repel(stat = "stratum", size = 6, aes(label = value_col)) 
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+#### 8 Saving ####
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+saveRDS(tf_idf, here(data_path,"Networks", 
+                     paste("tf_idf", year_low, year_high,time_window_var,"year_windows",rationality_prop_filter,"rationality_score.RDS", sep= "_")))
+saveRDS(alluv_dt, here(data_path,"Networks", 
+                       paste("alluv", year_low, year_high,time_window_var,"year_windows",rationality_prop_filter,"rationality_score.RDS", sep= "_")))
+saveRDS(tbl_networks, here(data_path,"Networks", 
+                            paste("networks", year_low, year_high,time_window_var,"year_windows",rationality_prop_filter,"rationality_score.RDS", sep= "_")))
+saveRDS(names_ai, here(data_path,"Networks", 
+                           paste("label_ai", year_low, year_high,time_window_var,"year_windows",rationality_prop_filter,"rationality_score.RDS", sep= "_")))
 
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#

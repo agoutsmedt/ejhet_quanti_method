@@ -38,7 +38,6 @@ extract_windows_df <- function(text, target_word, window_size = 128) {
 # -------------------- Setup --------------------
 
 con <- DBI::dbConnect(RSQLite::SQLite(), file.path(jstor_raw_data, "jstor_journals.sqlite"))
-
 text_db <- tbl(con, "text_cleaned")
 
 target_word <- "\\b(irrational|rational)\\w*\\b"
