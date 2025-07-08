@@ -7,17 +7,14 @@ import pyarrow.feather as feather
 import paths
 import gc
 
-from sklearn.metrics.pairwise import cosine_similarity
+from tqdm import tqdm
 
+from sklearn.metrics.pairwise import cosine_similarity
 
 # --------------------------- LOAD DATA  --------------------------- #
 
 JSTOR_RAW_DATA_PATH = paths.jstor_raw_data
-
-
 EMBEDDINGS_FOLDER = os.path.join(JSTOR_RAW_DATA_PATH, "sentences_embeddings")
-
-# Where your feather files are stored
 pattern = os.path.join(EMBEDDINGS_FOLDER, "sentence_embeddings_*.feather")
 all_files = glob.glob(pattern)
 
@@ -27,61 +24,80 @@ all_years = sorted([
     for f in all_files
 ])
 
+# --- nouveau paramètre : fenêtre réduite à ±2 ans
+WINDOW_SIZE = 2  # donc année -2 à année +2
 
+
+
+# Remove noisy decades
 decades = sorted(set(y - y % 10 for y in all_years))
-
-# delete 1890, the first decade
-decades = [d for d in decades if d >= 1900]
 
 records = []
 
-# select two decades to test
+for year in tqdm(all_years, desc="Processing years"):
+    file_path = os.path.join(EMBEDDINGS_FOLDER, f"sentence_embeddings_{year}.feather")
+    df = feather.read_feather(file_path)
+    df["embedding"] = df["embedding"].apply(np.array)
 
-for decade in decades:
+    matched_vectors = df.loc[
+        df["sentence"].str.contains(r"\brational(?:ity)?\b", case=False, regex=True),
+        "embedding"
+    ].tolist()
+
+    del df
+    gc.collect()
+
+    if not matched_vectors:
+        continue
+
+    avg_year = np.mean(matched_vectors, axis=0)
+    decade = year - (year % 10)
     
-    decade_years = list(range(decade, decade + 10))
-    matched_vectors = []
+    # -- fenêtre centrée réduite
+    window_years = [y for y in range(year - WINDOW_SIZE, year + WINDOW_SIZE + 1) if y in all_years]
+    window_vectors = []
+
+    for wy in window_years:
+        wy_path = os.path.join(EMBEDDINGS_FOLDER, f"sentence_embeddings_{wy}.feather")
+        df_wy = feather.read_feather(wy_path)
+        df_wy["embedding"] = df_wy["embedding"].apply(np.array)
+
+        window_vectors.extend(df_wy.loc[
+            df_wy["sentence"].str.contains(r"\brational(?:ity)?\b", case=False, regex=True),
+            "embedding"
+        ])
+
+        del df_wy
+        gc.collect()
+
+    avg_centered = np.mean(window_vectors, axis=0) if window_vectors else np.nan
+
+    records.append({
+        "year": year,
+        "decade": decade,
+        "embedding_by_year": avg_year,
+        "embedding_by_decade": None,  # rempli plus tard
+        "embedding_by_year_centered": avg_centered
+    })
+
+    del matched_vectors, window_vectors, avg_year, avg_centered
+    gc.collect()
     
-    print(f"Processing {decade}s...")
     
-    # Filter files for the current decade
-    decade_files = [f for f in all_files if any(str(year) in f for year in decade_years)]
-    
-    for file in decade_files:
-       
-        df = feather.read_feather(file)
 
-        # Ensure embedding is numpy array 
-        df["embedding"] = df["embedding"].apply(np.array)
+# Convertir en DataFrame
+df_all = pd.DataFrame(records)
 
-        # Filter by keyword
-        matched_vectors.extend(df.loc[df["sentence"].str.contains(r"\brational(?:ity)?\b", case=False, regex=True), "embedding"])
+# Calculer les vecteurs moyens par décennie
+decade_groups = df_all.groupby("decade")["embedding_by_year"].apply(lambda x: np.mean(np.stack(x), axis=0))
 
-    if matched_vectors:
-        avg_vector = np.mean(matched_vectors, axis=0)
-        
-        records.append({
-            "decade": decade,
-            "embedding": avg_vector
-        })
-        
-        print(f"✅ {decade}s — {len(matched_vectors)} matches")
-    else:
-        print(f"⚠️ {decade}s — no matches")
+# Injecter dans la colonne `embedding_by_decade`
+df_all["embedding_by_decade"] = df_all["decade"].map(decade_groups)
 
+# Sauvegarde
+output_file = os.path.join(JSTOR_RAW_DATA_PATH, "representative_embeddings.feather")
+df_all.to_feather(output_file)
 
-# Create result DataFrame
-df_decade_embeddings = pd.DataFrame(records)
-
-# Save 
-OUTPUT_FILE = os.path.join(JSTOR_RAW_DATA_PATH, "representative_embeddings_by_decade.feather")
-df_decade_embeddings.to_feather(OUTPUT_FILE)
-
-# --------------------------- COMPUTE REPRESENTATIVE VECTORS --------------------------- #
-
-# load
-
-df_decade_embeddings = pd.read_feather(OUTPUT_FILE)
 
 # Evaluate representative vector by computing cosine similarity 
 
