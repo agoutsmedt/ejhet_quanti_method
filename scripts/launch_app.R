@@ -1,9 +1,11 @@
 # LOADING DATA AND LIBRARIES----------------------
 source(file.path("scripts", "paths_and_packages.R"))
+source(file.path("scripts", "_functions.R"))
+p_load(shiny,
+       shinycssloaders)
 
-graphs <- readRDS(here::here(jstor_raw_data, "networks_1970_2014_10_year_windows_0.15_rationality_score.RDS"))
-labels <- readRDS(here::here(jstor_raw_data, "label_ai_1970_2014_10_year_windows_0.15_rationality_score.RDS"))
-
+graphs <- readRDS(here::here(data_path, "networks_1970_2014_10_year_windows_0.15_rationality_score.RDS"))
+labels <- readRDS(here::here(data_path, "label_ai_1970_2014_10_year_windows_0.15_rationality_score.RDS"))
 
 # add labels to the list of graphs
 
@@ -22,7 +24,6 @@ graphs <- lapply(graphs, function(graph) {
   return(graph)
 })
 
-
 launch_network_app(
     graph_tbl = graphs, 
     cluster_id = "value_col", 
@@ -34,5 +35,4 @@ launch_network_app(
     color = "color",
     layout = NULL # already layouted
 )
-
 
