@@ -42,11 +42,36 @@ source(here::here("scripts", "paths_and_packages.R"))
 
 # Introduction
 
-# Languages models and their applications for the history of economic thought 
+# Literature review on the history of rationality
 
-# Literature review on rationality
+# The use of quantitative methods in the history of economic thought
+
+## What can we see with quantitative methods?
+
+- Mapping economic research
+- Identifying the timing of evolutions and trends
+- Tracing influences and heritages
+
+## General principles for quantitative methods
+
+- Crossing methods
+- Interpretation of results: interaction qualitative reading with quantitative results
+
+# Corpus and Methods
+
+## Building a double corpus
+
+## Textual methods
+
+## Bibliometric Methods
 
 # Results 
+
+## Textual methods
+
+## Bibliometric Methods
+
+# Discussion
 
 # Appendix
 
