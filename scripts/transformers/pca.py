@@ -25,18 +25,18 @@ econ_matrix = np.vstack(econbert_vectors['bert_embedding_concat'])
 # ------------------------- PCA --------------------------- #
 
 # Fit PCA on each model separately
-pca_basic = PCA(n_components=2)
+pca_basic = PCA(n_components=3)
 basic_pca_result = pca_basic.fit_transform(basic_matrix)
 
-pca_econ = PCA(n_components=2)
+pca_econ = PCA(n_components=3)
 econ_pca_result = pca_econ.fit_transform(econ_matrix)
 
 # Attach to dataframes
-basic_bert_vectors['pca_1'] = basic_pca_result[:, 0]
-basic_bert_vectors['pca_2'] = basic_pca_result[:, 1]
+basic_bert_vectors['pca_1'] = basic_pca_result[:, 1]
+basic_bert_vectors['pca_2'] = basic_pca_result[:, 2]
 
-econbert_vectors['pca_1'] = econ_pca_result[:, 0]
-econbert_vectors['pca_2'] = econ_pca_result[:, 1]
+econbert_vectors['pca_1'] = econ_pca_result[:, 1]
+econbert_vectors['pca_2'] = econ_pca_result[:, 2]
 
 # For BERT base
 explained_variance_basic = pca_basic.explained_variance_ratio_

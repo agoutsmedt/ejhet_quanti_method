@@ -20,7 +20,7 @@ n_cores <- floor(parallel::detectCores() /2)
 registerDoParallel(cores = n_cores)
 
 ## Bert rational paragraph loading--------------------
-bert_df <- read_feather(here::here(jstor_raw_data, "embeddings_bert-base-uncased.feather")) %>% 
+bert_df <- read_feather(here::here(data_path, "embeddings_bert-base-uncased.feather")) %>% 
   mutate(doc_id = str_c(id, "_", paragraph_id)) %>% 
   arrange(doc_id)  
 

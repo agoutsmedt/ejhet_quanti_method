@@ -46,7 +46,7 @@ share_cl_max_var <- 0.05
 year_high <- 2014
 year_low <- 1970
 rationality_score_filter <- 0.05
-rationality_prop_filter <- 0.25
+rationality_prop_filter <- 0.15
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 #### Introduction ####
@@ -105,7 +105,9 @@ coup_network <- networkflow::build_dynamic_networks(nodes = nodes,
                                                     compute_size = TRUE,
                                                     edges_threshold = 2)
 
+coup_network <- lapply(coup_network, function(tbl)(tbl %>% activate(nodes) %>% left_join(journal_wos, by = "Code_Revue")))
 tbl_coup_list <- networkflow::filter_components(coup_network)
+
 set.seed(1858545)
 tbl_coup_list <- networkflow::add_clusters(tbl_coup_list, clustering_method = "leiden", objective_function = "modularity")
 tbl_coup_list <- networkflow::merge_dynamic_clusters(
