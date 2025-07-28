@@ -65,7 +65,7 @@ tokens_count[, idf := log(total_docs / df)]
 tokens_count[, tf_idf := tf * idf]
 
 # Get top 4 tf-idf tokens per cluster
-labels_dt <- tokens_count[order(-tf_idf)][absolute_tf > 15, head(.SD, 4), by = new_cluster][, .(new_cluster, token)]
+labels_dt <- tokens_count[order(-tf_idf)][absolute_tf > 15, head(.SD, 5), by = new_cluster][, .(new_cluster, token)]
 labels_dt <- labels_dt[, .(label = paste(token, collapse = ", ")), by = new_cluster]
 
 bert_df <- merge(bert_df, labels_dt, all.x = TRUE, by = "new_cluster")
@@ -117,6 +117,47 @@ areas_cluster <- ggplot(bert_df, aes(x = publication_year, y = after_stat(count)
   theme(legend.position = "bottom") +
   scale_fill_see() 
 plotly::ggplotly(areas_cluster)
+
+# 2. Alluvial plot showing cluster persistence
+all_clusters <- levels(factor(bert_df$label)) %>% sample()
+# Preview the default 'see' palette to get the colors
+palette_colors <- c(see::see_colors(), see::oi_colors())  # Example for the see_d palette
+# If you use another palette, replace accordingly
+# Let's say you use 8 clusters and 8 colors from the palette
+cluster_colors <- palette_colors[1:length(all_clusters)]
+names(cluster_colors) <- all_clusters
+
+label_alluvial <- bert_df %>% 
+  distinct(label, time_window) %>% 
+  mutate(first_year = str_extract(time_window, "\\d{4}") %>% as.integer()) %>% 
+  mutate(label_alluvial = first_year == min(first_year), .by = label) %>%
+  filter(label_alluvial == TRUE) %>%
+  distinct(label, time_window) %>%
+  mutate(label_alluvial = label)
+
+bert_df %>%
+  left_join(label_alluvial) %>% 
+  count(time_window, label, label_alluvial) %>% 
+  mutate(percent = n / sum(n), .by = time_window) %>%
+  mutate(label = factor(label, levels= all_clusters)) %>% 
+  ggplot(aes(x = time_window, y = percent, stratum = label, alluvium = label,
+             fill = label, label = str_wrap(label_alluvial, 25))) +
+  geom_flow(alpha = 0.8) +
+  geom_stratum(alpha = 0.8) +
+  geom_text(stat = "stratum", size = 3) +
+  labs(title = "Cluster Persistence Across Time Windows",
+       x = "Time Period",
+       y = "Percentage of Documents",
+       fill = "Intertemporal Cluster") +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  scale_fill_manual(values = cluster_colors)  # HARD color lock
+
+ggsave(file.path("pictures", "intertemporal_clusters_alluvial.png"),
+       units = "cm",
+       width = 40,
+       height = 30,
+       dpi = 300)
 
 # Top Journals----------
 # Join journal info with cluster assignments
