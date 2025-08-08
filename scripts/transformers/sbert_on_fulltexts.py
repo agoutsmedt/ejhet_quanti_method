@@ -23,7 +23,8 @@ RDS_META_FILE = os.path.join(JSTOR_RAW_DATA_PATH, "full_metadata_journals_cleane
 SQLITE_FILE = os.path.join(JSTOR_RAW_DATA_PATH, "jstor_journals.sqlite")
 OUTPUT_DIR = os.path.join(JSTOR_RAW_DATA_PATH, "sentences_embeddings")
 
-SENTENCE_BERT_MODEL = "all-MiniLM-L6-v2"
+# SENTENCE_BERT_MODEL = "all-MiniLM-L6-v2"
+SENTENCE_BERT_MODEL = "all-mpnet-base-v2"
 BATCH_SIZE = 32
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)

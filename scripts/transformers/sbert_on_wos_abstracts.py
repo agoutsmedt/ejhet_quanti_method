@@ -19,7 +19,9 @@ AB_DIR = os.path.join(JSTOR_RAW_DATA_PATH, "abstract_wos", "abstract_use_this_on
 AB_INFO_DIR = os.path.join(JSTOR_RAW_DATA_PATH, "abstract_wos", "all_art.parquet")
 OUTPUT_DIR = os.path.join(JSTOR_RAW_DATA_PATH, "abstract_wos", "sentences_embeddings")
 
-SENTENCE_BERT_MODEL = "all-MiniLM-L6-v2"
+# SENTENCE_BERT_MODEL = "all-MiniLM-L6-v2"
+SENTENCE_BERT_MODEL = "all-mpnet-base-v2"
+
 BATCH_SIZE = 32
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -39,7 +41,7 @@ del abstracts_info
 
 # filter revue nan  
 abstracts = abstracts[~abstracts["Revue"].isna()]
-abstracts = abstracts[abstracts["text"].notna()]
+abstracts = abstracts[abstracts["Abstract"].notna()]
 
 # filter non economic abstracts 
 abstracts = abstracts[abstracts["Code_Discipline"] == 119]

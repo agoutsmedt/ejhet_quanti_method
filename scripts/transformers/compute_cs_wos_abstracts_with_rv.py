@@ -18,6 +18,7 @@ EMBEDDINGS_FOLDER = os.path.join(JSTOR_RAW_DATA_PATH, "abstract_wos", "sentences
 pattern = os.path.join(EMBEDDINGS_FOLDER, "sentence_embeddings_*.feather")
 all_files = glob.glob(pattern)
 
+
 # load representative vectors
 R_VECTORS_FILE = os.path.join(JSTOR_RAW_DATA_PATH, "representative_vectors.feather")
 df_rep = feather.read_feather(R_VECTORS_FILE)
@@ -44,12 +45,10 @@ for file in tqdm(all_files):
 
 # --------------------------- COMPUTE PROXIMITY TO REPRESENTATIVE VECTORS --------------------------- #
 
-R_VECTORS_FILE = os.path.join(JSTOR_RAW_DATA_PATH, "representative_embeddings.feather")
-df_rep = feather.read_feather(R_VECTORS_FILE)
-
-# create columns to join 
-df_average_vectors_by_id["year"] = df_average_vectors_by_id["publication_year"]
-df_average_vectors_by_id["decade"] = (df_average_vectors_by_id["publication_year"] // 10) * 10
+# rename and create columns to join 
+df_average_vectors_by_id = pd.concat(df_average_vectors_by_id, ignore_index=True)
+df_average_vectors_by_id = df_average_vectors_by_id.rename(columns={"publication_year": "year"})
+df_average_vectors_by_id["decade"] = (df_average_vectors_by_id["year"] // 10) * 10
 
 # Merge embeddings by year
 df_merged = df_average_vectors_by_id.merge(
