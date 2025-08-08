@@ -56,8 +56,13 @@ if(str_detect(getwd(), "goutsmed")){
 
 image_path <- here::here("paper", "images")
 
-
 print(paste("The path for data is", data_path))
 
 # increasing parallelization for data.table
 setDTthreads(percent = 20)
+
+# load functions file
+
+source(here::here("scripts", "_functions.R"))
+
+
