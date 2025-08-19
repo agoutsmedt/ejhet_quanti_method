@@ -1,10 +1,11 @@
 # LOADING DATA AND LIBRARIES----------------------
 source(file.path("scripts", "_functions.R"))
+source(file.path("scripts", "paths_and_packages.R"))
 
 pacman::p_load(shiny, shinycssloaders)
 
-graphs <- readRDS(here::here(data_path, "networks_1970_2014_10_year_windows_0.15_rationality_score.RDS"))
-labels <- readRDS(here::here(data_path, "label_ai_1970_2014_10_year_windows_0.15_rationality_score.RDS"))
+graphs <- readRDS(here::here(data_path, "networks_1970_2014_10_year_windows_0.1_rationality_score.RDS"))
+labels <- readRDS(here::here(data_path, "label_ai_1970_2014_10_year_windows_0.1_rationality_score.RDS"))
 
 # rationality_score_original <- read_feather(here::here(data_path, "similarities_by_document.feather")) %>% 
 #   as.data.table()
@@ -26,6 +27,7 @@ graphs <- lapply(graphs, function(graph) {
     
   return(graph)
 })
+
 
 # # Similarity scores
 # rationality_score_original[,id:=paste0("http://www.jstor.org/stable/", id)]

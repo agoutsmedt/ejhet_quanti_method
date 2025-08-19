@@ -91,7 +91,8 @@ launch_network_app <- function(
         shiny::sliderInput("min_edge_width", "Min Edge Width:", min = 0.01, max = 10, value = 0.01, step = 0.01),
         shiny::sliderInput("max_edge_width", "Max Edge Width:", min = 0.01, max = 10, value = 1, step = 0.01),
         shiny::sliderInput("min_node_size", "Min Node Size:", min = 0.1, max = 10, value = 0.5, step = 0.01),
-        shiny::sliderInput("max_node_size", "Max Node Size:", min = 0.1, max = 10, value = 2, step = 0.01)
+        shiny::sliderInput("max_node_size", "Max Node Size:", min = 0.1, max = 10, value = 2, step = 0.01),
+        shiny::sliderInput("label_size", "Label size", min = 0.5, max = 5, value = 2, step = 0.1)
       ),
       mainPanel = shiny::mainPanel(
         shiny::div(
@@ -174,7 +175,9 @@ launch_network_app <- function(
       
       edge_width_range <- c(input$min_edge_width, input$max_edge_width)
       node_size_range  <- c(input$min_node_size, input$max_node_size)
-      
+      label_size <- input$label_size
+
+
       g <- ggraph::ggraph(g_tbl, layout = "manual", x = x, y = y) +
         ggraph::geom_edge_arc0(
           ggplot2::aes(color = !!color_sym, width = weight),
@@ -187,7 +190,8 @@ launch_network_app <- function(
         ggiraph::geom_label_repel_interactive(
           data = label_data,
           mapping = do.call(ggplot2::aes, label_aes),
-          alpha = 0.9, size = 2, fontface = "bold", show.legend = FALSE
+          alpha = 0.9, fontface = "bold", show.legend = FALSE,
+          size = label_size,
         ) +
         ggraph::scale_edge_width_continuous(range = edge_width_range) +
         ggplot2::scale_size_continuous(range = node_size_range) +
