@@ -1,3 +1,72 @@
+#' Compute Term Frequency-Inverse Document Frequency (TF-IDF)
+#'
+#' This function computes the Term Frequency (TF), Inverse Document Frequency (IDF),
+#' and TF-IDF score for tokens within documents in a data.table.
+#'
+#' @param dt A `data.table` containing at least two columns: one for tokens (e.g., words)
+#' and one for documents (e.g., time windows, article IDs, etc.).
+#' @param token_col A string indicating the name of the column containing tokens. Default is `"token"`.
+#' @param document_col A string indicating the name of the column containing document identifiers. Default is `"document"`.
+#'
+#' @return A `data.table` with one row per unique token-document pair, including the following columns:
+#' \describe{
+#'   \item{absolute_tf}{Total frequency of each token across all documents.}
+#'   \item{nb_word}{Total number of tokens in each document.}
+#'   \item{tf}{Term frequency of each token within each document.}
+#'   \item{df}{Document frequency — the number of documents in which each token appears.}
+#'   \item{idf}{Inverse document frequency: \code{log(total_docs / df)}.}
+#'   \item{tf_idf}{TF-IDF score: \code{tf * idf}.}
+#' }
+#'
+#' @examples
+#' library(data.table)
+#' dt <- data.table(doc = c(1, 1, 2, 2, 2, 3), word = c("apple", "banana", "apple", "apple", "kiwi", "banana"))
+#' result <- compute_tf_idf(dt, token_col = "word", document_col = "doc")
+#' print(result)
+#'
+#' @import data.table
+#' @export
+compute_tf_idf <- function(dt, token_col = "token", document_col = "document") {
+  
+  # Make a copy to avoid modifying in-place
+  dt <- copy(dt)
+  
+  # Convert column names to symbols
+  token_sym <- as.name(token_col)
+  time_sym <- as.name(document_col)
+  
+  # Standardize names temporarily for easier handling
+  setnames(dt, c(document_col, token_col), c("document", "token"))
+  
+  # Calculate absolute term frequency
+  dt[, absolute_tf := .N, by = token]
+  dt[, nb_word := .N, by = document]
+  dt[, tf := .N / nb_word, by = .(document, token)]
+  
+  # Make unique for TF-IDF calculation
+  tokens_count <- unique(dt)
+  
+  # TF table
+  tf_dt <- dt[, .N, by = .(document, token)]
+  setnames(tf_dt, "N", "tf")
+  
+  # DF table
+  df_dt <- tokens_count[, .N, by = token]
+  setnames(df_dt, "N", "df")
+  
+  # Merge and compute IDF and TF-IDF
+  total_docs <- uniqueN(tokens_count$document)
+  tokens_count <- merge(tokens_count, df_dt, by = "token", all.x = TRUE)
+  tokens_count[, idf := log(total_docs / df)]
+  tokens_count[, tf_idf := tf * idf]
+  
+  # Rename back to original column names
+  setnames(tokens_count, c("document", "token"), c(document_col, token_col))
+  
+  return(tokens_count[])
+}
+
+
 #' Launch an Interactive Shiny App to Explore Network Graphs
 #'
 #' @description

@@ -44,9 +44,9 @@ time_window_var <- 10
 length_cl_var <- 2
 share_cl_max_var <- 0.05
 year_high <- 2014
-year_low <- 1970
+year_low <- 1960
 rationality_score_filter <- 0.05
-rationality_prop_filter <- 0.15
+rationality_prop_filter <- 0.10
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 #### Introduction ####
@@ -56,11 +56,23 @@ rationality_prop_filter <- 0.15
 matching <- readRDS(here(data_path, "final_match.RDS"))
 
 # Similarity scores
-rationality_score <- readRDS(here(data_path, "rationality_similarity_scores.RDS"))
+# rationality_score <- readRDS(here(data_path, "rationality_similarity_scores.RDS"))
 
-mean_three_pages <- rationality_score[order(jstor_id,-similarity)][, head(.SD, 3), by = jstor_id]
-mean_three_pages[,mean_3_p:=mean(similarity), jstor_id]
-mean_three_pages <- mean_three_pages[,.N,.(jstor_id,mean_3_p)]
+# rationality_score_original <- arrow::read_feather(here(data_path, "similarities_by_document.feather")) %>% as.data.table()
+rationality_score_original <- arrow::read_feather(here(data_path, "similarities_fulltexts.feather")) %>% as.data.table()
+rationality_score_original[,id:=paste0("http://www.jstor.org/stable/", id)]
+rationality_score <- rationality_score_original %>% rename(jstor_id = id, similarity = cosine_sim_centered) %>% select(jstor_id, similarity) %>% unique()
+
+filter_mean_score_ids <- rationality_score %>% slice_max(similarity, prop = rationality_prop_filter) %>% .[[1]]
+
+# mean_three_pages <- rationality_score[order(jstor_id,-similarity)][, head(.SD, 3), by = jstor_id]
+# mean_three_pages[,mean_3_p:=mean(similarity), jstor_id]
+# mean_three_pages <- mean_three_pages[,.N,.(jstor_id,mean_3_p)]
+
+before <- ggplot(rationality_score_original, aes(x=publication_year)) + 
+  geom_histogram(color="black")
+after <- ggplot(rationality_score_original %>% slice_max(cosine_similarity, prop = rationality_prop_filter), aes(x=publication_year)) + 
+  geom_histogram(color="black")
 
 # wos
 wos_art <- arrow::read_parquet(here(general_data_path,"all_art.parquet"), arrow.unsafe_metadata = TRUE)
@@ -77,12 +89,19 @@ wos_art <- wos_art[,Label:=paste0(name_short,",",Annee_Bibliographique)]
 wos_art[, c("name_short"):=NULL]
 
 # Filtering
-# ids_rationality <- matching[id_jstor %in% rationality_score[sum>=0.5]$jstor_id]
-ids_jstor <- mean_three_pages %>% slice_max(mean_3_p, prop = rationality_prop_filter) 
-ids_rationality <- matching[id_jstor %in% ids_jstor$jstor_id]
+ids_rationality <- matching[id_jstor %in% filter_mean_score_ids]
+
+rationality_score_abstract <- arrow::read_feather(here(data_path, "similarities_wos_abstracts.feather")) %>% as.data.table()
+ids_rationality_abstract <- rationality_score_abstract %>% slice_max(cosine_sim_centered, prop = rationality_prop_filter) %>% .[[1]]
+
+ids_rationality <- append(ids_rationality$id_match_final, ids_rationality_abstract)
+ids_rationality <- ids_rationality %>% na.omit() %>% unique()
+
+# ids_jstor <- mean_three_pages %>% slice_max(mean_3_p, prop = rationality_prop_filter) 
+# ids_rationality <- matching[id_jstor %in% ids_jstor$jstor_id]
 
 wos_art <- wos_art[Annee_Bibliographique>=year_low & Annee_Bibliographique<=year_high]
-wos_art <- wos_art[ID_Art %in% ids_rationality$id_match_final]
+wos_art <- wos_art[ID_Art %in% ids_rationality]
 
 wos_refs <- wos_refs[ItemID_Ref!=0]
 wos_refs <- wos_refs[ID_Art %in% wos_art$ID_Art]
@@ -165,7 +184,7 @@ tbl_networks <- lapply(tbl_coup_list, function(tbl) tbl %N>% left_join(main_colo
 tbl_networks <- lapply(tbl_networks, function(tbl) tbl %>% 
                          activate(edges) %>%
                          mutate(com_ID_to = .N()$main_colors[to], com_ID_from = .N()$main_colors[from]) %>%
-                         mutate(color_edges = MixColor(com_ID_to, com_ID_from, amount1 = 0.5)))
+                         mutate(color_edges = DescTools::MixColor(com_ID_to, com_ID_from, amount1 = 0.5)))
 
 # Alluvial plot (colors and label)
 label_mean <- copy(alluv_dt)
@@ -217,7 +236,7 @@ for (cl in cluster_list) {
                    top_20_authors = top_20_authors$Nom,
                    top_20_tfidf = top_20_tfidf$term)
   
-  txt <- ollamar::generate("llama3.1", 
+  txt <- ollamar::generate("gemma3:27b", 
                   paste0("Here is a cluster or scientific articles in economics made using bibliographic coupling. 
                        You can find in the following text the top 20 most common references in the cluster, their title when available, and the 20 most prolific authors in the cluster.
                        Using this information to name cluster using no more than 5 words. 
@@ -255,34 +274,18 @@ saveRDS(names_ai, here(data_path,"Networks",
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 #### Networks ####
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+names_ai <- names_ai %>% rename(dynamic_cluster_leiden=id_col)
+alluv_dt <- merge(alluv_dt, names_ai, by = "dynamic_cluster_leiden", all.x = TRUE)
+alluv_dt[!is.na(value_col), dynamic_cluster_leiden:=value_col]
+alluv_dt[!is.na(Label), Label:=dynamic_cluster_leiden]
+alluv_dt$dynamic_cluster_leiden <- forcats::fct_reorder(alluv_dt$dynamic_cluster_leiden, alluv_dt$minimize_crossing_order, min, .desc = TRUE)
 
-main_labels_table <- data.table(
-  dynamic_cluster_leiden = as.character(alluv_named[main_colors!="grey", .N, dynamic_cluster_leiden][,dynamic_cluster_leiden]))
-
-main_labels_table <- merge(main_labels_table, test, by.x = "dynamic_cluster_leiden", by.y = "id_col", all.x = TRUE)
-main_labels_table <- merge(main_labels_table, alluv_named[,.N, .(dynamic_cluster_leiden, main_colors)], by = "dynamic_cluster_leiden", all.x = TRUE)
-
-tbl_networks <- lapply(tbl_networks, function(tbl)
-  tbl %N>% left_join(main_labels_table)) 
+ggplot(alluv_dt, aes(x = window, y= y_alluv, stratum = dynamic_cluster_leiden, alluvium = ID_Art, fill = main_colors, label = dynamic_cluster_leiden)) +
+  geom_stratum(alpha =1, size=1/10) +
+  geom_flow() +
+  theme_minimal() +
+  theme(legend.position = "none", panel.background = element_rect(fill = 'white', color = NA)) +
+  scale_fill_identity() +
+  ggtitle("") +
+  ggrepel::geom_label_repel(stat = "stratum", size = 2, aes(label = Label)) 
   
-list_ggplot_com <- list()
-for (Year in names(tbl_networks) %>% as.integer) {
-  label_com <- tbl_networks[[paste0(Year)]] %N>% as.data.table()
-  label_com <- label_com[,mean_coord_x:=mean(x), dynamic_cluster_leiden]
-  label_com <- label_com[,mean_coord_y:=mean(y), dynamic_cluster_leiden]
-  label_com <- label_com[main_colors!="grey", head(.SD, 1), dynamic_cluster_leiden]
-  
-  list_ggplot_com[[as.character(Year)]] <- ggraph(filter_components(tbl_networks[[paste0(Year)]]), "manual", x = x, y = y) +
-    geom_edge_arc(aes(color = color_edges, width = weight), alpha = 0.5, strength =0.2) +
-    geom_node_point(aes(fill = main_colors, size = size), pch=21) +
-    scale_edge_width_continuous(range = c(0.5, 1)) +
-    theme_graph() +
-    ggrepel::geom_label_repel(data = label_com, aes(x = mean_coord_x, y = mean_coord_y, label = as.character(value_col), fill = main_colors)) +
-    # geom_node_text(aes(label = nom, size = size^2)) +
-    theme(legend.position = "none") +
-    scale_fill_identity() +
-    scale_edge_colour_identity() +
-    labs(title = paste0(as.character(Year),"-",as.character(Year+time_window_var-1)))
-  # ggsave("Networks/coup_2000.png", width=30, height=20, units = "cm")
-  
-}

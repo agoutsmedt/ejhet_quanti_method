@@ -23,7 +23,9 @@ source(here("scripts", "paths_and_packages.R"))
 matching <- readRDS(here(data_path, "final_match.RDS"))
 
 # Similarity scores
-rationality_score <- readRDS(here(data_path, "rationality_similarity_scores.RDS"))
+rationality_score_original <- arrow::read_feather(here(data_path, "similarities_by_document.feather")) %>% as.data.table()
+rationality_score_original[,id:=paste0("http://www.jstor.org/stable/", id)]
+rationality_score <- rationality_score_original %>% rename(jstor_id = id, similarity = cosine_sim_centered) %>% select(jstor_id, similarity) %>% unique()
 
 # jstor
 jstor_art <- readRDS(here(data_path, "full_metadata_journals.RDS"))
