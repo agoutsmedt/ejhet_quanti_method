@@ -20,6 +20,7 @@ p_load(RSQLite,
        RColorBrewer,
        ggraph,
        ggalluvial,
+       hrbrthemes, # nice themes for ggplot
        igraph,
        tidygraph,
      #  DescTools,
