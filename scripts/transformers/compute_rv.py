@@ -95,7 +95,7 @@ decade_groups = df_all.groupby("decade")["embedding_by_year"].apply(lambda x: np
 df_all["embedding_by_decade"] = df_all["decade"].map(decade_groups)
 
 # Sauvegarde
-output_file = os.path.join(JSTOR_RAW_DATA_PATH, "representative_embeddings.feather")
+output_file = os.path.join(JSTOR_RAW_DATA_PATH, "representative_vectors.feather")
 df_all.to_feather(output_file)
 
 

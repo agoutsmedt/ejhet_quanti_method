@@ -12,12 +12,16 @@ from sklearn.metrics.pairwise import cosine_similarity
 # --------------------------- LOAD DATA  --------------------------- #
 
 JSTOR_RAW_DATA_PATH = paths.jstor_raw_data
-EMBEDDINGS_FOLDER = os.path.join(JSTOR_RAW_DATA_PATH, "sentences_embeddings")
-REF_VECTORS_FILE = os.path.join(JSTOR_RAW_DATA_PATH, "representative_embeddings_by_decade.feather")
 
-# Where your feather files are stored
+# load sentence embeddings of fulltexts
+EMBEDDINGS_FOLDER = os.path.join(JSTOR_RAW_DATA_PATH, "sentences_embeddings")
 pattern = os.path.join(EMBEDDINGS_FOLDER, "sentence_embeddings_*.feather")
 all_files = glob.glob(pattern)
+
+# load representative vectors
+R_VECTORS_FILE = os.path.join(JSTOR_RAW_DATA_PATH, "representative_vectors.feather")
+df_rep = feather.read_feather(R_VECTORS_FILE)
+
 
 # --------------------------- COMPUTE AVERAGE VECTOR FOR EACH DOCUMENT --------------------------- #
 
@@ -37,23 +41,6 @@ for file in tqdm(all_files):
     
     df_average_vectors_by_id.append(df)
 
-
-# concat and save dataframe 
-
-df_average_vectors_by_id = pd.concat(df_average_vectors_by_id, ignore_index=True)
-
-# temp saving
-# df_average_vectors_by_id.to_feather(os.path.join(JSTOR_RAW_DATA_PATH, "average_embedding_by_document.feather"))
-
-
-
-# --------------------------- COMPUTE PROXIMITY TO REPRESENTATIVE VECTORS --------------------------- #
-
-# Load df average vectors
-df_average_vectors_by_id = pd.read_feather(os.path.join(JSTOR_RAW_DATA_PATH, "average_embedding_by_document.feather"))
-
-REP_EMBEDDINGS_FILE = os.path.join(JSTOR_RAW_DATA_PATH, "representative_embeddings.feather")
-df_rep = feather.read_feather(REP_EMBEDDINGS_FILE)
 
 # create columns to join 
 df_average_vectors_by_id["year"] = df_average_vectors_by_id["publication_year"]
@@ -122,5 +109,5 @@ df_merged["cosine_sim_centered"] = similarities_by_centered
 
 
 # Sauvegarde
-output_file = os.path.join(JSTOR_RAW_DATA_PATH, "similarities_by_document.feather")
+output_file = os.path.join(JSTOR_RAW_DATA_PATH, "similarities_fulltexts.feather")
 df_merged.to_feather(output_file)
