@@ -6,22 +6,15 @@ import gc
 import re
 import paths
 
-import nltk
 from nltk.corpus import stopwords
 from sklearn.metrics.pairwise import cosine_similarity
 
 from transformers import BertTokenizer, RobertaTokenizer
 
 
-
-import matplotlib.pyplot as plt
-from collections import Counter
-from wordcloud import WordCloud
-
-
 # --------------------------- CONFIG --------------------------- #
 
-nltk.download('stopwords')
+# nltk.download('stopwords')
 stop_words = set(stopwords.words('english'))
 
 def normalize_token(tok):
@@ -41,13 +34,10 @@ elif SELECTED_MODEL == "bert":
 else:
     raise ValueError("Unsupported model")
 
-TOP_N = 10
 
 # --------------------------- PATHS --------------------------- #
 
-import paths
 JSTOR_RAW_DATA_PATH = paths.jstor_raw_data
-
 EMBEDDINGS_FOLDER = os.path.join(JSTOR_RAW_DATA_PATH, "paragraphs_embeddings")
 OUTPUT_FILE = os.path.join(JSTOR_RAW_DATA_PATH, f"nearest_neighbors_{model_name.replace('/', '_')}.feather")
 INPUT_PARAGRAPH_FILE = os.path.join(JSTOR_RAW_DATA_PATH, "paragraphs_with_target_word.parquet")
@@ -61,6 +51,7 @@ df_meta = df_meta[['id', 'year', 'target_word']]
 
 # --------------------------- UTILS --------------------------- #
 
+# The merge_tokens_and_embeddings function merges subword tokens and their embeddings. In this case, it averages "rational" and "##ity" to get a single embedding for "rationality".
 def merge_tokens_and_embeddings(tokens, embeddings):
     merged_tokens = []
     merged_embeddings = []
@@ -149,26 +140,27 @@ for fname in tqdm.tqdm(embedding_files, desc="Processing yearly embeddings"):
         excluded_words = {normalize_token(target_word), base_form} | set(map(normalize_token, stop_words))
 
         top_indices = sims.argsort()[::-1]  # du plus similaire au moins
-        top_neighbors = []
+        
+        neighbors = []
 
         for idx in top_indices:
             neighbor = merged_tokens[idx]
             norm_neighbor = normalize_token(neighbor)
 
-            if len(top_neighbors) >= TOP_N:
-                break
             if norm_neighbor in excluded_words:
                 continue
             if norm_neighbor.startswith(base_form):  # éviter "rationalism", "rationalized"...
                 continue
 
-            top_neighbors.append(neighbor)
+            neighbors.append(neighbor)
 
         all_results.append({
             "id": pid,
             "year": year,
             "target_word": target_word,
-            "nearest_neighbors": top_neighbors
+            "neighbors": neighbors,
+            "cosine_similarities": sims[top_indices].tolist()
+
         })
 
     # Clean up
@@ -179,101 +171,5 @@ for fname in tqdm.tqdm(embedding_files, desc="Processing yearly embeddings"):
 
 df_out = pd.DataFrame(all_results)
 df_out.to_feather(OUTPUT_FILE)
-print(f"✅ Saved full neighbors dataset to: {OUTPUT_FILE}")
-
-
-# ---------------------- CONFIG ---------------------- #
-
-JSTOR_RAW_DATA_PATH = paths.jstor_raw_data
-MODEL_NAME = "bert-base-uncased"  # ou "econbert"
-INPUT_FEATHER = os.path.join(JSTOR_RAW_DATA_PATH, f"nearest_neighbors_{MODEL_NAME.replace('/', '_')}.feather")
-
-# ---------------------- LOAD DATA ---------------------- #
-
-df = pd.read_feather(INPUT_FEATHER)
-df['year'] = pd.to_numeric(df['year'], errors='coerce')
-df = df.dropna(subset=['year'])
-df['decade'] = (df['year'] // 10 * 10).astype(int)
-
-# filter null neighbors
-
-df = df[df['nearest_neighbors'].notna() & (df['nearest_neighbors'].str.len() > 0)]
-
-# group by decade
-
-decade_to_counter = {}
-
-for decade, group in df.groupby('decade'):
-    all_neighbors = [neighbor for neighbors in group['nearest_neighbors'] for neighbor in neighbors]
-    decade_to_counter[decade] = Counter(all_neighbors)
-
-
-
-
-# ---------------------- PLOT WORD CLOUDS ---------------------- #
-
-n_decades = len(decade_to_counter)
-n_cols = 3
-n_rows = (n_decades + n_cols - 1) // n_cols
-
-fig, axs = plt.subplots(n_rows, n_cols, figsize=(15, 5 * n_rows))
-
-# flatten axes array
-axs = axs.flatten()
-
-for i, (decade, counter) in enumerate(sorted(decade_to_counter.items())):
-    wc = WordCloud(width=900, height=600, background_color='white', colormap='tab10')
-    wc.generate_from_frequencies(counter)
-
-    axs[i].imshow(wc, interpolation='bilinear')
-    axs[i].set_title(f"{decade}s", fontsize=16)
-    axs[i].axis("off")
-
-# Hide unused subplots
-for j in range(i + 1, len(axs)):
-    axs[j].axis("off")
-
-plt.tight_layout(pad=2)  # espace entre les subplots
-plt.suptitle("Top semantic neighbors per decade", fontsize=20)
-plt.subplots_adjust(top=0.92)
-plt.show()
-
-
-
-# -------------------------- PLOT TOP 10 BAR CHARTS ---------------------- #
-
-# remove 1880s decade if it exists
-    
-fig, axs = plt.subplots(n_rows, n_cols, figsize=(15, 4 * n_rows))
-axs = axs.flatten()
-
-for i, (decade, counter) in enumerate(sorted(decade_to_counter.items())):
-    top10 = counter.most_common(10)
-    words, counts = zip(*top10)
-
-    axs[i].barh(words, counts)
-    axs[i].invert_yaxis()  # pour que le mot le plus fréquent soit en haut
-    axs[i].set_title(f"{decade}s", fontsize=14)
-    axs[i].set_xlabel("Frequency")
-
-# Hide unused subplots
-for j in range(i + 1, len(axs)):
-    axs[j].axis("off")
-
-plt.tight_layout(pad=2)
-plt.suptitle("Top 10 semantic neighbors per decade", fontsize=10)
-plt.subplots_adjust(top=0.92)
-plt.show()
-
-
-
-
-
-
-
-
-
-
-
 
 
