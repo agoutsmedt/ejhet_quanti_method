@@ -18,14 +18,17 @@ for (target in targets) {
   # Préparation des données
   df_long <- df_filtered %>%
     mutate(year = as.numeric(year), decade = floor(year / 10) * 10) %>%
-    unnest(nearest_neighbors) %>% 
+    # FILTER FOR ILLUSTRATION, COMMENT FOR ALL PERIODS
+    # filter(year %in% c(1950, 1990)) |> 
+    unnest(c(neighbors, similarities)) %>% 
+    # KEEP ONLY TOP 10
+    #group_by(decade) %>%
+    #slice_max(order_by = similarities, n = 20) %>%
     filter(decade > 1890) 
-  
-
   
   # Fréquence des mots par décennie
   decade_freq <- df_long %>%
-    group_by(decade, nearest_neighbors) %>%
+    group_by(decade, neighbors) %>%
     summarise(freq = n(), .groups = "drop")
   
   # Garder les top 10 mots par décennie
@@ -33,11 +36,11 @@ for (target in targets) {
     group_by(decade) %>%
     slice_max(order_by = freq, n = 10) %>%
     ungroup %>% 
-    mutate(nearest_neighbors = reorder_within(nearest_neighbors, freq, decade)) %>%
+    mutate(neighbors = reorder_within(neighbors, freq, decade)) %>%
     ungroup
   
   # Bar plot
-  gg <- ggplot(top_decades, aes(x = freq, y = nearest_neighbors)) +
+  gg <- ggplot(top_decades, aes(x = freq, y = neighbors)) +
     geom_col(show.legend = FALSE, fill = "lightblue") +
     facet_wrap(~decade, ncol = 3, scales = "free") +
     labs(
@@ -54,7 +57,7 @@ for (target in targets) {
 
 # Sauvegarde
   ggsave(
-    here::here(image_path, paste0("bar_neighbors_", target, "_by_decade.png")),
+    here::here(image_path_temp, paste0("bar_neighbors_", target, "_by_decade.png")),
     plot = gg,
     width = 12,
     height = 8,

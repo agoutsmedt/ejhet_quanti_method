@@ -57,6 +57,8 @@ if(str_detect(getwd(), "goutsmed")){
 
 
 image_path <- here::here("paper", "images")
+image_path_temp <- here::here("pictures")
+
 
 print(paste("The path for data is", data_path))
 

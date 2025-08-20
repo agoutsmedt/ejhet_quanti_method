@@ -93,7 +93,6 @@ def is_valid_sentence(s):
         return False
 
     # Beaucoup de chiffres (souvent tableaux de données)
-    
     digit_ratio = sum(c.isdigit() for c in s) / max(len(s), 1)
     if digit_ratio > 0.3:
         return False
@@ -150,7 +149,7 @@ for year in tqdm.tqdm(years, desc="Processing: "):
             "id": all_ids,
             "publication_year": all_years,
             "sentence": all_sentences,
-            "embedding": all_embeddings  # Liste de floats (384-dim, etc.)
+            "embedding": all_embeddings  
         })
 
 
