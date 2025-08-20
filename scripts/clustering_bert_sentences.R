@@ -1,4 +1,4 @@
-################## Finding Inter-Temporal Clusters from BERT Embeddings ##################
+################## Finding Inter-Temporal Clusters from BERT Sentence Embeddings ##################
 # This script analyzes textual data using BERT embeddings to identify persistent thematic 
 # clusters across different time periods. It performs:
 # 1. Time window creation (decadal)
@@ -16,15 +16,64 @@ pacman::p_load(tidymodels,
                see) # Color scales
 
 # Set up parallel processing (using half of available cores)
-n_cores <- floor(parallel::detectCores() /2)  
+n_cores <- floor(parallel::detectCores() /2.5)  
 registerDoParallel(cores = n_cores)
 
 ## Bert rational paragraph loading--------------------
-bert_df <- read_feather(here::here(data_path, "embeddings_bert-base-uncased.feather")) %>% 
-  mutate(doc_id = str_c(id, "_", paragraph_id)) %>% 
-  arrange(doc_id)  
+bert_df <- read_rds(here::here(data_path, "closest_sentences_0.01_rationality_score.rds")) %>% 
+  bind_rows %>% 
+  as.data.table()
 
-#econ_df <- read_feather(here::here(jstor_raw_data, "embeddings_econbert.feather"))
+# Choosing thresholds for similarity----------------
+
+# 1) Mean similarity by year (already computed per sentence; take the unique per year)
+bert_df[, sd_similarity := sd(similarity, na.rm = TRUE)]
+mean_year <- bert_df[, .(mean_year_similarity = unique(mean_year_similarity)[1],
+                         sd_similarity = unique(sd_similarity)[1]),
+                     by = publication_year][order(publication_year)]
+
+# Plot mean ± sd per year
+ggplot(mean_year, aes(x = publication_year, y = mean_year_similarity)) +
+  geom_line(color = "black") +
+  geom_point() +
+  geom_ribbon(aes(ymin = mean_year_similarity - sd_similarity,
+                    ymax = mean_year_similarity + sd_similarity),
+                alpha = 0.3) +
+  labs(
+    title = "Mean similarity per year with standard deviation",
+    x = "Publication Year",
+    y = "Mean similarity ± SD"
+  )
+
+# 2) How many sentences per year if cutoff = 0.60 or 0.55
+#    Note: this counts within your kept subset (top 1%), not the full corpus.
+counts <- bert_df[, .(
+  prop_062 = mean(similarity >= 0.62, na.rm = TRUE),
+  prop_060 = mean(similarity >= 0.60, na.rm = TRUE),
+  prop_058 = mean(similarity >= 0.58, na.rm = TRUE),
+  kept   = .N
+), by = publication_year][order(publication_year)]
+
+# Plot both thresholds
+counts_long <- melt(counts,
+                    id.vars = "publication_year",
+                    measure.vars = c("prop_062", "prop_060", "prop_058"),
+                    variable.name = "cutoff",
+                    value.name = "count")
+
+ggplot(counts_long, aes(publication_year, count, linetype = cutoff, color = cutoff)) +
+  geom_point() +
+  geom_smooth(span = 0.3) +
+  scale_color_see_d() +
+  labs(x = "Year", y = "Count ≥ cutoff") +
+  theme_minimal()
+
+# For now, we take a cutoff of 0.58 for similarity
+final_cutoff <- 0.58
+bert_df <- bert_df[similarity > final_cutoff]
+
+# Matching kept sentences with their vectors------------
+
 
 ## Time window set up------------------
 # Generate decade breaks (1900-2020)
