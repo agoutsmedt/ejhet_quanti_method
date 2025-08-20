@@ -22,6 +22,8 @@ registerDoParallel(cores = n_cores)
 ## Bert rational paragraph loading--------------------
 bert_df <- read_rds(here::here(data_path, "closest_sentences_0.01_rationality_score.rds")) %>% 
   bind_rows %>% 
+  distinct(id, publication_year, sentence, .keep_all = TRUE) %>% 
+  mutate(sentence_id = row_number()) %>%
   as.data.table()
 
 # Choosing thresholds for similarity----------------
@@ -72,6 +74,27 @@ ggplot(counts_long, aes(publication_year, count, linetype = cutoff, color = cuto
 final_cutoff <- 0.58
 bert_df <- bert_df[similarity > final_cutoff]
 
+# inputs
+emb_dir <- here(jstor_raw_data, "sentences_embeddings")
+dataset <- open_dataset(emb_dir, format = "feather") 
+
+data_query <- dataset %>% 
+  filter(id %in% unique(bert_df$id) & 
+           sentence %in% unique(bert_df$sentence)) %>% 
+  collect() %>% 
+  distinct(id, sentence, publication_year, .keep_all = TRUE)
+
+bert_df <- merge(bert_df, data_query, 
+                 by = c("id", "sentence", "publication_year"), 
+                 all.x = TRUE) %>% 
+  as_tibble() %>% 
+  unique()
+
+saveRDS(bert_df, file.path(data_path, "closest_sentences_0.01_rationality_score_with_embeddings.rds"))
+
+#' If necessary, load data with embeddings:
+#' `bert_df <- readRDS(file.path(data_path, "closest_sentences_0.01_rationality_score_with_embeddings.rds"))`
+
 # Matching kept sentences with their vectors------------
 
 
@@ -98,16 +121,13 @@ process_window <- function(years, df) {
 
   # Filter documents in current window
   window_data <- df %>% 
-    filter(between(publication_year, years[1], years[2]))
-  
-  # Create embedding matrix
-  bert_mat <- do.call(rbind, window_data$bert_embedding_concat)
-  bert_tbl <- as_tibble(bert_mat) %>% 
-    mutate(id = window_data$doc_id, .before = everything())
+    filter(between(publication_year, years[1], years[2])) %>% 
+    select(sentence_id, V = embedding) %>% 
+    unnest_wider(V, names_sep = "")
   
   # Preprocessing recipe
-  clust_recipe <- recipe(~ ., data = bert_tbl) %>%
-    update_role(id, new_role = "id") %>% 
+  clust_recipe <- recipe(~ ., data = window_data) %>%
+    update_role(sentence_id, new_role = "id") %>% 
     step_normalize()
   
   # Define clustering workflow
@@ -119,7 +139,7 @@ process_window <- function(years, df) {
   set.seed(89)
   tune_res <- tune_cluster(
     kmeans_wf,
-    resamples = vfold_cv(bert_tbl, v = 3),
+    resamples = vfold_cv(window_data, v = 3),
     grid = tibble(num_clusters = 3:8),
     metrics = cluster_metric_set(sse_ratio),
     control = control_grid(parallel_over = "everything")
@@ -148,12 +168,12 @@ process_window <- function(years, df) {
   final_fit <- workflow() %>%
     add_recipe(clust_recipe) %>%
     add_model(k_means(num_clusters = selected_k) %>% set_engine("stats")) %>%
-    fit(data = bert_tbl)
+    fit(data = window_data)
   
   # Prepare results
   list(
-    documents_partition = bert_tbl %>% 
-      select(id) %>% 
+    documents_partition = window_data %>% 
+      select(sentence_id) %>% 
       mutate(
         cluster = extract_cluster_assignment(final_fit)$.cluster,
         nb_cluster = selected_k,
@@ -165,9 +185,9 @@ process_window <- function(years, df) {
 }
 # Process all time windows
 results <- map(time_windows, ~process_window(.x, bert_df))
-saveRDS(results, file.path(data_path, "clustering_rational_paragraphs.rds"))
+saveRDS(results, file.path(data_path, "clustering_rational_sentences.rds"))
 
-#' If necessary: `results <- readRDS(file.path(data_path, "clustering_rational_paragraphs.rds"))`
+#' If necessary: `results <- readRDS(file.path(data_path, "clustering_rational_sentences.rds"))`
 
 # INTER-TEMPORAL CLUSTER MERGING ----------------------
 # Combine results from all windows
@@ -183,17 +203,37 @@ centroid_matrix <- centroids %>%
   as.matrix()
 cosine_sim <- lsa::cosine(t(centroid_matrix))
 
+p_load(philentropy)
+# Ensure non-negative values
+centroid_matrix_shifted <- centroid_matrix - apply(centroid_matrix, 1, min)
+# Add a tiny epsilon to avoid all-zero rows
+centroid_matrix_shifted <- centroid_matrix_shifted + 1e-12
+# Row-normalize to sum to 1 (probability distribution per centroid)
+centroid_matrix_norm <- centroid_matrix_shifted / rowSums(centroid_matrix_shifted)
+jsd_matrix <- distance(centroid_matrix_norm, method = "jensen-shannon", unit = "log2")
+
+# distribution of cosine similarities
+similarities <- data.frame(similarity = as.vector(cosine_sim)) %>% 
+  filter(similarity < 1) # Filter out self-comparisons (diagonal)
+
+ggplot(similarities, aes(x = similarity)) +
+  geom_boxplot() +
+  labs(title = "Distribution of Cosine Similarities Between Centroids",
+       x = "Cosine Similarity",
+       y = "Frequency") +
+  theme_minimal()
+
 # Extract window names in order
 window_order <- data.frame(
   window = names(time_windows),
   window_index = seq_along(time_windows)
 )
 
-similarity_threshold <- 0.97
-cosine_tbl <- as.data.frame(cosine_sim) %>%
+similarity_threshold <- 0.05
+cosine_tbl <- as.data.frame(jsd_matrix) %>%
   mutate(cluster_A = centroids$cluster_original_id) %>%
   pivot_longer(-cluster_A, names_to = "cluster_B", values_to = "similarity") %>%
-  mutate(cluster_B = as.integer(str_remove(cluster_B, "V"))) %>%
+  mutate(cluster_B = as.integer(str_remove(cluster_B, "v"))) %>% 
   filter(cluster_A < cluster_B) %>%
   left_join(select(centroids, cluster_A = cluster_original_id, window_A = window)) %>%
   left_join(select(centroids, cluster_B = cluster_original_id, window_B = window)) %>%
@@ -201,7 +241,7 @@ cosine_tbl <- as.data.frame(cosine_sim) %>%
   rename(index_A = window_index) %>%
   left_join(window_order, by = c("window_B" = "window")) %>%
   rename(index_B = window_index) %>%
-  filter(similarity > similarity_threshold, abs(index_A - index_B) == 1) %>%
+  filter(similarity < similarity_threshold, abs(index_A - index_B) == 1) %>%
   # we don't want to merge clusters from the same window
   distinct(cluster_A, window_A, window_B, .keep_all = TRUE) %>% # We merge only with the closest cluster in the window, to avoid merging to cluster together in a window
   distinct(cluster_B, window_A, window_B, .keep_all = TRUE) # We merge only with the closest cluster in the window, to avoid merging to cluster together in a window
