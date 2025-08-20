@@ -1,3 +1,5 @@
+# This script computes the cosine similarity between the average sentence embedding of a WOS abstract and representative vectors.
+
 import os
 import glob
 import pandas as pd

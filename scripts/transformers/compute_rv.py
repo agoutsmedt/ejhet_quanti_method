@@ -17,6 +17,7 @@ JSTOR_RAW_DATA_PATH = paths.jstor_raw_data
 EMBEDDINGS_FOLDER = os.path.join(JSTOR_RAW_DATA_PATH, "sentences_embeddings")
 pattern = os.path.join(EMBEDDINGS_FOLDER, "sentence_embeddings_*.feather")
 all_files = glob.glob(pattern)
+output_file = os.path.join(JSTOR_RAW_DATA_PATH, "representative_vectors.feather")
 
 # Extract available years
 all_years = sorted([
@@ -95,7 +96,6 @@ decade_groups = df_all.groupby("decade")["embedding_by_year"].apply(lambda x: np
 df_all["embedding_by_decade"] = df_all["decade"].map(decade_groups)
 
 # Sauvegarde
-output_file = os.path.join(JSTOR_RAW_DATA_PATH, "representative_vectors.feather")
 df_all.to_feather(output_file)
 
 
@@ -105,13 +105,17 @@ df_all.to_feather(output_file)
 
 # param
 
-FILTER_TARGET_WORDS = True  # Active/désactive le filtrage
+FILTER_TARGET_WORDS = False  # Active/désactive le filtrage
 TARGET_REGEX = r"\brational(?:ity)?\b"
 compiled_target_regex = re.compile(TARGET_REGEX, flags=re.IGNORECASE)
 
 # loop
+df_decade_embeddings = pd.read_feather(output_file)
 
-df_decade_embeddings = pd.read_feather(OUTPUT_FILE)
+# filter after 1890 
+df_decade_embeddings = df_decade_embeddings[df_decade_embeddings["decade"] >= 1890] 
+
+
 top_sentences_by_decade = []
 
 for _, row in df_decade_embeddings.iterrows():
@@ -119,41 +123,55 @@ for _, row in df_decade_embeddings.iterrows():
     decade = row["decade"]
     print("Compute for decade:", decade)
     
-    ref_vector = row["embedding"].reshape(1, -1)
-    decade_years = list(range(decade, decade + (5 if decade == 2020 else 10)))
+    # get rv 
+    rv = row["embedding_by_year_centered"].reshape(1, -1)
+    
+    # get decade years (the unique years for this decade)
+    decade_years = row["year"].unique()
     
     matched_sentences = []
 
     for year in decade_years:
+        # load embeddings for the year
         file_path = os.path.join(EMBEDDINGS_FOLDER, f"sentence_embeddings_{year}.feather")
         df_year = feather.read_feather(file_path, columns=["sentence", "embedding", "id"])
         df_year["embedding"] = df_year["embedding"].apply(np.array)
 
+        # if true, we remove the sentences that contain the target words 
         if FILTER_TARGET_WORDS:
             df_year = df_year[~df_year["sentence"].str.contains(compiled_target_regex)]
 
         matched_sentences.append(df_year)
 
-    df_decade_sentences = pd.concat(matched_sentences, ignore_index=True)
+    # once we get all sentences for the decade, we concatenate them into a single DataFrame
+    df_sentences_of_decades = pd.concat(matched_sentences, ignore_index=True)
+    # clean up memory
     del matched_sentences, df_year
     gc.collect()
     
-    embeddings_matrix = np.stack(df_decade_sentences["embedding"].values)
-    similarities = cosine_similarity(embeddings_matrix, ref_vector).flatten()
+    # compute cosine similarity
+    embeddings_matrix = np.stack(df_sentences_of_decades["embedding"].values)
+    similarities = cosine_similarity(embeddings_matrix, rv).flatten()
     
-    df_decade_sentences["similarity"] = similarities
-    top_10 = df_decade_sentences.sort_values(by="similarity", ascending=False).head(10).copy()
-    top_10["decade"] = decade
+    # add similarity scores to the DataFrame
+    df_sentences_of_decades["similarity"] = similarities
 
-    top_sentences_by_decade.append(top_10)
-    del df_decade_sentences, similarities, top_10, embeddings_matrix
+    # get the top 100 sentences based on similarity
+    top_100 = df_sentences_of_decades.sort_values(by="similarity", ascending=False).head(100).copy()
+    top_100["decade"] = decade
+    # add to the list 
+    top_sentences_by_decade.append(top_100)
+
+    # clean up memory before the next iteration 
+    del df_sentences_of_decades, similarities, top_100, embeddings_matrix
     gc.collect()
 
-df_top10_by_decade = pd.concat(top_sentences_by_decade, ignore_index=True)
+
+df_top100_by_decade = pd.concat(top_sentences_by_decade, ignore_index=True)
 
 suffix = "_no_target_words" if FILTER_TARGET_WORDS else ""
 OUTPUT_FILE = os.path.join(JSTOR_RAW_DATA_PATH, f"top_sentences_by_decade{suffix}.feather")
-df_top10_by_decade.to_feather(OUTPUT_FILE)
+df_top100_by_decade.to_feather(OUTPUT_FILE)
 
 
 
