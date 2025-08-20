@@ -5,29 +5,23 @@ source(file.path("scripts", "paths_and_packages.R"))
 p_load(see)
 
 ## Bert rational paragraph loading--------------------
-bert_df <- read_feather(here::here(jstor_raw_data, "embeddings_bert-base-uncased.feather")) %>% 
-  filter(between(publication_year, 1900, 2019)) %>% 
-  mutate(doc_id = str_c(id, "_", paragraph_id)) %>% 
-  arrange(doc_id)  
+bert_df <- readRDS(file.path(data_path, "closest_sentences_0.01_rationality_score_with_embeddings.rds")) #%>% 
+  # mutate(doc_id = str_c(id, "_", paragraph_id)) %>% 
+  # arrange(doc_id)  
 
 metadata <- read_rds(file.path(data_path, "full_metadata_journals_cleaned.rds")) %>% 
   # Only keep research articles for now because other types are quite messy and avoid overloading the memory
   .[ refined_sub_type == "research-article" & language == "eng", .(id, is_part_of, title, creator, publication_year)] %>% 
   .[order(publication_year)] 
 
-documents_cluster <- readRDS(file.path(data_path, "paragraphs_intertemporal_cluster.rds")) %>% 
-  rename(doc_id = id) %>% 
-  mutate(id = str_remove(doc_id, "_\\d+$")) %>% 
+documents_cluster <- readRDS(file.path(data_path, "sentences_intertemporal_cluster.rds")) %>% 
+  left_join(select(bert_df, id, sentence, sentence_id)) %>% 
   left_join(metadata)
 
-# Join cluster info to bert_df
-bert_df <- bert_df %>%
-  left_join(documents_cluster %>% select(doc_id, new_cluster, time_window = window, is_part_of, title), by = c("doc_id")) 
-
 # Naming clusters ---------------------
-setDT(bert_df)
-unigrams <- bert_df[, .(doc_id, window, new_cluster)][, token := tokenizers::tokenize_words(window, lowercase = TRUE)][, -("window")]
-bigrams <- bert_df[, .(doc_id, window, new_cluster)][, token := tokenizers::tokenize_ngrams(window, n= 2, lowercase = TRUE)][, -("window")]
+setDT(documents_cluster)
+unigrams <- documents_cluster[, .(sentence_id, sentence, new_cluster)][, token := tokenizers::tokenize_words(sentence, lowercase = TRUE)][, -("sentence")]
+bigrams <- documents_cluster[, .(sentence_id, sentence, new_cluster)][, token := tokenizers::tokenize_ngrams(sentence, n= 2, lowercase = TRUE)][, -("sentence")]
 tokens <- rbind(unigrams,
                 bigrams)
 tokens <- tokens[, .(token = unlist(token)), by = new_cluster]
@@ -45,44 +39,29 @@ tokens <- tokens[
 ]
 tokens <- tokens[, .(new_cluster, token)]
 
-tokens[, absolute_tf := .N, by = token]
-tokens[, nb_word := .N, by = new_cluster]
-tokens[, tf := .N/nb_word, by = .(new_cluster, token)]
-tokens_count <- unique(tokens)
-# Calculating tf-idf
-tf_dt <- tokens[, .N, by = .(new_cluster, token)]  # N = term frequency
-setnames(tf_dt, "N", "tf")
-
-df_dt <- tokens_count[, .N, by = token]  # each token per document, once
-setnames(df_dt, "N", "df")
-
-total_docs <- uniqueN(tokens_count$new_cluster)
-# Merge TF with DF
-tokens_count <- merge(tokens_count, df_dt, by = "token", all.x = TRUE)
-
-# Compute IDF and TF-IDF
-tokens_count[, idf := log(total_docs / df)]
-tokens_count[, tf_idf := tf * idf]
+tokens_count <- compute_tf_idf(tokens, 
+               token_col = "token", 
+               document_col = "new_cluster")
 
 # Get top 4 tf-idf tokens per cluster
-labels_dt <- tokens_count[order(-tf_idf)][absolute_tf > 15, head(.SD, 5), by = new_cluster][, .(new_cluster, token)]
+labels_dt <- tokens_count[order(-tf_idf)][absolute_tf > 20, head(.SD, 5), by = new_cluster][, .(new_cluster, token)]
 labels_dt <- labels_dt[, .(label = paste(token, collapse = ", ")), by = new_cluster]
 
-bert_df <- merge(bert_df, labels_dt, all.x = TRUE, by = "new_cluster")
+documents_cluster <- merge(documents_cluster, labels_dt, all.x = TRUE, by = "new_cluster")
 
 # Top tf-idf terms
-top_terms <- tokens_count[order(-tf_idf)][absolute_tf > 15, head(.SD, 15), by = new_cluster]
+top_terms <- tokens_count[order(-tf_idf)][absolute_tf > 20, head(.SD, 15), by = new_cluster]
 
 top_terms %>% 
   mutate(token = reorder_within(token, tf_idf, new_cluster)) %>% 
 ggplot(aes(x = token, y = tf_idf)) +
   geom_col(fill = "#2C77B8") +
-  facet_wrap(~ new_cluster, scales = "free_y") +
+  facet_wrap(~ new_cluster, scales = "free") +
   coord_flip() +
   scale_x_reordered() +
   labs(title = "Top 10 TF-IDF Tokens per Intertemporal Cluster",
        x = "Token", y = "TF-IDF") +
-  theme_minimal(base_size = 12)
+  theme_bw(base_size = 12)
 ggsave("pictures/tf_idf_cluster_rationality.png",
        width = 60,
        height = 40,
@@ -91,7 +70,7 @@ ggsave("pictures/tf_idf_cluster_rationality.png",
 
 # Distribution by year-------------
 # Plot distribution by year and cluster
-bert_df %>%
+distribution_by_year <- documents_cluster %>%
   count(publication_year, new_cluster) %>%
   ggplot(aes(x = publication_year, y = n, color = new_cluster)) +
   geom_line() +
@@ -99,14 +78,13 @@ bert_df %>%
   labs(title = "Document Distribution by Year and Cluster",
        x = "Publication Year", y = "Number of Documents", color = "Cluster") +
   scale_color_see()
+plotly::ggplotly(distribution_by_year)
 
-
-tf_dt <- tokens_clean[, .N, by = .(new_cluster, token)]  # N = term frequency# Calculate proportions per year
-yearly_cluster_dist <- bert_df %>%
+yearly_cluster_dist <- documents_cluster %>%
   count(publication_year, new_cluster) %>%
   mutate(proportion = n / sum(n), .by = publication_year)
 
-areas_cluster <- ggplot(bert_df, aes(x = publication_year, y = after_stat(count), fill = label)) +
+areas_cluster <- ggplot(documents_cluster, aes(x = publication_year, y = after_stat(count), fill = label)) +
   geom_density(position = "fill", show.legend = TRUE) +
   theme_minimal() +
   labs(title = "Proportion of Clusters Over Time",
@@ -119,37 +97,37 @@ areas_cluster <- ggplot(bert_df, aes(x = publication_year, y = after_stat(count)
 plotly::ggplotly(areas_cluster)
 
 # 2. Alluvial plot showing cluster persistence
-all_clusters <- levels(factor(bert_df$label)) %>% sample()
+all_clusters <- levels(factor(documents_cluster$label)) %>% sample()
 # Preview the default 'see' palette to get the colors
-palette_colors <- c(see::see_colors(), see::oi_colors())  # Example for the see_d palette
+palette_colors <- c(see::see_colors(), see::oi_colors(), scico::scico(n = 10, palette = "roma"))  # Example for the see_d palette
 # If you use another palette, replace accordingly
 # Let's say you use 8 clusters and 8 colors from the palette
 cluster_colors <- palette_colors[1:length(all_clusters)]
 names(cluster_colors) <- all_clusters
 
-label_alluvial <- bert_df %>% 
-  distinct(label, time_window) %>% 
-  mutate(first_year = str_extract(time_window, "\\d{4}") %>% as.integer()) %>% 
+label_alluvial <- documents_cluster %>% 
+  distinct(label, window) %>% 
+  mutate(first_year = str_extract(window, "\\d{4}") %>% as.integer()) %>% 
   mutate(label_alluvial = first_year == min(first_year), .by = label) %>%
   filter(label_alluvial == TRUE) %>%
-  distinct(label, time_window) %>%
+  distinct(label, window) %>%
   mutate(label_alluvial = label)
 
-bert_df %>%
+documents_cluster %>%
   left_join(label_alluvial) %>% 
-  count(time_window, label, label_alluvial) %>% 
-  mutate(percent = n / sum(n), .by = time_window) %>%
+  count(window, label, label_alluvial) %>% 
+  mutate(percent = n / sum(n), .by = window) %>%
   mutate(label = factor(label, levels= all_clusters)) %>% 
-  ggplot(aes(x = time_window, y = percent, stratum = label, alluvium = label,
+  ggplot(aes(x = window, y = percent, stratum = label, alluvium = label,
              fill = label, label = str_wrap(label_alluvial, 25))) +
-  geom_flow(alpha = 0.8) +
-  geom_stratum(alpha = 0.8) +
+  geom_flow(alpha = 0.9) +
+  geom_stratum() +
   geom_text(stat = "stratum", size = 3) +
   labs(title = "Cluster Persistence Across Time Windows",
        x = "Time Period",
        y = "Percentage of Documents",
        fill = "Intertemporal Cluster") +
-  theme_minimal() +
+  theme_light() +
   theme(legend.position = "none") +
   scale_fill_manual(values = cluster_colors)  # HARD color lock
 
