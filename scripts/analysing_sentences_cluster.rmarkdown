@@ -1,0 +1,45 @@
+---
+title: "Analysing Sentences Cluster"
+format: html
+editor: source
+toc: true
+toc-depth: 2
+date: today
+theme: cosmo
+fontsize: 11pt
+fig-align: center
+fig-width: 8
+fig-height: 6
+code-fold: true
+code-summary: "Show the code"
+cache: true
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+```{r}
+#| output: false
+source(here::here("scripts", "paths_and_packages.R"))
+p_load(see)
+
+# Loading Data
+bert_df <- readRDS(file.path(data_path, "closest_sentences_0.01_rationality_score_with_embeddings.rds")) %>% 
+  arrange(sentence_id) %>% 
+  filter(between(publication_year, 1900, 2019))
+
+metadata <- read_rds(file.path(data_path, "full_metadata_journals_cleaned.rds")) %>% 
+  .[ refined_sub_type == "research-article" & language == "eng", .(id, is_part_of, title, creator, publication_year)] %>% 
+  .[order(publication_year)] 
+
+documents_cluster <- readRDS(file.path(data_path, "sentences_intertemporal_cluster.rds")) %>% 
+  left_join(select(bert_df, id, sentence, sentence_id)) %>% 
+  left_join(metadata) %>% 
+  arrange(sentence_id)
+```
+
+```{r}
+
+```
+

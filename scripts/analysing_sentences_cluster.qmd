@@ -1,0 +1,194 @@
+---
+title: "Analysing Sentences Cluster"
+format: html
+editor: source
+toc: true
+toc-depth: 2
+date: today
+theme: cosmo
+fontsize: 11pt
+fig-align: center
+fig-width: 8
+fig-height: 6
+code-fold: true
+code-summary: "Show the code"
+cache: true
+execute:
+  echo: true
+  warning: false
+  message: false
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r loading-data}
+#| output: false
+source(here::here("scripts", "paths_and_packages.R"))
+p_load(see)
+
+# Loading Data
+bert_df <- readRDS(file.path(data_path, "closest_sentences_0.01_rationality_score_with_embeddings.rds")) %>% 
+  arrange(sentence_id) %>% 
+  filter(between(publication_year, 1900, 2019))
+
+metadata <- read_rds(file.path(data_path, "full_metadata_journals_cleaned.rds")) %>% 
+  .[ refined_sub_type == "research-article" & language == "eng", .(id, is_part_of, title, creator, publication_year)] %>% 
+  .[order(publication_year)] 
+
+documents_cluster <- readRDS(file.path(data_path, "sentences_intertemporal_cluster.rds")) %>% 
+  left_join(select(bert_df, id, sentence, sentence_id)) %>% 
+  left_join(metadata) %>% 
+  arrange(sentence_id)
+```
+
+```{r preparing-tfidf}
+# Naming clusters and tf-idf---------------------
+setDT(documents_cluster)
+unigrams <- documents_cluster[, .(sentence_id, sentence, window, new_cluster)][, token := tokenizers::tokenize_words(sentence, lowercase = TRUE)][, -("sentence")]
+bigrams <- documents_cluster[, .(sentence_id, sentence, window, new_cluster)][, token := tokenizers::tokenize_ngrams(sentence, n= 2, lowercase = TRUE)][, -("sentence")]
+tokens <- rbind(unigrams,
+                bigrams)
+tokens <- tokens[, .(token = unlist(token)), by = .(new_cluster, window)]
+tokens <- tokens[nchar(token) >= 2, ]
+tokens <- tokens[, c("word_1", "word_2") := tstrsplit(token, " ")]
+
+stop_words <- tidytext::stop_words$word %>% 
+  unique()
+tokens <- tokens[
+  # Remove any digits in either word
+  !grepl("[0-9]", word_1) & (is.na(word_2) | !grepl("[0-9]", word_2)) &
+  # Remove stopwords in either word
+    !(word_1 %in% stop_words) &
+    (is.na(word_2) | !(word_2 %in% stop_words))
+]
+tokens <- tokens[, .(new_cluster, window, token)]
+tokens[, token := str_replace(token, " ", "_")]
+
+tokens_count_cluster <- compute_tf_idf(tokens[, -"window"], 
+               token_col = "token", 
+               document_col = "new_cluster")
+
+# Top tf-idf terms
+top_terms_cluster <- tokens_count_cluster[order(-tf_idf)][absolute_tf > 30, head(.SD, 20), by = new_cluster]
+
+tokens[, new_variable := str_c(new_cluster, "--", window)]
+tokens_count_window <- compute_tf_idf(tokens, 
+               token_col = "token", 
+               document_col = "new_variable")
+# Top tf-idf terms
+top_terms_window <- tokens_count_window[order(-tf_idf)][absolute_tf > 20, head(.SD, 15), by = new_variable]
+
+# Get top 4 tf-idf tokens per cluster
+labels_cluster <- tokens_count_cluster[order(-tf_idf)][absolute_tf > 30, head(.SD, 5), by = new_cluster][, .(new_cluster, token)]
+labels_cluster <- labels_cluster[, .(label = paste0(token, collapse = ", ")), by = new_cluster]
+labels_cluster[, label := paste0(str_extract(new_cluster, "\\d+$"), ": ", label)]
+
+documents_cluster <- merge(documents_cluster, labels_cluster, all.x = TRUE, by = "new_cluster")
+
+# Labels per decade
+labels_window<- tokens_count_window[order(-tf_idf)][absolute_tf > 20, head(.SD, 5), by = new_variable][, .(new_variable, token)]
+labels_window <- labels_window[, .(label = paste0(token, collapse = ", ")), by = new_variable]
+labels_window[, label := paste0(str_extract(new_variable, "\\d+(?=--)"), ": ", label)]
+
+```
+
+```{r attributing-colors}
+palette_colors <- c(see::see_colors(), 
+                    see::oi_colors()[1:7], 
+                    scico::scico(n = 8, palette = "roma"), 
+                    scico::scico(n = 8, palette = "tokyo"),
+                    scico::scico(n = 8, palette = "hawaii"),
+                    scico::scico(n = 8, palette = "batlowK"),
+                    scico::scico(n = 7, palette = "bamako"),
+                    scico::scico(n = 7, palette = "glasgow")) %>% 
+  sample()
+
+nb_clusters <- documents_cluster %>% 
+  pull(new_cluster) %>% 
+  unique() %>% 
+  length
+if(nb_clusters > length(palette_colors)) message("no sufficient colors")
+cluster_colors <- palette_colors[1:length(all_clusters)]
+names(cluster_colors) <- all_clusters
+```
+
+```{r alluvial}
+label_alluvial_position <- documents_cluster %>% 
+  distinct(new_cluster, label, window) %>% 
+  mutate(first_year = str_extract(window, "\\d{4}") %>% as.integer()) %>% 
+  mutate(label_alluvial = first_year == min(first_year), .by = label) %>%
+  filter(label_alluvial == TRUE) %>%
+  mutate(label_alluvial = label) %>% 
+  distinct(new_cluster, label_alluvial, window)
+
+documents_cluster %>%
+  count(window, new_cluster, label) %>% 
+  left_join(label_alluvial_position) %>% 
+  mutate(percent = n / sum(n), .by = window) %>%
+#  mutate(new_cluster = factor(new_cluster, levels= all_clusters)) %>% 
+  ggplot(aes(x = window, y = percent, stratum = new_cluster, alluvium = new_cluster,
+             fill = new_cluster)) +
+  geom_flow(alpha = 0.9) +
+  geom_stratum() +
+  geom_text(aes(label = str_wrap(label_alluvial, 25)), stat = "stratum", size = 3) +
+  labs(title = "Cluster Persistence Across Time Windows",
+       x = "Time Period",
+       y = "Percentage of Documents",
+       fill = "Intertemporal Cluster") +
+  theme_bw() +
+  theme(legend.position = "none") +
+  scale_fill_manual(values = cluster_colors)  # HARD color lock
+
+ggsave(file.path("pictures", "intertemporal_clusters_alluvial.png"),
+       units = "cm",
+       width = 50,
+       height = 40,
+       dpi = 300)
+```
+
+```{r alluvial-absolute}
+documents_cluster %>%
+  filter(publication_year > 1949) %>% 
+  count(window, new_cluster, label) %>% 
+  left_join(label_alluvial_position) %>% 
+  mutate(percent = n / sum(n), .by = window) %>%
+#  mutate(new_cluster = factor(new_cluster, levels= all_clusters)) %>% 
+  ggplot(aes(x = window, y = n, stratum = new_cluster, alluvium = new_cluster,
+             fill = new_cluster)) +
+  geom_flow(alpha = 0.9) +
+  geom_stratum() +
+  geom_text(aes(label = str_wrap(label_alluvial, 25)), stat = "stratum", size = 3) +
+  labs(title = "Cluster Persistence Across Time Windows",
+       x = "Time Period",
+       y = "Percentage of Documents",
+       fill = "Intertemporal Cluster") +
+  theme_bw() +
+  theme(legend.position = "none") +
+  scale_fill_manual(values = cluster_colors)  # HARD color lock
+
+ggsave(file.path("pictures", "intertemporal_clusters_alluvial_absolute.png"),
+       units = "cm",
+       width = 50,
+       height = 40,
+       dpi = 300)
+```
+
+```{r graph-top-terms}
+#| output: false
+top_terms %>% 
+  mutate(token = reorder_within(token, tf_idf, new_cluster)) %>% 
+ggplot(aes(x = token, y = tf_idf)) +
+  geom_col(fill = "#2C77B8") +
+  facet_wrap(~ new_cluster, scales = "free") +
+  coord_flip() +
+  scale_x_reordered() +
+  labs(title = "Top 10 TF-IDF Tokens per Intertemporal Cluster",
+       x = "Token", y = "TF-IDF") +
+  theme_bw(base_size = 12)
+ggsave("pictures/tf_idf_cluster_rationality.png",
+       width = 70,
+       height = 50,
+       units = "cm",
+       dpi = 300)
+```
+
