@@ -1,0 +1,30 @@
+---
+title: "A history of rationality in economics: a computational approach" 
+author: 
+  - name: "Thomas Delcey"
+    affiliation: "Université de Bourgogne"
+    email: "Thomas.delcey@ube.fr"
+  - name: "Aurelien Goutsmedt"
+    affiliation: "UC Louvain; ICHEC"
+    email: "aurelien.goutsmedt@uclouvain.be" 
+  - name: "Alexandre Truc"
+    affiliation: "Université du CNRS"
+    email: "Alexandre.truc[at]auCNRSpointFr"
+format:
+  revealjs: 
+    transition: convex
+    slide-number: true
+    toc: false 
+    toc-depth: 1
+    slide-level: 2
+    embed-resources: true
+    view-distance: 100
+    progress: true
+    width: 1000
+    margin: 0.05
+    lightbox: true
+---
+
+## Introduction 
+
+## Slide 1 
