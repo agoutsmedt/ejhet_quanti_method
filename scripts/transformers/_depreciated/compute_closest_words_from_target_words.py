@@ -97,7 +97,7 @@ for fname in tqdm.tqdm(embedding_files, desc="Processing yearly embeddings"):
         row = df_meta[df_meta['id'] == pid]
 
         if row.empty:
-            all_results.append({"id": pid, "year": year, "target_word": None, "nearest_neighbors": None})
+            all_results.append({"id": pid, "year": year, "target_word": None, "neighbors": None})
             continue
 
         target_word = row.iloc[0]['target_word']
@@ -109,58 +109,46 @@ for fname in tqdm.tqdm(embedding_files, desc="Processing yearly embeddings"):
         ]
 
         if not match_indices:
-            all_results.append({"id": pid, "year": year, "target_word": target_word, "nearest_neighbors": None})
+            all_results.append({"id": pid, "year": year, "target_word": target_word, "neighbors": None})
             continue
 
         start_idx = match_indices[len(match_indices) // 2]
         indices = list(range(start_idx, start_idx + len(target_tokenized)))
 
+        # average the embeddings for the target word
         try:
             target_vec = np.mean([emb[i] for i in indices], axis=0)
+        
+        # security check
         except Exception:
-            all_results.append({"id": pid, "year": year, "target_word": target_word, "nearest_neighbors": None})
+            all_results.append({"id": pid, "year": year, "target_word": target_word, "neighbors": None})
             continue
         
         # Supprimer les tokens spéciaux
         special_tokens = {'[CLS]', '[SEP]', '[PAD]'}
-        filtered = [(tok, vec) for tok, vec in zip(toks, emb) if tok not in special_tokens]
+        excluded_words = {normalize_token(target_word)} | set(map(normalize_token, stop_words))
+
+        filtered = [(tok, vec) for tok, vec in zip(toks, emb) if tok not in special_tokens and normalize_token(tok) not in excluded_words]
+        
+        # security check
         if not filtered:
-            all_results.append({"id": pid, "year": year, "target_word": target_word, "nearest_neighbors": None})
+            all_results.append({"id": pid, "year": year, "target_word": target_word, "neighbors": None})
             continue
           
         # Fusionner tokens + embeddings
         toks, emb = zip(*filtered)
         merged_tokens, merged_embeddings = merge_tokens_and_embeddings(toks, emb)
 
+        # Compute cosine similarity
         vectors = np.stack(merged_embeddings)
         sims = cosine_similarity([target_vec], vectors)[0]
-
-        # Construire set de mots à exclure : base word, toutes ses variantes, stopwords
-        base_form = re.sub(r'(ity|ies|al|s)$', '', target_word.lower())
-        excluded_words = {normalize_token(target_word), base_form} | set(map(normalize_token, stop_words))
-
-        top_indices = sims.argsort()[::-1]  # du plus similaire au moins
-        
-        neighbors = []
-
-        for idx in top_indices:
-            neighbor = merged_tokens[idx]
-            norm_neighbor = normalize_token(neighbor)
-
-            if norm_neighbor in excluded_words:
-                continue
-            if norm_neighbor.startswith(base_form):  # éviter "rationalism", "rationalized"...
-                continue
-
-            neighbors.append(neighbor)
 
         all_results.append({
             "id": pid,
             "year": year,
             "target_word": target_word,
-            "neighbors": neighbors,
-            "cosine_similarities": sims[top_indices].tolist()
-
+            "neighbors": merged_tokens,
+            "similarities": sims.tolist()
         })
 
     # Clean up

@@ -119,6 +119,12 @@ time_windows <- map2(decades[-length(decades)], decades[-1] - 1,
                      ~c(.x, .y)) %>%
   set_names(paste0(decades[-length(decades)], "-", decades[-1] - 1))
 
+project_pc <- function(df, pc) {
+  X <- do.call(rbind, df$embedding)
+  Xs <- scale(X, center = pc$center, scale = pc$scale)
+  as.matrix(Xs %*% pc$rotation[, 1:ncol(pc$rotation)])
+}
+
 # CLUSTERING PIPELINE-------------------
 
 #' Process documents within a time window
@@ -133,23 +139,36 @@ process_window <- function(years, df) {
 
   # Filter documents in current window
   window_data <- df %>% 
-    filter(between(publication_year, years[1], years[2])) %>% 
-    select(sentence_id, V = embedding) %>% 
-    unnest_wider(V, names_sep = "")
-  
-  Msc <- scale(select(window_data, -sentence_id), center = pc_global$center, scale = pc_global$scale)
-  reduced_data <- window_data %>% 
-    select(sentence_id) %>% 
-    bind_cols(as.data.frame(Msc %*% pc_global$rotation[, 1:100]))
+    filter(between(publication_year, years[1], years[2]))
+
+  reduced_data <- project_pc(window_data, pc_global) %>% 
+    as_tibble() %>% 
+    mutate(sentence_id = window_data$sentence_id, .before = everything())
   rm(window_data)
   
   # Preprocessing recipe
   clust_recipe <- recipe(~ ., data = reduced_data) %>%
     update_role(sentence_id, new_role = "id") %>% 
-    step_zv(all_predictors()) %>%  # drop zero-variance cols
     step_normalize(all_predictors())
   
   # Define clustering workflow
+  if("ClusterR" %in% installed.packages()){
+    p_load(ClusterR)
+    kmeans_wf <- workflow() %>%
+      add_recipe(clust_recipe) %>%
+      add_model(k_means(num_clusters = tune()) %>% 
+                  set_engine("ClusterR", 
+                             num_init = 10,
+                             max_iters = 100,
+                             verbose = TRUE))
+  } else {
+    message("Package 'ClusterR' not installed. Using stats::kmeans instead.")
+    # Fallback to stats::kmeans if ClusterR is not available
+    kmeans_wf <- workflow() %>%
+      add_recipe(clust_recipe) %>%
+      add_model(k_means(num_clusters = tune()) %>% 
+                  set_engine("stats", algorithm = "Hartigan-Wong", iter.max = 100, nstart = 20))
+  }
   kmeans_wf <- workflow() %>%
     add_recipe(clust_recipe) %>%
     add_model(k_means(num_clusters = tune()) %>% 
@@ -160,7 +179,7 @@ process_window <- function(years, df) {
   tune_res <- tune_cluster(
     kmeans_wf,
     resamples = vfold_cv(reduced_data, v = 4),
-    grid = tibble(num_clusters = 3:10),
+    grid = tibble(num_clusters = 5:15),
     metrics = cluster_metric_set(sse_ratio),
     control = control_grid(parallel_over = "everything")
   )

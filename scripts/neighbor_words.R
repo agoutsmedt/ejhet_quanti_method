@@ -1,3 +1,5 @@
+# This script extracts the frequency of words that appear before or next to a target word in paragraphs.
+
 # paths and packages
 source(file.path("scripts", "paths_and_packages.R"))
 
