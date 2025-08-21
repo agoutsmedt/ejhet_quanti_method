@@ -5,23 +5,23 @@ source(file.path("scripts", "paths_and_packages.R"))
 p_load(see)
 
 ## Bert rational paragraph loading--------------------
-bert_df <- readRDS(file.path(data_path, "closest_sentences_0.01_rationality_score_with_embeddings.rds")) #%>% 
-  # mutate(doc_id = str_c(id, "_", paragraph_id)) %>% 
-  # arrange(doc_id)  
+bert_df <- readRDS(file.path(data_path, "closest_sentences_0.01_rationality_score_with_embeddings.rds")) %>% 
+  arrange(sentence_id) %>% 
+  filter(between(publication_year, 1900, 2019))
 
 metadata <- read_rds(file.path(data_path, "full_metadata_journals_cleaned.rds")) %>% 
-  # Only keep research articles for now because other types are quite messy and avoid overloading the memory
   .[ refined_sub_type == "research-article" & language == "eng", .(id, is_part_of, title, creator, publication_year)] %>% 
   .[order(publication_year)] 
 
 documents_cluster <- readRDS(file.path(data_path, "sentences_intertemporal_cluster.rds")) %>% 
   left_join(select(bert_df, id, sentence, sentence_id)) %>% 
-  left_join(metadata)
+  left_join(metadata) %>% 
+  arrange(sentence_id)
 
-# Naming clusters ---------------------
+# Naming clusters and tf-idf---------------------
 setDT(documents_cluster)
-unigrams <- documents_cluster[, .(sentence_id, sentence, new_cluster)][, token := tokenizers::tokenize_words(sentence, lowercase = TRUE)][, -("sentence")]
-bigrams <- documents_cluster[, .(sentence_id, sentence, new_cluster)][, token := tokenizers::tokenize_ngrams(sentence, n= 2, lowercase = TRUE)][, -("sentence")]
+unigrams <- documents_cluster[, .(sentence_id, sentence, window, new_cluster)][, token := tokenizers::tokenize_words(sentence, lowercase = TRUE)][, -("sentence")]
+bigrams <- documents_cluster[, .(sentence_id, sentence, window, new_cluster)][, token := tokenizers::tokenize_ngrams(sentence, n= 2, lowercase = TRUE)][, -("sentence")]
 tokens <- rbind(unigrams,
                 bigrams)
 tokens <- tokens[, .(token = unlist(token)), by = new_cluster]
@@ -37,7 +37,7 @@ tokens <- tokens[
     !(word_1 %in% stop_words) &
     (is.na(word_2) | !(word_2 %in% stop_words))
 ]
-tokens <- tokens[, .(new_cluster, token)]
+tokens <- tokens[, .(new_cluster, window, token)]
 
 tokens_count <- compute_tf_idf(tokens, 
                token_col = "token", 
@@ -97,21 +97,22 @@ areas_cluster <- ggplot(documents_cluster, aes(x = publication_year, y = after_s
 plotly::ggplotly(areas_cluster)
 
 # 2. Alluvial plot showing cluster persistence
+
 all_clusters <- levels(factor(documents_cluster$label)) %>% sample()
 # Preview the default 'see' palette to get the colors
-palette_colors <- c(see::see_colors(), see::oi_colors(), scico::scico(n = 10, palette = "roma"))  # Example for the see_d palette
+palette_colors <- c(see::see_colors(), see::oi_colors(), scico::scico(n = 8, palette = "roma"), scico::scico(palette = "tokyo", n = 6))  # Example for the see_d palette
 # If you use another palette, replace accordingly
 # Let's say you use 8 clusters and 8 colors from the palette
 cluster_colors <- palette_colors[1:length(all_clusters)]
 names(cluster_colors) <- all_clusters
 
 label_alluvial <- documents_cluster %>% 
-  distinct(label, window) %>% 
+  distinct(new_cluster, label, window) %>% 
   mutate(first_year = str_extract(window, "\\d{4}") %>% as.integer()) %>% 
   mutate(label_alluvial = first_year == min(first_year), .by = label) %>%
   filter(label_alluvial == TRUE) %>%
-  distinct(label, window) %>%
-  mutate(label_alluvial = label)
+  distinct(new_cluster, label, window) %>%
+  mutate(label_alluvial = str_c(new_cluster, ": ", label))
 
 documents_cluster %>%
   left_join(label_alluvial) %>% 
@@ -153,7 +154,7 @@ top_journals_cluster <- cluster_journal_counts %>%
   slice_max(proportion, n = 5, by = new_cluster)
 
 # Plot top journals per cluster
-top_journals_cluster %>% 
+top_journals_cluster %>%
   mutate(is_part_of = reorder_within(is_part_of, proportion, new_cluster)) %>% 
 ggplot(aes(x = reorder(is_part_of, proportion), y = proportion, fill = new_cluster)) +
   geom_col(show.legend = FALSE) +
@@ -164,35 +165,20 @@ ggplot(aes(x = reorder(is_part_of, proportion), y = proportion, fill = new_clust
   labs(title = "Top Journals per Cluster", x = "Journal", y = "Number of Documents") +
   scale_fill_see()
 
-# Top words-----------------------
-# Top target words per cluster
-top_words_cluster <- bert_df %>%
-  count(new_cluster, target_word, sort = TRUE) %>%
-  mutate(proportion = n/sum(n)) %>% 
-  group_by(new_cluster) %>%
-  slice_max(n, n = 5) %>%
-  ungroup()
 
-# Plot top words per cluster
-ggplot(top_words_cluster, aes(x = reorder(target_word, proportion), y = proportion, fill = new_cluster)) +
-  geom_col(show.legend = FALSE) +
-  facet_wrap(~ new_cluster, scales = "free") +
-  coord_flip() +
-  theme_minimal() +
-  labs(title = "Top Words per Cluster", x = "Target Word", y = "Frequency") +
-  scale_fill_see()
-
-
-
-# Top paragraphs----------------------------------
+# Top sentences----------------------------------
 # Build embedding matrix
 
 # Convert to data.table
+bert_df <- merge(bert_df, 
+                 select(documents_cluster, sentence_id, window, new_cluster), 
+                 by = "sentence_id", 
+                 all.x = TRUE)
 bert_dt <- as.data.table(bert_df)
 
 # Expand bert_embedding_concat list into separate columns
 # Assume each embedding is length 3072
-bert_dt <- bert_dt[, as.data.table(do.call(rbind, bert_embedding_concat))]
+bert_dt <- bert_dt[, as.data.table(do.call(rbind, embedding))]
 bert_dt$new_cluster <- bert_df$new_cluster
 
 # Calculate mean of each dimension by new_cluster
@@ -201,66 +187,68 @@ cluster_centroids <- bert_dt[, lapply(.SD, mean), by = new_cluster]
 # Ensure embedding columns are correctly selected
 embedding_cols <- setdiff(names(bert_dt), "new_cluster")
 
-# Build paragraph matrix with doc_id as row names
-paragraph_mat <- as.matrix(bert_dt[, ..embedding_cols])
-rownames(paragraph_mat) <- bert_df$doc_id
+# Build paragraph matrix with sentence_id as row names
+sentences_mat <- as.matrix(bert_dt[, ..embedding_cols])
+rownames(sentences_mat) <- bert_df$sentence_id
 
 # Build centroid matrix with new_cluster as row names
 centroid_mat <- as.matrix(cluster_centroids[, ..embedding_cols])
 rownames(centroid_mat) <- cluster_centroids$new_cluster
 
-# Calculate cosine similarity between paragraphs and centroids
+# Calculate cosine similarity between sentences and centroids
 #similarity_matrix <- text2vec::sim2(x = paragraph_mat, y = centroid_mat, method = "cosine", norm = "l2")
 
 # Get the list of clusters
 clusters <- unique(bert_dt$new_cluster)
+bert_dt$window <- bert_df$window
+bert_dt$sentence_id <- bert_df$sentence_id
 
-# Set how many top paragraphs you want
+# Set how many top sentences you want
 top_n <- 10
 
 # Run similarity search per cluster and per window
-top_paragraphs_per_cluster_window <- map_dfr(clusters, function(cluster) {
+top_sentences_per_cluster_window <- map_dfr(clusters, function(cluster) {
   
-  # Filter paragraphs for this cluster
-  bert_dt$time_window <- bert_df$time_window
-  bert_dt$doc_id <- bert_df$doc_id
-  cluster_paragraphs <- bert_dt[new_cluster == cluster]
+  # Filter sentences for this cluster
+  cluster_sentences <- bert_dt[new_cluster == cluster]
   
   # Get unique time windows in this cluster
-  time_windows <- unique(bert_df$time_window)
+  time_windows <- unique(bert_dt[new_cluster == cluster]$window)
   
   # Extract the centroid for this cluster
   centroid_vec <- centroid_mat[cluster, , drop = FALSE]
   
   # Run similarity search per time window
-  map_dfr(time_windows, function(window) {
+  map_dfr(time_windows, function(time_window) {
     
-    # Select paragraphs in this window
-    window_paragraphs <- cluster_paragraphs[time_window == window]
-    if (nrow(window_paragraphs) == 0) return(NULL)  # Skip empty groups
+    # Select sentences in this window
+    window_sentences <- cluster_sentences[window == time_window]
+    if (nrow(window_sentences) == 0) return(NULL)  # Skip empty groups
     
-    window_mat <- as.matrix(window_paragraphs[, ..embedding_cols])
-    rownames(window_mat) <- window_paragraphs$doc_id
+    window_mat <- as.matrix(window_sentences[, ..embedding_cols])
+    rownames(window_mat) <- window_sentences$sentence_id
     
     # Calculate cosine similarity for this window
     sim_vec <- text2vec::sim2(x = window_mat, y = centroid_vec, method = "cosine", norm = "l2")[, 1]
     
-    # Get top N most similar paragraphs in this window
+    # Get top N most similar sentences in this window
     top_idx <- order(sim_vec, decreasing = TRUE)[1:min(5, length(sim_vec))]
     
     data.table(
       new_cluster = cluster,
-      time_window = window,
-      doc_id = names(sim_vec)[top_idx],
+      window = time_window,
+      sentence_id = names(sim_vec)[top_idx],
       similarity = sim_vec[top_idx],
       rank = 1:length(top_idx)
     )
   })
 })
 
-top_paragraphs_per_cluster_window <- top_paragraphs_per_cluster_window  %>% 
-  left_join(select(bert_df, doc_id, window, publication_year))
+top_sentences_per_cluster_window <- top_sentences_per_cluster_window  %>% 
+  mutate(sentence_id = as.integer(sentence_id)) %>%
+  left_join(select(bert_df, sentence_id, sentence, publication_year)) %>% 
+  mutate(mention_rationality = str_detect(sentence, regex("(^| )rational", ignore_case = TRUE)))
 
-# Now we just keep the n most important paragraphs for the whole cluster (among the selection of top_n per window)
-top_paragraphs_per_cluster <- top_paragraphs_per_cluster_window %>% 
+# Now we just keep the n most important sentences for the whole cluster (among the selection of top_n per window)
+top_sentences_per_cluster <- top_sentences_per_cluster_window %>% 
   slice_max(order_by = similarity, by = new_cluster, n = 10)
