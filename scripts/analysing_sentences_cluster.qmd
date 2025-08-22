@@ -13,6 +13,7 @@ fig-height: 6
 code-fold: true
 code-summary: "Show the code"
 cache: true
+embed-resources: true
 lightbox: auto
 execute:
   echo: true
