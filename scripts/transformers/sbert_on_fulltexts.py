@@ -92,7 +92,6 @@ def is_valid_sentence(s):
         return False
 
     # Beaucoup de chiffres (souvent tableaux de données)
-    
     digit_ratio = sum(c.isdigit() for c in s) / max(len(s), 1)
     if digit_ratio > 0.3:
         return False

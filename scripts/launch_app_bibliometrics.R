@@ -4,15 +4,11 @@ source(file.path("scripts", "paths_and_packages.R"))
 
 pacman::p_load(shiny, shinycssloaders)
 
+# load graphs 
 graphs <- readRDS(here::here(data_path, "networks_1970_2014_10_year_windows_0.1_rationality_score.RDS"))
 labels <- readRDS(here::here(data_path, "label_ai_1970_2014_10_year_windows_0.1_rationality_score.RDS"))
 
-# rationality_score_original <- read_feather(here::here(data_path, "similarities_by_document.feather")) %>% 
-#   as.data.table()
-
-
-# add labels to the list of graphs
-
+# add labels to the list of graphs  
 graphs <- lapply(graphs, function(graph) {
   
   graph <- graph %>% 
@@ -24,23 +20,8 @@ graphs <- lapply(graphs, function(graph) {
   graph <- graph %>% 
     activate(edges) %>%
     rename(color = color_edges)
-    
-  return(graph)
 })
 
-
-# # Similarity scores
-# rationality_score_original[,id:=paste0("http://www.jstor.org/stable/", id)]
-# rationality_score <- rationality_score_original %>% rename(jstor_id = id, similarity = cosine_sim_centered) %>% select(jstor_id, similarity) %>% unique()
-# rationality_score <- merge(matching, rationality_score, all.x = TRUE, by.x = "id_jstor", by.y = "jstor_id")
-# rationality_score <- rationality_score[!is.na(id_match_final) & !is.na(similarity),.(id_match_final, similarity)] %>% rename(ID_Art = id_match_final)
-# rationality_score[,ID_Art:=as.character(ID_Art)]
-# rationality_score[,similarity:=mean(similarity), ID_Art]
-# rationality_score <- unique(rationality_score)
-# 
-# # similarity scores to network
-# tbl_networks <- lapply(tbl_networks, function(tbl)(tbl %>% activate(nodes) %>% 
-#                                                    left_join(rationality_score, by = "ID_Art")))
 
 launch_network_app(
     graph_tbl = graphs, 
@@ -53,3 +34,52 @@ launch_network_app(
     color = "color",
     layout = NULL # already layouted
 )
+
+
+
+# to add textual values 
+
+# retrieve text from jstor and wos  
+fulltexts <- open_dataset(here(jstor_raw_data, "sentences_embeddings"), format = "feather")
+abstracts <- open_dataset(here(jstor_raw_data, "Abstract_wos", "sentences_embeddings"), format = "feather")
+
+# add representative text using rv 
+graphs <- lapply(graphs, function(graph) {
+
+  # get id 
+  list_ids <- graph |> 
+    activate(nodes) |> 
+    as.data.frame() |> 
+    select(ID_Art) |> 
+    unique() |> 
+    pull(ID_Art)
+
+  fulltexts_query <- fulltexts |> 
+    filter(id %in% list_ids) |> 
+    collect() |> 
+    select(id, sentence) |> 
+    rename(fulltext = sentence,
+           ID_Art = id) |> 
+    # merge sentence from the same id 
+    group_by(ID_Art) |>
+    summarise(fulltext = paste(fulltext, collapse = ". "))
+
+  abstracts_query <- abstracts |> 
+    filter(id %in% list_ids) |> 
+    select(id, sentence) |> 
+    collect() |> 
+    rename(abstract = sentence,
+           ID_Art = id) |> 
+    mutate(ID_Art = as.character(ID_Art))
+
+  # if not empty, add fulltexts and abstracts to the graph
+    graph <- graph |> 
+      activate(nodes) |> 
+      left_join(fulltexts_query) 
+
+    graph <- graph |> 
+      activate(nodes) |>
+      left_join(abstracts_query) 
+  
+  return(graph)
+})
