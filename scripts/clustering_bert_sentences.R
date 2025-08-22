@@ -100,10 +100,10 @@ saveRDS(bert_df, file.path(data_path, "closest_sentences_0.01_rationality_score_
 ## Running a PCA to reduce dimensionality-----------------
 balanced_sample <- bert_df %>%
   mutate(time_window = cut(publication_year, 
-                             breaks = seq(1900, 2020, by = 10), 
-                             labels = paste0(seq(1900, 2010, by = 10), "-", seq(1909, 2019, by = 10)))) %>%
+                           breaks = c(1900, seq(1920, 2020, by = 10)), 
+                           labels = paste0(c(1900, seq(1920, 2010, by = 10)), "-", seq(1919, 2019, by = 10)))) %>%
   group_by(time_window) %>%
-  slice_sample(n = 2000) %>%
+  slice_sample(n = 3000) %>%
   ungroup()
 
 # 2. Fit PCA on this sample
@@ -112,12 +112,19 @@ pc_global <- prcomp_irlba(sample_embeddings, n = 100, center = TRUE, scale. = TR
 
 ## Time window set up------------------
 # Generate decade breaks (1900-2020)
-decades <- seq(1900, 2020, by = 10)
+decades <- c(1900,
+             seq(1920, 2020, by = 10))
 
 # Create window labels (e.g., "1900-1909", "1910-1919")
 time_windows <- map2(decades[-length(decades)], decades[-1] - 1, 
                      ~c(.x, .y)) %>%
   set_names(paste0(decades[-length(decades)], "-", decades[-1] - 1))
+
+project_pc <- function(df, pc) {
+  X <- do.call(rbind, df$embedding)
+  Xs <- scale(X, center = pc$center, scale = pc$scale)
+  as.matrix(Xs %*% pc$rotation[, 1:ncol(pc$rotation)])
+}
 
 # CLUSTERING PIPELINE-------------------
 
@@ -133,34 +140,46 @@ process_window <- function(years, df) {
 
   # Filter documents in current window
   window_data <- df %>% 
-    filter(between(publication_year, years[1], years[2])) %>% 
-    select(sentence_id, V = embedding) %>% 
-    unnest_wider(V, names_sep = "")
-  
-  Msc <- scale(select(window_data, -sentence_id), center = pc_global$center, scale = pc_global$scale)
-  reduced_data <- window_data %>% 
-    select(sentence_id) %>% 
-    bind_cols(as.data.frame(Msc %*% pc_global$rotation[, 1:100]))
+    filter(between(publication_year, years[1], years[2]))
+
+  reduced_data <- project_pc(window_data, pc_global) %>% 
+    as_tibble() %>% 
+    mutate(sentence_id = window_data$sentence_id, .before = everything())
   rm(window_data)
   
   # Preprocessing recipe
   clust_recipe <- recipe(~ ., data = reduced_data) %>%
     update_role(sentence_id, new_role = "id") %>% 
-    step_zv(all_predictors()) %>%  # drop zero-variance cols
     step_normalize(all_predictors())
   
   # Define clustering workflow
-  kmeans_wf <- workflow() %>%
-    add_recipe(clust_recipe) %>%
-    add_model(k_means(num_clusters = tune()) %>% 
-                set_engine("stats", algorithm = "Hartigan-Wong", iter.max = 100, nstart = 20))
-  
+  if("ClusterR" %in% installed.packages()){
+    p_load(ClusterR)
+    kmeans_wf <- workflow() %>%
+      add_recipe(clust_recipe) %>%
+      add_model(k_means(num_clusters = tune()) %>% 
+                  set_engine("ClusterR", 
+                             num_init = 10,
+                             max_iters = 100,
+                             verbose = TRUE))
+  } else {
+    message("Package 'ClusterR' not installed. Using stats::kmeans instead.")
+    # Fallback to stats::kmeans if ClusterR is not available
+    kmeans_wf <- workflow() %>%
+      add_recipe(clust_recipe) %>%
+      add_model(k_means(num_clusters = tune()) %>% 
+                  set_engine("stats", 
+                             algorithm = "Hartigan-Wong", 
+                             iter.max = 100, 
+                             nstart = 20))
+  }
+
   # Tune number of clusters (k) using silhouette score
   set.seed(89)
   tune_res <- tune_cluster(
     kmeans_wf,
     resamples = vfold_cv(reduced_data, v = 4),
-    grid = tibble(num_clusters = 3:10),
+    grid = tibble(num_clusters = 5:15),
     metrics = cluster_metric_set(sse_ratio),
     control = control_grid(parallel_over = "everything")
   )
@@ -224,15 +243,6 @@ centroid_matrix <- centroids %>%
   as.matrix()
 cosine_sim <- lsa::cosine(t(centroid_matrix))
 
-# p_load(philentropy)
-# # Ensure non-negative values
-# centroid_matrix_shifted <- centroid_matrix - apply(centroid_matrix, 1, min)
-# # Add a tiny epsilon to avoid all-zero rows
-# centroid_matrix_shifted <- centroid_matrix_shifted + 1e-12
-# # Row-normalize to sum to 1 (probability distribution per centroid)
-# centroid_matrix_norm <- centroid_matrix_shifted / rowSums(centroid_matrix_shifted)
-# jsd_matrix <- distance(centroid_matrix_norm, method = "jensen-shannon", unit = "log2")
-
 # distribution of cosine similarities
 similarities <- data.frame(similarity = as.vector(cosine_sim)) %>% 
   filter(similarity < 1) # Filter out self-comparisons (diagonal)
@@ -250,7 +260,7 @@ window_order <- data.frame(
   window_index = seq_along(time_windows)
 )
 
-similarity_threshold <- 0.983
+similarity_threshold <- 0.999
 cosine_tbl <- as.data.frame(cosine_sim) %>% 
   mutate(cluster_A = centroids$cluster_original_id) %>%
   pivot_longer(-cluster_A, names_to = "cluster_B", values_to = "similarity") %>%
@@ -279,38 +289,6 @@ final_clusters <- centroids %>%
   left_join(cluster_map, by = "cluster_original_id") %>% 
   mutate(new_cluster = ifelse(is.na(new_cluster), paste0("intertemporal_cluster_", cluster_original_id), paste0("intertemporal_cluster_", new_cluster)))
 
-# 
-# # Convert similarity matrix to tidy format
-# cosine_tbl <- as.data.frame(cosine_sim) %>%
-#   mutate(cluster_A = centroids$cluster_original_id) %>%
-#   pivot_longer(-cluster_A, names_to = "cluster_B", values_to = "similarity") %>%
-#   mutate(cluster_B = str_remove(cluster_B, "V") %>% as.integer()) %>% 
-#   filter(cluster_A < cluster_B) %>%  # Remove duplicates and self-comparisons
-#   arrange(desc(similarity)) %>% 
-#   left_join(select(centroids, original_cluster_A = .cluster, window_A = window, cluster_A = cluster_original_id)) %>% 
-#   left_join(select(centroids, original_cluster_B = .cluster, window_B = window, cluster_B = cluster_original_id)) 
-# 
-# # Merge similar clusters (threshold = 0.95 cosine similarity)
-# 
-# clusters_to_merge <- cosine_tbl %>% 
-#   filter(similarity > similarity_threshold) %>% 
-#   filter(window_A != window_B) %>% # we don't want to merge clusters from the same window
-#   distinct(cluster_A, window_A, window_B, .keep_all = TRUE) %>% # We merge only with the closest cluster in the window, to avoid merging to cluster together in a window
-#   distinct(original_cluster_B, window_A, window_B, .keep_all = TRUE) %>% # We merge only with the closest cluster in the window, to avoid merging to cluster together in a window
-#   select(cluster_A, cluster_B) %>% 
-#   arrange(cluster_A, cluster_B) %>% 
-#   mutate(new_cluster = min(cluster_A), .by = cluster_A) %>% 
-#   mutate(new_cluster = min(new_cluster), .by = cluster_B) %>% 
-#   mutate(new_cluster = min(new_cluster), .by = cluster_A) %>% 
-#   pivot_longer(cluster_A:cluster_B, values_to = "cluster_original_id") %>% 
-#   select(-name) %>% 
-#   unique() %>% 
-#   mutate(new_cluster = str_c("intertemporal_cluster_", min(new_cluster)), .by = cluster_original_id) %>% 
-#   unique() %>% 
-#   arrange(new_cluster) %>% 
-#   right_join(select(centroids, window, cluster = .cluster, cluster_original_id)) %>% 
-#   mutate(new_cluster = if_else(is.na(new_cluster), str_c("intertemporal_cluster_", cluster_original_id), new_cluster))
-
 # Apply merged clusters to documents
 documents_partition <- documents_partition %>% 
   mutate(cluster = as.character(cluster)) %>% 
@@ -329,25 +307,8 @@ palette_colors <- c(see::see_colors(), see::oi_colors(), scico::scico(n = 10, pa
 cluster_colors <- palette_colors[1:length(all_clusters)]
 names(cluster_colors) <- all_clusters
 
-# 1. Stacked bar plot of cluster proportions
-documents_partition %>%
-  count(window, new_cluster) %>%
-  mutate(percent = n / sum(n), .by = window,
-         new_cluster = factor(new_cluster, levels= all_clusters)) %>%
-  ggplot(aes(x = window, y = percent, fill = new_cluster)) +
-  geom_col(position = "stack") +
-  geom_text(aes(label = percent(percent, accuracy = 1)), 
-            position = position_stack(vjust = 0.5), 
-            color = "white", size = 3) +
-  scale_y_continuous(labels = percent) +
-  labs(title = "Share of Documents by Cluster (Stacked)",
-       x = "Time Window",
-       y = "Percentage of Documents",
-       fill = "Intertemporal Cluster") +
-  theme_minimal() +
-  scale_fill_manual(values = cluster_colors)  # HARD color lock
   
-# 2. Alluvial plot showing cluster persistence
+# 1. Alluvial plot showing cluster persistence
 documents_partition %>%
   count(window, new_cluster) %>% 
   mutate(percent = n / sum(n), .by = window) %>%
@@ -370,71 +331,3 @@ ggsave(file.path("pictures", "intertemporal_clusters_alluvial.png"),
        width = 30,
        height = 30,
        dpi = 300)
-
-# 3. PCA visualization of all documents
-window_data <- bert_df %>% 
-  filter(between(publication_year, min(unlist(time_windows)), max(unlist(time_windows))))
-bert_mat <- do.call(rbind, window_data$embedding)
-pca <- prcomp_irlba(bert_mat, n = 2, center = TRUE, scale. = TRUE)
-
-top_clusters <- documents_partition %>% 
-  count(new_cluster) %>% 
-  mutate(share = n/sum(n)) %>% 
-  filter(share > 0.03)
-
-# Create tibble with results
-all_articles_pca <- tibble(
-  id = window_data$sentence_id,
-  PC1 = pca$x[, 1],
-  PC2 = pca$x[, 2],
-) %>% 
-  left_join(select(documents_partition, id, new_cluster)) %>% 
-  mutate(label_cluster = if_else(new_cluster %in% top_clusters$new_cluster, new_cluster, NA),
-         label_cluster = factor(label_cluster, levels = all_clusters))
-
-# PCA plot colored by intertemporal clusters
-plot_bert <- ggplot(all_articles_pca, aes(x = PC1, y = PC2, color = label_cluster)) +
-  geom_point(size = 0.5) +
-  theme_minimal() + 
-  scale_color_manual(values = cluster_colors, na.value = "gray") +  # HARD color lock
-#  see::scale_color_see_d(na.value = "gray") +
-  labs(title = "BERT base", x = "PC1", y = "PC2")
-
-ggsave(file.path("pictures", "intertemporal_clusters_pca.png"),
-       plot_bert,
-       units = "cm",
-       width = 30,
-       height = 30,
-       dpi = 300)
-
-# embeddings <- bert_df %>% 
-#   arrange(sentence_id) %>% 
-#   #  filter(between(publication_year, years[1], years[2])) %>% 
-#   select(sentence_id, V = embedding) %>% 
-#   unnest_wider(V, names_sep = "")
-# 
-# pc_global <- prcomp_irlba(embeddings, n = 50, center = TRUE, scale. = TRUE)
-# pcs <- pc_global$x
-# 
-# # run k-means
-# km <- kmeans(pcs, centers = 6, nstart = 20)
-# clusters <- bert_df %>% 
-#   arrange(sentence_id) %>% 
-#   select(id, publication_year, sentence_id) %>% 
-#   mutate(km_cluster = km$cluster)
-# 
-# clusters %>% 
-#   count(publication_year, km_cluster) %>% 
-#   View()
-# 
-# clusters %>% 
-#   ggplot(aes(x = publication_year, y = after_stat(count), fill = as.factor(km_cluster))) +
-#   geom_density(position = "fill", show.legend = TRUE) +
-#   theme_minimal() +
-#   labs(title = "Proportion of Clusters Over Time",
-#        x = "Publication Year",
-#        y = "Proportion of Documents",
-#        fill = "Cluster") +
-#   scale_y_continuous(labels = scales::percent_format()) +
-#   theme(legend.position = "bottom") +
-#   scale_fill_see() 
