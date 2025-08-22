@@ -7,6 +7,7 @@ toc-depth: 3
 date: today
 theme: cosmo
 fontsize: 12pt
+width: 1400
 fig-align: center
 fig-width: 8
 fig-height: 6
@@ -199,7 +200,7 @@ bert_dt$window <- bert_df$window
 bert_dt$sentence_id <- bert_df$sentence_id
 
 # Set how many top sentences you want
-top_n <- 15
+top_n <- 50
 
 # Run similarity search per cluster and per window
 top_sentences_per_cluster_window <- map_dfr(clusters, function(cluster) {
@@ -245,7 +246,6 @@ top_sentences_per_cluster_window <- top_sentences_per_cluster_window  %>%
   mutate(mention_rationality = str_detect(sentence, regex("(^| )rational", ignore_case = TRUE)))
 ```
 
-
 ```{r alluvial-absolute}
 alluvial_absolute <- documents_cluster %>%
   filter(publication_year > 1949) %>% 
@@ -270,7 +270,7 @@ ggsave(here("pictures", "intertemporal_clusters_alluvial_absolute.png"),
        alluvial_absolute,
        units = "cm",
        width = 50,
-       height = 40,
+       height = 35,
        dpi = 300)
 
 knitr::include_graphics(here("pictures", "intertemporal_clusters_alluvial_absolute.png"))
@@ -298,7 +298,64 @@ ggsave(here("pictures", "tf_idf_cluster_rationality.png"),
 knitr::include_graphics(here("pictures", "tf_idf_cluster_rationality.png"))
 ```
 
-```{r}
+```{r geom-density-1}
+areas_cluster_1900 <- documents_cluster %>% 
+  filter(publication_year < 1950) %>% 
+ggplot(aes(x = publication_year, y = after_stat(count), fill = label)) +
+  geom_density(position = "fill", show.legend = TRUE, adjust = 9/10) +
+  theme_minimal() +
+  labs(title = "Proportion of Clusters Over Time",
+       x = NULL,
+       y = NULL,
+       fill = "Cluster") +
+  scale_y_continuous(labels = scales::percent_format()) +
+  theme(legend.position = "bottom") +
+  scale_fill_see() 
+plotly::ggplotly(areas_cluster_1900,
+         width = 800, 
+         height = 900) %>%
+      plotly::layout(legend=list(orientation='h'))
+```
+
+```{r geom-density-2}
+areas_cluster_1950 <- documents_cluster %>% 
+  filter(publication_year >= 1950) %>% 
+ggplot(aes(x = publication_year, y = after_stat(count), fill = label)) +
+  geom_density(position = "fill", show.legend = TRUE, adjust = 9/10) +
+  theme_minimal() +
+  labs(title = "Proportion of Clusters Over Time",
+       x = NULL,
+       y = NULL,
+       fill = "Cluster") +
+  scale_y_continuous(labels = scales::percent_format()) +
+  theme(legend.position = "bottom") +
+  scale_fill_see() 
+plotly::ggplotly(areas_cluster_1950,
+         width = 800, 
+         height = 900) %>%
+      plotly::layout(legend=list(orientation='h'))
+```
+
+```{r geom-density-3}
+areas_cluster_1970 <- documents_cluster %>% 
+  filter(publication_year >= 1970) %>% 
+ggplot(aes(x = publication_year, y = after_stat(count), fill = label)) +
+  geom_density(position = "fill", show.legend = TRUE, adjust = 9/10) +
+  theme_minimal() +
+  labs(title = "Proportion of Clusters Over Time",
+       x = NULL,
+       y = NULL,
+       fill = "Cluster") +
+  scale_y_continuous(labels = scales::percent_format()) +
+  theme(legend.position = "bottom") +
+  scale_fill_see() 
+plotly::ggplotly(areas_cluster_1970,
+         width = 800, 
+         height = 900) %>%
+      plotly::layout(legend=list(orientation='h'))
+```
+
+```{r template}
 #| results: 'asis'
 
 for(cluster in list_clusters){
@@ -317,7 +374,7 @@ for(cluster in list_clusters){
   
   ############# General Info ##################
   cat(paste0("  \nThe cluster gathers ", length(unique(cluster_data$sentence_id))," sentences from our corpus. It represents ",round(length(unique(cluster_data$sentence_id))/length(unique(documents_cluster$sentence_id))*100,2),"% of all the sentences selected over the whole period.\n"))
-  
+
   cat(paste0("\nThe community exists from ", window[1]," to ", window[2],". \n\n"))
   
   recurring_authors <- cluster_data %>% 
@@ -373,13 +430,46 @@ for(cluster in list_clusters){
     }
   }
   
-  ############# Top sentences ##################
-  cat("\n### Top sentences of the community\n\n")
+  ############# Distribution sentences ##################
+  cat("\n### Distribution of sentences over time \n\n")
   
+    plot(cluster_data %>% 
+      count(publication_year) %>% 
+      ggplot(aes(x = publication_year, y = n)) +
+      geom_bar(stat = "identity") + 
+      scale_x_continuous(expand = c(0.01,0), n.breaks = 10) +
+      scale_y_continuous(expand = c(0.01, 0)) +
+      theme_light(base_size = 20) +
+      labs(y = "Number of sentences",
+           x = NULL,
+           title = NULL)) 
+      
   
   top_sentences_filtered <- top_sentences_per_cluster_window %>% 
     filter(new_cluster == !!cluster) %>% 
     left_join(select(cluster_data, title, publication_year, is_part_of, creator, sentence_id)) 
+  
+
+  ############# Top sentences ##################
+  cat("\n\n")
+  cat("\n### Top sentences with 'rational' or 'rationality' of the cluster\n\n")
+  
+  percentage_rationality <- nrow(filter(top_sentences_filtered, mention_rationality)) / nrow(top_sentences_filtered) * 100 %>% round(2)
+  cat(glue("\nAmong the top {nrow(top_sentences_filtered)} sentences of the cluster, {percentage_rationality}% mention the terms 'rational' or 'rationality'\n\n"))
+  
+  if(top_sentences_filtered %>% filter(mention_rationality) %>% nrow() > 0){
+    top_sentences_filtered %>% 
+      filter(mention_rationality == TRUE) %>% 
+      slice_max(similarity, n = 15) %>% 
+      select(sentence, title, publication_year, is_part_of, creator, similarity) %>% 
+      kbl(col.names = c("Sentence", "Title", "Year", "Journal", "Authors", "Similarity")) %>% 
+      kable_styling(bootstrap_options = c("striped","condensed"),
+                    font_size = 13) %>% 
+      print()
+  }
+  
+  
+  cat("\n### Top sentences (in general) of the cluster\n\n")
   
   top_sentences_filtered %>% 
     slice_max(similarity, n = 15) %>% 
