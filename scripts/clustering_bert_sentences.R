@@ -20,8 +20,9 @@ n_cores <- floor(parallel::detectCores() /2.5)
 registerDoParallel(cores = n_cores)
 
 ## Bert rational paragraph loading--------------------
-bert_df <- read_rds(here::here(data_path, "closest_sentences_0.01_rationality_score.rds")) %>% 
+bert_df <- read_rds(here::here(data_path, "closest_sentences_0.01_filtered_rationality_score.rds")) %>% 
   bind_rows %>% 
+  filter(between(publication_year, 1900, 2020)) %>% 
   distinct(id, publication_year, sentence, .keep_all = TRUE) %>% 
   mutate(sentence_id = row_number()) %>%
   as.data.table()
@@ -49,6 +50,12 @@ ggplot(mean_year, aes(x = publication_year, y = mean_year_similarity)) +
 
 # 2) How many sentences per year if cutoff = 0.60 or 0.55
 #    Note: this counts within your kept subset (top 1%), not the full corpus.
+bert_df %>% 
+  select(publication_year, similarity) %>% 
+  summarise(min = min(similarity), .by = publication_year) %>% 
+  ggplot(aes(publication_year, min)) + 
+  geom_point()
+
 counts <- bert_df[, .(
   prop_062 = mean(similarity >= 0.62, na.rm = TRUE),
   prop_060 = mean(similarity >= 0.60, na.rm = TRUE),
@@ -71,7 +78,7 @@ ggplot(counts_long, aes(publication_year, count, linetype = cutoff, color = cuto
   theme_minimal()
 
 # For now, we take a cutoff of 0.58 for similarity
-final_cutoff <- 0.58
+final_cutoff <- 0.5 # i.e. no cutoff
 bert_df <- bert_df[similarity > final_cutoff]
 
 # inputs
@@ -90,18 +97,18 @@ bert_df <- merge(bert_df, data_query,
   as_tibble() %>% 
   unique()
 
-saveRDS(bert_df, file.path(data_path, "closest_sentences_0.01_rationality_score_with_embeddings.rds"))
+saveRDS(bert_df, file.path(data_path, "closest_sentences_0.01_rationality_score_filtered_with_embeddings.rds"))
 
 #' If necessary, load data with embeddings:
-#' `bert_df <- readRDS(file.path(data_path, "closest_sentences_0.01_rationality_score_with_embeddings.rds"))`
+#' `bert_df <- readRDS(file.path(data_path, "closest_sentences_0.01_rationality_score_filtered_with_embeddings.rds"))`
 
 # Matching kept sentences with their vectors------------
 
 ## Running a PCA to reduce dimensionality-----------------
 balanced_sample <- bert_df %>%
   mutate(time_window = cut(publication_year, 
-                           breaks = c(1900, seq(1920, 2020, by = 10)), 
-                           labels = paste0(c(1900, seq(1920, 2010, by = 10)), "-", seq(1919, 2019, by = 10)))) %>%
+                           breaks = c(1900, 1920, seq(1940, 2020, by = 10)), 
+                           labels = paste0(c(1900, 1920, seq(1940, 2010, by = 10)), "-", c(1919, seq(1939, 2019, by = 10))))) %>%
   group_by(time_window) %>%
   slice_sample(n = 3000) %>%
   ungroup()
@@ -113,12 +120,14 @@ pc_global <- prcomp_irlba(sample_embeddings, n = 100, center = TRUE, scale. = TR
 ## Time window set up------------------
 # Generate decade breaks (1900-2020)
 decades <- c(1900,
-             seq(1920, 2020, by = 10))
+             1920,
+             seq(1940, 2020, by = 10))
 
 # Create window labels (e.g., "1900-1909", "1910-1919")
-time_windows <- map2(decades[-length(decades)], decades[-1] - 1, 
+time_windows <- map2(decades[-length(decades)], decades[-1] - 1,
                      ~c(.x, .y)) %>%
   set_names(paste0(decades[-length(decades)], "-", decades[-1] - 1))
+
 
 project_pc <- function(df, pc) {
   X <- do.call(rbind, df$embedding)
@@ -179,9 +188,9 @@ process_window <- function(years, df) {
   tune_res <- tune_cluster(
     kmeans_wf,
     resamples = vfold_cv(reduced_data, v = 4),
-    grid = tibble(num_clusters = 5:15),
+    grid = tibble(num_clusters = 2:20),
     metrics = cluster_metric_set(sse_ratio),
-    control = control_grid(parallel_over = "everything")
+    control = control_grid(parallel_over = "everything", allow_par = TRUE)
   )
   
   metrics_df <- collect_metrics(tune_res) %>%
