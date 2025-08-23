@@ -121,8 +121,14 @@ plotly::ggplotly(areas_cluster)
 # 2. Alluvial plot showing cluster persistence
 all_clusters <- levels(factor(bert_df$label)) %>% sample()
 # Preview the default 'see' palette to get the colors
-palette_colors <- c(see::see_colors(), see::oi_colors())  # Example for the see_d palette
-# If you use another palette, replace accordingly
+palette_colors <- c(see::see_colors(), 
+                    see::oi_colors()[1:7], 
+                    scico::scico(n = 8, palette = "roma"), 
+                    scico::scico(n = 8, palette = "tokyo"),
+                    scico::scico(n = 8, palette = "hawaii"),
+                    scico::scico(n = 8, palette = "batlowK"),
+                    scico::scico(n = 7, palette = "bamako"),
+                    scico::scico(n = 7, palette = "glasgow")) %>% # If you use another palette, replace accordingly
 # Let's say you use 8 clusters and 8 colors from the palette
 cluster_colors <- palette_colors[1:length(all_clusters)]
 names(cluster_colors) <- all_clusters

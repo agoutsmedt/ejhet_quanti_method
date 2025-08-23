@@ -239,12 +239,13 @@ centroids <- map(1:length(results), ~pluck(results, ., "centroids")) %>%
 
 # Calculate cosine similarity between all centroids
 centroid_matrix <- centroids %>%
-  select(-.cluster, -window) %>%
+  select(-.cluster, -window, -cluster_original_id) %>%
   as.matrix()
 cosine_sim <- lsa::cosine(t(centroid_matrix))
 
 # distribution of cosine similarities
 similarities <- data.frame(similarity = as.vector(cosine_sim)) %>% 
+  arrange(desc(similarity)) %>% 
   filter(similarity < 1) # Filter out self-comparisons (diagonal)
 
 ggplot(similarities, aes(x = similarity)) +
@@ -260,7 +261,7 @@ window_order <- data.frame(
   window_index = seq_along(time_windows)
 )
 
-similarity_threshold <- 0.999
+similarity_threshold <- 0.4
 cosine_tbl <- as.data.frame(cosine_sim) %>% 
   mutate(cluster_A = centroids$cluster_original_id) %>%
   pivot_longer(-cluster_A, names_to = "cluster_B", values_to = "similarity") %>%
@@ -272,18 +273,20 @@ cosine_tbl <- as.data.frame(cosine_sim) %>%
   rename(index_A = window_index) %>%
   left_join(window_order, by = c("window_B" = "window")) %>%
   rename(index_B = window_index) %>%
-  filter(similarity > similarity_threshold, abs(index_A - index_B) == 1) %>%
-  # we don't want to merge clusters from the same window
-  distinct(cluster_A, window_A, window_B, .keep_all = TRUE) %>% # We merge only with the closest cluster in the window, to avoid merging to cluster together in a window
-  distinct(cluster_B, window_A, window_B, .keep_all = TRUE) # We merge only with the closest cluster in the window, to avoid merging to cluster together in a window
-  
+  filter(similarity > similarity_threshold, abs(index_A - index_B) == 1) %>% 
+  arrange(index_A, cluster_A, similarity) %>% 
+  distinct(window_A, cluster_A, window_B, .keep_all = TRUE) %>% # only one matching in the future (if a t clusters is close to 2 t+1 clusers, we take the first one)
+  distinct(window_B, cluster_B, window_A, .keep_all = TRUE) # only one matching in the past (if a t+1 clusters is close to 2 t clusers, we take the first one)
+
 g <- graph_from_data_frame(cosine_tbl, directed = FALSE)
 components <- components(g)
 cluster_map <- data.frame(cluster_original_id = names(components$membership) %>% as.integer(),
                           new_cluster = components$membership) %>% 
   mutate(new_cluster = min(cluster_original_id), .by = new_cluster) %>% 
   filter(cluster_original_id != new_cluster)
-nrow(cluster_map)
+cli::cli_alert_info("Number of merged clusters: {nrow(cluster_map)}.
+                     Total clusters before merging: {nrow(centroids)}.
+                     Total clusters after merging: {nrow(centroids) - nrow(cluster_map)}.")
 
 final_clusters <- centroids %>%
   left_join(cluster_map, by = "cluster_original_id") %>% 
@@ -301,7 +304,14 @@ saveRDS(documents_partition, file.path(data_path, "sentences_intertemporal_clust
 set.seed(1989)
 all_clusters <- levels(factor(documents_partition$new_cluster)) %>% sample()
 # Preview the default 'see' palette to get the colors
-palette_colors <- c(see::see_colors(), see::oi_colors(), scico::scico(n = 10, palette = "roma"))  # Example for the see_d palette
+palette_colors <- c(see::see_colors(), 
+                    see::oi_colors()[1:7], 
+                    scico::scico(n = 8, palette = "roma"), 
+                    scico::scico(n = 8, palette = "tokyo"),
+                    scico::scico(n = 8, palette = "hawaii"),
+                    scico::scico(n = 8, palette = "batlowK"),
+                    scico::scico(n = 7, palette = "bamako"),
+                    scico::scico(n = 7, palette = "glasgow"))
 # If you use another palette, replace accordingly
 # Let's say you use 8 clusters and 8 colors from the palette
 cluster_colors <- palette_colors[1:length(all_clusters)]
@@ -323,7 +333,7 @@ documents_partition %>%
        y = "Percentage of Documents",
        fill = "Intertemporal Cluster") +
   theme_bw() +
-  theme(legend.position = "bottom") +
+  theme(legend.position = "none") +
   scale_fill_manual(values = cluster_colors)  # HARD color lock
 
 ggsave(file.path("pictures", "intertemporal_clusters_alluvial.png"),
