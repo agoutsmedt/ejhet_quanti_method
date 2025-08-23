@@ -45,8 +45,6 @@ documents_cluster <- readRDS(file.path(data_path, "sentences_intertemporal_clust
   left_join(metadata) %>% 
   arrange(sentence_id)
 
-rm(metadata)
-
 list_clusters <- documents_cluster %>% 
   mutate(rank_cluster = str_extract(new_cluster, "\\d+$") %>% as.integer()) %>% 
   arrange(rank_cluster) %>% 
@@ -114,7 +112,6 @@ labels_cluster[, label := paste0(str_extract(new_cluster, "\\d+$"), ": ", label)
 
 documents_cluster <- merge(documents_cluster, labels_cluster, all.x = TRUE, by = "new_cluster")
 ```
-
 
 ```{r preparing-tfidf-window}
 tokens[, new_variable := str_c(new_cluster, "--", window)]
@@ -278,8 +275,6 @@ top_sentences_per_cluster_window <- top_sentences_per_cluster_window  %>%
   mutate(sentence_id = as.integer(sentence_id)) %>%
   left_join(select(bert_df, sentence_id, sentence, publication_year)) %>% 
   mutate(mention_rationality = str_detect(sentence, regex("(^| )rational", ignore_case = TRUE)))
-rm(bert_df,
-   bert_dt)
 ```
 
 ```{r alluvial-absolute}
