@@ -96,6 +96,11 @@ launch_network_app <- function(
     cluster_information,
     cluster_tooltip = NULL,
     node_id,
+    top_references,
+    top_references_without_id,
+    cluster_origins,
+    cluster_destinies,
+    tf_idf_data,
     node_tooltip = NULL,
     node_size = NULL,
     color = NULL,
@@ -109,6 +114,7 @@ launch_network_app <- function(
     requireNamespace("dplyr"),
     requireNamespace("ggraph"),
     requireNamespace("rlang"),
+    requireNamespace("purrr"),
     requireNamespace("shinycssloaders"),
     requireNamespace("tidygraph"),
     requireNamespace("networkflow"),
@@ -145,6 +151,8 @@ launch_network_app <- function(
   cluster_sym <- rlang::sym(cluster_id)
   id_sym      <- rlang::sym(node_id)
   tooltip_sym <- if (!is.null(node_tooltip)) rlang::sym(node_tooltip) else NULL
+  id_chr      <- rlang::as_name(id_sym)
+  cluster_chr <- rlang::as_name(cluster_sym)
   
   # UI
   ui <- shiny::fluidPage(
@@ -157,11 +165,15 @@ launch_network_app <- function(
                              choices = names(graph_tbl),
                              selected = names(graph_tbl)[1])
         },
-        shiny::sliderInput("min_edge_width", "Min Edge Width:", min = 0.01, max = 10, value = 0.01, step = 0.01),
-        shiny::sliderInput("max_edge_width", "Max Edge Width:", min = 0.01, max = 10, value = 1, step = 0.01),
-        shiny::sliderInput("min_node_size", "Min Node Size:", min = 0.1, max = 10, value = 0.5, step = 0.01),
-        shiny::sliderInput("max_node_size", "Max Node Size:", min = 0.1, max = 10, value = 2, step = 0.01),
-        shiny::sliderInput("label_size", "Label size", min = 0.5, max = 5, value = 2, step = 0.1)
+ #       shiny::sliderInput("min_edge_width", "Min Edge Width:", min = 0.1, max = 10, value = 1, step = 0.1),
+  #      shiny::sliderInput("max_edge_width", "Max Edge Width:", min = 0.1, max = 10, value = 3, step = 0.1),
+        shiny::sliderInput("min_node_size", "Min Node Size:", min = 0.1, max = 10, value = 1, step = 0.1),
+        shiny::sliderInput("max_node_size", "Max Node Size:", min = 0.1, max = 10, value = 5, step = 0.1),
+        shiny::sliderInput("label_size", "Label size", min = 0.5, max = 5, value = 2.5, step = 0.1),
+        
+        # shiny::hr(),
+        # shiny::h5("Cluster composition"),
+        DT::DTOutput("cluster_share") 
       ),
       mainPanel = shiny::mainPanel(
         shiny::div(
@@ -171,8 +183,7 @@ launch_network_app <- function(
           )
         ),
         shiny::hr(),
-        shiny::h4("Documents in Selected Cluster"),
-        DT::DTOutput("cluster_docs")
+        shiny::uiOutput("info_panel")
       )
     )
   )
@@ -180,6 +191,23 @@ launch_network_app <- function(
   # Server
   server <- function(input, output, session) {
     selected_cluster <- shiny::reactiveVal(NULL)
+    selected_node_id <- shiny::reactiveVal(NULL)
+    
+    all_nodes_df <- shiny::reactive({
+      if (is_list_graph) {
+        purrr::imap_dfr(graph_tbl, function(g, nm) {
+          df <- tidygraph::activate(g, "nodes") |> as.data.frame()
+          df$.graph <- nm
+          if (!"time_window" %in% names(df)) df$time_window <- nm
+          df
+        })
+      } else {
+        df <- tidygraph::activate(graph_tbl, "nodes") |> as.data.frame()
+        df$.graph <- "graph"
+        if (!"time_window" %in% names(df)) df$time_window <- NA_character_
+        df
+      }
+    })
     
     active_graph <- shiny::reactive({
       if (is_list_graph) graph_tbl[[input$selected_graph]] else graph_tbl
@@ -213,11 +241,14 @@ launch_network_app <- function(
         x = quote(x),
         y = quote(y),
         fill = color_sym,
-        size = quote(size)
+        size = quote(size),
+        data_id = id_sym                         # <— was tooltip_sym
       )
       if (!is.null(tooltip_sym)) {
         node_aes$tooltip <- tooltip_sym
-        node_aes$data_id <- tooltip_sym
+    #    node_aes$data_id <- tooltip_sym
+      } else {
+        node_aes$tooltip <- id_sym               # fallback tooltip
       }
       
       # Cluster label data
@@ -242,16 +273,16 @@ launch_network_app <- function(
         label_aes$tooltip <- cluster_tooltip
       }
       
-      edge_width_range <- c(input$min_edge_width, input$max_edge_width)
+   #   edge_width_range <- c(input$min_edge_width, input$max_edge_width)
       node_size_range  <- c(input$min_node_size, input$max_node_size)
       label_size <- input$label_size
 
 
       g <- ggraph::ggraph(g_tbl, layout = "manual", x = x, y = y) +
-        ggraph::geom_edge_arc0(
-          ggplot2::aes(color = !!color_sym, width = weight),
-          alpha = 0.3, strength = 0.2, show.legend = FALSE
-        ) +
+        # ggraph::geom_edge_arc0(
+        #   ggplot2::aes(color = !!color_sym, width = weight),
+        #   alpha = 0.3, strength = 0.2, show.legend = FALSE
+        # ) +
         ggiraph::geom_point_interactive(
           mapping = do.call(ggplot2::aes, node_aes),
           shape = 21, alpha = 0.8, show.legend = FALSE
@@ -262,9 +293,9 @@ launch_network_app <- function(
           alpha = 0.9, fontface = "bold", show.legend = FALSE,
           size = label_size,
         ) +
-        ggraph::scale_edge_width_continuous(range = edge_width_range) +
+        # ggraph::scale_edge_width_continuous(range = edge_width_range) +
         ggplot2::scale_size_continuous(range = node_size_range) +
-        ggraph::scale_edge_colour_identity() +
+        # ggraph::scale_edge_colour_identity() +
         ggplot2::scale_fill_identity() +
         ggplot2::theme_void()
       
@@ -272,13 +303,93 @@ launch_network_app <- function(
         ggobj = g,
         width_svg = 10,
         height_svg = 6,
-        options = list(ggiraph::opts_selection(type = "single"))
+        options = list(ggiraph::opts_selection(type = "single"),
+                       ggiraph::opts_zoom(min = 1, max = 12),        # wheel to zoom, drag to pan
+                       ggiraph::opts_toolbar(position = "topright")  # gives reset zoom button)
+        )
+      )
+    })
+
+    shiny::observeEvent(input$network_plot_selected, {
+      sel <- input$network_plot_selected
+      nodes_all  <- all_nodes_df()
+      nodes_here <- tidygraph::activate(active_graph(), "nodes") |> as.data.frame()
+      
+      if (!is.null(sel) && sel %in% nodes_all[[id_chr]]) {
+        # clicked a node -> show ONLY node info
+        selected_node_id(sel)
+        selected_cluster(NULL)
+      } else if (!is.null(sel) && sel %in% nodes_here[[cluster_chr]]) {
+        # clicked a cluster label -> show ONLY cluster info
+        selected_cluster(sel)
+        selected_node_id(NULL)
+      } else {
+        selected_node_id(NULL)
+        selected_cluster(NULL)
+      }
+    })
+    
+    output$info_panel <- shiny::renderUI({
+      if (!is.null(selected_node_id())) {
+        tagList(
+          shiny::h4("Selected node"),
+          DT::DTOutput("node_info")
+        )
+      } else if (!is.null(selected_cluster())) {
+        cl <- if (is_list_graph) paste0(selected_cluster(), " — ", input$selected_graph)
+              else as.character(selected_cluster())
+        tagList(
+          shiny::h4(paste0("Documents in ", cl)),
+          DT::DTOutput("cluster_docs"),
+          shiny::h4(paste0("Top References of ", cl)),
+          DT::DTOutput("cluster_refs"),
+          shiny::h4(paste0("Top References (without ID) of ", cl)),
+          DT::DTOutput("cluster_refs_without_id"),
+          shiny::h4(paste0("Cluster tf-idf for ", cl, " (t → t+1)")),
+          DT::DTOutput("cluster_tf_idf"),
+          shiny::h4(paste0("Cluster origins for ", cl, " (t-1 → t)")),
+          DT::DTOutput("cluster_origins_table"),
+          shiny::h4(paste0("Cluster destinies for ", cl, " (t → t+1)")),
+          DT::DTOutput("cluster_destinies_table")
+        )
+      } else {
+        NULL
+      }
+    })
+    
+    output$cluster_share <- DT::renderDT({
+      g_tbl <- active_graph()
+      nodes <- tidygraph::activate(g_tbl, "nodes") %>% as.data.frame()
+      
+      tab <- nodes %>%
+        dplyr::count(!!cluster_sym, name = "n") %>%
+        dplyr::mutate(prop = n / sum(n),
+                      pct  = sprintf("%.1f%%", 100 * prop)) %>%
+        dplyr::arrange(dplyr::desc(prop)) %>%
+        dplyr::rename(Cluster = !!cluster_sym) %>%
+        dplyr::select(Cluster, n, pct)
+      
+      DT::datatable(tab,
+                    options = list(dom = 't', paging = FALSE),
+                    rownames = FALSE
       )
     })
     
-    shiny::observeEvent(input$network_plot_selected, {
-      selected_cluster(input$network_plot_selected)
+    output$node_info <- DT::renderDT({
+      req(selected_node_id())
+      nodes_all <- all_nodes_df()
+      
+      out <- nodes_all |>
+        dplyr::filter(.data[[id_chr]] == selected_node_id()) |>
+        dplyr::arrange(.graph) %>% 
+        dplyr::select(dplyr::any_of(c(
+          "time_window", cluster_id, cluster_information, node_size
+        )))
+        
+      
+      DT::datatable(out, options = list(pageLength = 10))
     })
+    
     
     output$cluster_docs <- DT::renderDT({
       req(selected_cluster())
@@ -288,6 +399,80 @@ launch_network_app <- function(
       nodes_df %>%
         dplyr::filter(!!cluster_sym == selected_cluster()) %>%
         dplyr::select(all_of(cluster_information)) %>%
+        DT::datatable(options = list(pageLength = 10))
+    })
+    
+    output$cluster_refs <- DT::renderDT({
+      req(selected_cluster())
+      g_tbl <- active_graph()
+      main_refs_cluster <- g_tbl %>%
+        tidygraph::activate("nodes") %>%
+        as.data.frame() %>%
+        distinct(!!cluster_sym, time_window) %>% 
+        dplyr::left_join(top_references)
+        main_refs_cluster %>%
+        dplyr::filter(!!cluster_sym == selected_cluster()) %>%
+        dplyr::select(Nom, Annee, Revue_Abbrege, nb_cit) %>%
+        DT::datatable(options = list(pageLength = 10))
+    })
+    
+    output$cluster_refs_without_id <- DT::renderDT({
+      req(selected_cluster())
+      g_tbl <- active_graph()
+      main_refs_cluster <- g_tbl %>%
+        tidygraph::activate("nodes") %>%
+        as.data.frame() %>%
+        distinct(!!cluster_sym, time_window) %>% 
+        dplyr::left_join(top_references_without_id)
+      main_refs_cluster %>%
+        dplyr::filter(!!cluster_sym == selected_cluster()) %>%
+        dplyr::select(Nom, Annee, nb_cit) %>%
+        DT::datatable(options = list(pageLength = 10))
+    })
+    
+    output$cluster_tf_idf <- DT::renderDT({
+      req(selected_cluster())
+      g_tbl <- active_graph()
+      tf_idf_for_cluster <- g_tbl %>%
+        tidygraph::activate("nodes") %>%
+        as.data.frame() %>%
+        distinct(!!cluster_sym, time_window) %>% 
+        dplyr::left_join(tf_idf_data) %>% 
+        filter(!is.na(term))
+      tf_idf_for_cluster %>%
+        dplyr::filter(!!cluster_sym == selected_cluster()) %>%
+        dplyr::select(term, tf_idf) %>%
+        mutate(tf_idf = round(tf_idf, 4)) %>%
+        DT::datatable(options = list(pageLength = 10))
+    })
+    
+    output$cluster_origins_table <- DT::renderDT({
+      req(selected_cluster())
+      g_tbl <- active_graph()
+      origins <- g_tbl %>%
+        tidygraph::activate("nodes") %>%
+        as.data.frame() %>%
+        distinct(!!cluster_sym, time_window) %>% 
+        dplyr::left_join(cluster_origins)
+      origins %>%
+        dplyr::filter(!!cluster_sym == selected_cluster()) %>%
+        dplyr::select(previous_cluster, origin_percent) %>%
+        mutate(origin_percent = sprintf("%.1f%%", 100 * origin_percent)) %>%
+        DT::datatable(options = list(pageLength = 10))
+    })
+    
+    output$cluster_destinies_table <- DT::renderDT({
+      req(selected_cluster())
+      g_tbl <- active_graph()
+      destinies <- g_tbl %>%
+        tidygraph::activate("nodes") %>%
+        as.data.frame() %>%
+        distinct(!!cluster_sym, time_window) %>% 
+        dplyr::left_join(cluster_destinies)
+      destinies %>%
+        dplyr::filter(!!cluster_sym == selected_cluster()) %>%
+        dplyr::select(forward_cluster, destiny_percent) %>%
+        mutate(destiny_percent = sprintf("%.1f%%", 100 * destiny_percent)) %>%
         DT::datatable(options = list(pageLength = 10))
     })
   }

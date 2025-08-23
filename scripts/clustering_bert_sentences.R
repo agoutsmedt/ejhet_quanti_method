@@ -20,8 +20,9 @@ n_cores <- floor(parallel::detectCores() /2.5)
 registerDoParallel(cores = n_cores)
 
 ## Bert rational paragraph loading--------------------
-bert_df <- read_rds(here::here(data_path, "closest_sentences_0.01_rationality_score.rds")) %>% 
+bert_df <- read_rds(here::here(data_path, "closest_sentences_0.01_filtered_rationality_score.rds")) %>% 
   bind_rows %>% 
+  filter(between(publication_year, 1900, 2020)) %>% 
   distinct(id, publication_year, sentence, .keep_all = TRUE) %>% 
   mutate(sentence_id = row_number()) %>%
   as.data.table()
@@ -49,6 +50,12 @@ ggplot(mean_year, aes(x = publication_year, y = mean_year_similarity)) +
 
 # 2) How many sentences per year if cutoff = 0.60 or 0.55
 #    Note: this counts within your kept subset (top 1%), not the full corpus.
+bert_df %>% 
+  select(publication_year, similarity) %>% 
+  summarise(min = min(similarity), .by = publication_year) %>% 
+  ggplot(aes(publication_year, min)) + 
+  geom_point()
+
 counts <- bert_df[, .(
   prop_062 = mean(similarity >= 0.62, na.rm = TRUE),
   prop_060 = mean(similarity >= 0.60, na.rm = TRUE),
@@ -71,7 +78,7 @@ ggplot(counts_long, aes(publication_year, count, linetype = cutoff, color = cuto
   theme_minimal()
 
 # For now, we take a cutoff of 0.58 for similarity
-final_cutoff <- 0.58
+final_cutoff <- 0.5 # i.e. no cutoff
 bert_df <- bert_df[similarity > final_cutoff]
 
 # inputs
@@ -90,18 +97,18 @@ bert_df <- merge(bert_df, data_query,
   as_tibble() %>% 
   unique()
 
-saveRDS(bert_df, file.path(data_path, "closest_sentences_0.01_rationality_score_with_embeddings.rds"))
+saveRDS(bert_df, file.path(data_path, "closest_sentences_0.01_rationality_score_filtered_with_embeddings.rds"))
 
 #' If necessary, load data with embeddings:
-#' `bert_df <- readRDS(file.path(data_path, "closest_sentences_0.01_rationality_score_with_embeddings.rds"))`
+#' `bert_df <- readRDS(file.path(data_path, "closest_sentences_0.01_rationality_score_filtered_with_embeddings.rds"))`
 
 # Matching kept sentences with their vectors------------
 
 ## Running a PCA to reduce dimensionality-----------------
 balanced_sample <- bert_df %>%
   mutate(time_window = cut(publication_year, 
-                           breaks = c(1900, seq(1920, 2020, by = 10)), 
-                           labels = paste0(c(1900, seq(1920, 2010, by = 10)), "-", seq(1919, 2019, by = 10)))) %>%
+                           breaks = c(1900, 1920, seq(1940, 2020, by = 10)), 
+                           labels = paste0(c(1900, 1920, seq(1940, 2010, by = 10)), "-", c(1919, seq(1939, 2019, by = 10))))) %>%
   group_by(time_window) %>%
   slice_sample(n = 3000) %>%
   ungroup()
@@ -113,12 +120,14 @@ pc_global <- prcomp_irlba(sample_embeddings, n = 100, center = TRUE, scale. = TR
 ## Time window set up------------------
 # Generate decade breaks (1900-2020)
 decades <- c(1900,
-             seq(1920, 2020, by = 10))
+             1920,
+             seq(1940, 2020, by = 10))
 
 # Create window labels (e.g., "1900-1909", "1910-1919")
-time_windows <- map2(decades[-length(decades)], decades[-1] - 1, 
+time_windows <- map2(decades[-length(decades)], decades[-1] - 1,
                      ~c(.x, .y)) %>%
   set_names(paste0(decades[-length(decades)], "-", decades[-1] - 1))
+
 
 project_pc <- function(df, pc) {
   X <- do.call(rbind, df$embedding)
@@ -179,9 +188,9 @@ process_window <- function(years, df) {
   tune_res <- tune_cluster(
     kmeans_wf,
     resamples = vfold_cv(reduced_data, v = 4),
-    grid = tibble(num_clusters = 5:15),
+    grid = tibble(num_clusters = 2:20),
     metrics = cluster_metric_set(sse_ratio),
-    control = control_grid(parallel_over = "everything")
+    control = control_grid(parallel_over = "everything", allow_par = TRUE)
   )
   
   metrics_df <- collect_metrics(tune_res) %>%
@@ -239,12 +248,13 @@ centroids <- map(1:length(results), ~pluck(results, ., "centroids")) %>%
 
 # Calculate cosine similarity between all centroids
 centroid_matrix <- centroids %>%
-  select(-.cluster, -window) %>%
+  select(-.cluster, -window, -cluster_original_id) %>%
   as.matrix()
 cosine_sim <- lsa::cosine(t(centroid_matrix))
 
 # distribution of cosine similarities
 similarities <- data.frame(similarity = as.vector(cosine_sim)) %>% 
+  arrange(desc(similarity)) %>% 
   filter(similarity < 1) # Filter out self-comparisons (diagonal)
 
 ggplot(similarities, aes(x = similarity)) +
@@ -260,7 +270,7 @@ window_order <- data.frame(
   window_index = seq_along(time_windows)
 )
 
-similarity_threshold <- 0.999
+similarity_threshold <- 0.5
 cosine_tbl <- as.data.frame(cosine_sim) %>% 
   mutate(cluster_A = centroids$cluster_original_id) %>%
   pivot_longer(-cluster_A, names_to = "cluster_B", values_to = "similarity") %>%
@@ -272,18 +282,20 @@ cosine_tbl <- as.data.frame(cosine_sim) %>%
   rename(index_A = window_index) %>%
   left_join(window_order, by = c("window_B" = "window")) %>%
   rename(index_B = window_index) %>%
-  filter(similarity > similarity_threshold, abs(index_A - index_B) == 1) %>%
-  # we don't want to merge clusters from the same window
-  distinct(cluster_A, window_A, window_B, .keep_all = TRUE) %>% # We merge only with the closest cluster in the window, to avoid merging to cluster together in a window
-  distinct(cluster_B, window_A, window_B, .keep_all = TRUE) # We merge only with the closest cluster in the window, to avoid merging to cluster together in a window
-  
+  filter(similarity > similarity_threshold, abs(index_A - index_B) == 1) %>% 
+  arrange(index_A, cluster_A, similarity) %>% 
+  distinct(window_A, cluster_A, window_B, .keep_all = TRUE) %>% # only one matching in the future (if a t clusters is close to 2 t+1 clusers, we take the first one)
+  distinct(window_B, cluster_B, window_A, .keep_all = TRUE) # only one matching in the past (if a t+1 clusters is close to 2 t clusers, we take the first one)
+
 g <- graph_from_data_frame(cosine_tbl, directed = FALSE)
 components <- components(g)
 cluster_map <- data.frame(cluster_original_id = names(components$membership) %>% as.integer(),
                           new_cluster = components$membership) %>% 
   mutate(new_cluster = min(cluster_original_id), .by = new_cluster) %>% 
   filter(cluster_original_id != new_cluster)
-nrow(cluster_map)
+cli::cli_alert_info("Number of merged clusters: {nrow(cluster_map)}.
+                     Total clusters before merging: {nrow(centroids)}.
+                     Total clusters after merging: {nrow(centroids) - nrow(cluster_map)}.")
 
 final_clusters <- centroids %>%
   left_join(cluster_map, by = "cluster_original_id") %>% 
@@ -301,7 +313,14 @@ saveRDS(documents_partition, file.path(data_path, "sentences_intertemporal_clust
 set.seed(1989)
 all_clusters <- levels(factor(documents_partition$new_cluster)) %>% sample()
 # Preview the default 'see' palette to get the colors
-palette_colors <- c(see::see_colors(), see::oi_colors(), scico::scico(n = 10, palette = "roma"))  # Example for the see_d palette
+palette_colors <- c(see::see_colors(), 
+                    see::oi_colors()[1:7], 
+                    scico::scico(n = 8, palette = "roma"), 
+                    scico::scico(n = 8, palette = "tokyo"),
+                    scico::scico(n = 8, palette = "hawaii"),
+                    scico::scico(n = 8, palette = "batlowK"),
+                    scico::scico(n = 7, palette = "bamako"),
+                    scico::scico(n = 7, palette = "glasgow"))
 # If you use another palette, replace accordingly
 # Let's say you use 8 clusters and 8 colors from the palette
 cluster_colors <- palette_colors[1:length(all_clusters)]
@@ -323,7 +342,7 @@ documents_partition %>%
        y = "Percentage of Documents",
        fill = "Intertemporal Cluster") +
   theme_bw() +
-  theme(legend.position = "bottom") +
+  theme(legend.position = "none") +
   scale_fill_manual(values = cluster_colors)  # HARD color lock
 
 ggsave(file.path("pictures", "intertemporal_clusters_alluvial.png"),
