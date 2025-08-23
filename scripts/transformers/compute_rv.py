@@ -36,6 +36,7 @@ decades = sorted(set(y - y % 10 for y in all_years))
 records = []
 
 for year in tqdm(all_years, desc="Processing years"):
+    
     file_path = os.path.join(EMBEDDINGS_FOLDER, f"sentence_embeddings_{year}.feather")
     df = feather.read_feather(file_path)
     df["embedding"] = df["embedding"].apply(np.array)

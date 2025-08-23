@@ -9,6 +9,10 @@ p_load(text2vec)
 # Load per-year representative vectors (list-column: embedding_by_year_centered)
 representative_vectors <- read_feather(here::here(data_path, "representative_vectors.feather"))
 
+# Load sentences to delete
+sentences_to_delete <- read_feather(here::here(data_path, "sentences_to_delete.feather"))
+
+
 # --- CONFIG -------------------------------------------------------------------
 # Directory that holds per-year sentence embeddings as Feather files:
 #   expected names: sentence_embeddings_<YEAR>.feather
@@ -20,7 +24,7 @@ sentence_files <- list.files(emb_dir)
 # --- RESUME LOGIC -------------------------------------------------------------
 # If a previous results file exists, resume from it; otherwise initialize a list
 existing_sentence_file <- list.files(data_path) %>%
-  .[str_detect(., "^closest_sentences_\\d+\\.\\d+_rationality_score\\.rds$")]   # NOTE: stricter regex
+  .[str_detect(., "^closest_sentences_\\d+\\.\\d+_filtered_rationality_score\\.rds$")]   # NOTE: stricter regex
 
 if (length(existing_sentence_file) > 0) {
   list_sentences <- readRDS(here::here(data_path, existing_sentence_file))
@@ -48,6 +52,14 @@ for (year in years_to_do) {
   sentence_embeddings <- read_feather(
     here::here(emb_dir, glue("sentence_embeddings_{year}.feather"))
   )
+
+  # filter out sentences to delete
+  sentences_year_to_delete <- sentences_to_delete %>%
+    filter(year == !!year) %>%
+    pull(sentence)
+
+  sentence_embeddings <- sentence_embeddings %>%
+    filter(!sentence %in% sentences_year_to_delete)
   
   # 3) Build an embedding matrix (rows = sentences, cols = embedding dims)
   #    NOTE: do.call(rbind, ...) allocates once; OK if per-year file fits RAM
@@ -74,11 +86,11 @@ for (year in years_to_do) {
     filter(similarity > cutoff)
   
   # 6) Free memory used by large objects before next iteration
-  rm(sentence_embeddings, emb_matrix, sims_mat, sims, cutoff)
+  rm(sentence_embeddings, emb_matrix, sims_mat, sims, cutoff, sentences_year_to_delete)
   gc()
   
   # 7) Persist progress after each year (robust to crashes)
   saveRDS(list_sentences,
           here::here(data_path,
-                     glue::glue("closest_sentences_0.01_rationality_score.rds")))
+                     glue::glue("closest_sentences_0.01_filtered_rationality_score.rds")))
 }
