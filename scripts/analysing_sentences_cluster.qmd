@@ -81,19 +81,22 @@ tokens_count_cluster <- compute_tf_idf(tokens[, -"window"],
 # Top tf-idf terms
 top_terms_cluster <- tokens_count_cluster[order(-tf_idf)][absolute_tf > 30, head(.SD, 20), by = new_cluster]
 
-tokens[, new_variable := str_c(new_cluster, "--", window)]
-tokens_count_window <- compute_tf_idf(tokens, 
-                                      token_col = "token", 
-                                      document_col = "new_variable")
-# Top tf-idf terms
-top_terms_window <- tokens_count_window[order(-tf_idf)][absolute_tf > 20, head(.SD, 15), by = new_variable]
-
 # Get top 4 tf-idf tokens per cluster
 labels_cluster <- tokens_count_cluster[order(-tf_idf)][absolute_tf > 30, head(.SD, 5), by = new_cluster][, .(new_cluster, token)]
 labels_cluster <- labels_cluster[, .(label = paste0(token, collapse = ", ")), by = new_cluster]
 labels_cluster[, label := paste0(str_extract(new_cluster, "\\d+$"), ": ", label)]
 
 documents_cluster <- merge(documents_cluster, labels_cluster, all.x = TRUE, by = "new_cluster")
+```
+
+
+```{r preparing-tfidf}
+tokens[, new_variable := str_c(new_cluster, "--", window)]
+tokens_count_window <- compute_tf_idf(tokens, 
+                                      token_col = "token", 
+                                      document_col = "new_variable")
+# Top tf-idf terms
+top_terms_window <- tokens_count_window[order(-tf_idf)][absolute_tf > 20, head(.SD, 15), by = new_variable]
 
 # Labels per decade
 labels_window<- tokens_count_window[order(-tf_idf)][absolute_tf > 20, head(.SD, 5), by = new_variable][, .(new_variable, token)]
@@ -132,10 +135,15 @@ label_alluvial_position <- documents_cluster %>%
   mutate(label_alluvial = label) %>% 
   distinct(new_cluster, label_alluvial, window)
 
+documents_cluster <- documents_cluster %>% 
+  networkflow::minimize_crossing_alluvial(intertemporal_cluster_column = "new_cluster",
+                                          node_id = "sentence_id",
+                                          window_column = "window")
 alluvial <- documents_cluster %>%
-  count(window, new_cluster, label) %>% 
+  count(window, new_cluster, minimize_crossing_order, label) %>% 
   left_join(label_alluvial_position) %>% 
-  mutate(percent = n / sum(n), .by = window) %>%
+  mutate(percent = n / sum(n), .by = window,
+         new_cluster = fct_reorder(new_cluster, minimize_crossing_order, min, .desc = TRUE)) %>%
   #  mutate(new_cluster = factor(new_cluster, levels= all_clusters)) %>% 
   ggplot(aes(x = window, y = percent, stratum = new_cluster, alluvium = new_cluster,
              fill = new_cluster)) +
@@ -146,8 +154,9 @@ alluvial <- documents_cluster %>%
        x = "Time Period",
        y = "Percentage of Documents",
        fill = "Intertemporal Cluster") +
-  theme_bw() +
+  theme_bw(base_size = 20) +
   theme(legend.position = "none") +
+  scale_y_continuous(expand = c(0.01, 0)) +
   scale_fill_manual(values = cluster_colors)  # HARD color lock
 
 ggsave(here("pictures", "intertemporal_clusters_alluvial.png"),

@@ -98,6 +98,9 @@ launch_network_app <- function(
     node_id,
     top_references,
     top_references_without_id,
+    cluster_origins,
+    cluster_destinies,
+    tf_idf_data,
     node_tooltip = NULL,
     node_size = NULL,
     color = NULL,
@@ -333,13 +336,21 @@ launch_network_app <- function(
           DT::DTOutput("node_info")
         )
       } else if (!is.null(selected_cluster())) {
+        cl <- if (is_list_graph) paste0(selected_cluster(), " — ", input$selected_graph)
+              else as.character(selected_cluster())
         tagList(
-          shiny::h4("Documents in Selected Cluster"),
+          shiny::h4(paste0("Documents in ", cl)),
           DT::DTOutput("cluster_docs"),
-          shiny::h4("Top References of Selected Cluster"),
+          shiny::h4(paste0("Top References of ", cl)),
           DT::DTOutput("cluster_refs"),
-          shiny::h4("Top References (without ID) of Selected Cluster"),
-          DT::DTOutput("cluster_refs_without_id")
+          shiny::h4(paste0("Top References (without ID) of ", cl)),
+          DT::DTOutput("cluster_refs_without_id"),
+          shiny::h4(paste0("Cluster tf-idf for ", cl, " (t → t+1)")),
+          DT::DTOutput("cluster_tf_idf"),
+          shiny::h4(paste0("Cluster origins for ", cl, " (t-1 → t)")),
+          DT::DTOutput("cluster_origins_table"),
+          shiny::h4(paste0("Cluster destinies for ", cl, " (t → t+1)")),
+          DT::DTOutput("cluster_destinies_table")
         )
       } else {
         NULL
@@ -416,6 +427,52 @@ launch_network_app <- function(
       main_refs_cluster %>%
         dplyr::filter(!!cluster_sym == selected_cluster()) %>%
         dplyr::select(Nom, Annee, nb_cit) %>%
+        DT::datatable(options = list(pageLength = 10))
+    })
+    
+    output$cluster_tf_idf <- DT::renderDT({
+      req(selected_cluster())
+      g_tbl <- active_graph()
+      tf_idf_for_cluster <- g_tbl %>%
+        tidygraph::activate("nodes") %>%
+        as.data.frame() %>%
+        distinct(!!cluster_sym, time_window) %>% 
+        dplyr::left_join(tf_idf_data) %>% 
+        filter(!is.na(term))
+      tf_idf_for_cluster %>%
+        dplyr::filter(!!cluster_sym == selected_cluster()) %>%
+        dplyr::select(term, tf_idf) %>%
+        mutate(tf_idf = round(tf_idf, 4)) %>%
+        DT::datatable(options = list(pageLength = 10))
+    })
+    
+    output$cluster_origins_table <- DT::renderDT({
+      req(selected_cluster())
+      g_tbl <- active_graph()
+      origins <- g_tbl %>%
+        tidygraph::activate("nodes") %>%
+        as.data.frame() %>%
+        distinct(!!cluster_sym, time_window) %>% 
+        dplyr::left_join(cluster_origins)
+      origins %>%
+        dplyr::filter(!!cluster_sym == selected_cluster()) %>%
+        dplyr::select(previous_cluster, origin_percent) %>%
+        mutate(origin_percent = sprintf("%.1f%%", 100 * origin_percent)) %>%
+        DT::datatable(options = list(pageLength = 10))
+    })
+    
+    output$cluster_destinies_table <- DT::renderDT({
+      req(selected_cluster())
+      g_tbl <- active_graph()
+      destinies <- g_tbl %>%
+        tidygraph::activate("nodes") %>%
+        as.data.frame() %>%
+        distinct(!!cluster_sym, time_window) %>% 
+        dplyr::left_join(cluster_destinies)
+      destinies %>%
+        dplyr::filter(!!cluster_sym == selected_cluster()) %>%
+        dplyr::select(forward_cluster, destiny_percent) %>%
+        mutate(destiny_percent = sprintf("%.1f%%", 100 * destiny_percent)) %>%
         DT::datatable(options = list(pageLength = 10))
     })
   }
