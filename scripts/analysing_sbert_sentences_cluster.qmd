@@ -37,7 +37,7 @@ bert_df <- readRDS(file.path(data_path, "closest_sentences_0.01_rationality_scor
   filter(between(publication_year, 1900, 2019))
 
 metadata <- read_rds(file.path(data_path, "full_metadata_journals_cleaned.rds")) %>% 
-  .[ refined_sub_type == "research-article" & language == "eng", .(id, is_part_of, title, creator, publication_year)] %>% 
+  .[ refined_sub_type == "research-article" & language == "eng", .(id, is_part_of, title, creator, publication_year, jstor_url = url)] %>% 
   .[order(publication_year)] 
 
 documents_cluster <- readRDS(file.path(data_path, "sentences_intertemporal_cluster.rds")) %>% 
@@ -400,7 +400,8 @@ plotly::ggplotly(areas_cluster_1970,
 
 for(cluster in list_clusters){
   cluster_data <- documents_cluster %>% 
-    filter(new_cluster == !!cluster)
+    filter(new_cluster == !!cluster) %>% 
+    mutate(title = glue("<a href='{jstor_url}' target='_blank'>{title}</a>"))
   cluster_name <- cluster_data %>% 
     pull(label) %>% 
     unique
@@ -487,8 +488,8 @@ for(cluster in list_clusters){
   
   top_sentences_filtered <- top_sentences_per_cluster_window %>% 
     filter(new_cluster == !!cluster) %>% 
-    left_join(select(cluster_data, title, publication_year, is_part_of, creator, sentence_id)) 
-  
+    left_join(select(cluster_data, title, publication_year, is_part_of, creator, sentence_id, jstor_url)) %>% 
+    mutate(title = glue("<a href='{jstor_url}' target='_blank'>{title}</a>"))
 
   ############# Top sentences ##################
   cat("\n\n")
@@ -502,7 +503,7 @@ for(cluster in list_clusters){
       filter(mention_rationality == TRUE) %>% 
       slice_max(similarity, n = 15) %>% 
       select(sentence, title, publication_year, is_part_of, creator, similarity) %>% 
-      kbl(col.names = c("Sentence", "Title", "Year", "Journal", "Authors", "Similarity")) %>% 
+      kbl(escape = FALSE, col.names = c("Sentence", "Title", "Year", "Journal", "Authors", "Similarity")) %>% 
       kable_styling(bootstrap_options = c("striped","condensed"),
                     font_size = 13) %>% 
       print()
@@ -514,7 +515,7 @@ for(cluster in list_clusters){
   top_sentences_filtered %>% 
     slice_max(similarity, n = 15) %>% 
     select(sentence, title, publication_year, is_part_of, creator, similarity) %>% 
-    kbl(col.names = c("Sentence", "Year", "Title", "Journal", "Authors", "Similarity")) %>% 
+    kbl(escape = FALSE, col.names = c("Sentence", "Year", "Title", "Journal", "Authors", "Similarity")) %>% 
     kable_styling(bootstrap_options = c("striped","condensed"),
                   font_size = 13) %>% 
     print()
@@ -530,7 +531,7 @@ for(cluster in list_clusters){
         filter(window == !! decade) %>%
         slice_max(similarity, n = 10) %>% 
         select(sentence, title, publication_year, is_part_of, creator, similarity) %>% 
-        kbl(col.names = c("Sentence", "Year", "Title", "Journal", "Authors", "Similarity")) %>% 
+        kbl(escape = FALSE, col.names = c("Sentence", "Year", "Title", "Journal", "Authors", "Similarity")) %>% 
         kable_styling(bootstrap_options = c("striped","condensed"),
                       font_size = 13) %>% 
         print()
@@ -546,7 +547,7 @@ for(cluster in list_clusters){
            .by = id) %>% 
     distinct(title, publication_year, is_part_of, creator, n, mean_similarity) %>% 
     slice_max(n, n = 10) %>% 
-    kbl(col.names = c("Title", "Year", "Journal", "Authors", "Number sentences", "Similarity")) %>% 
+    kbl(escape = FALSE, col.names = c("Title", "Year", "Journal", "Authors", "Number sentences", "Similarity")) %>% 
     kable_styling(bootstrap_options = c("striped","condensed"),
                   font_size = 13) %>% 
     print()
@@ -565,7 +566,7 @@ for(cluster in list_clusters){
                .by = id) %>% 
         distinct(title, publication_year, is_part_of, creator, n, mean_similarity) %>% 
         slice_max(n, n = 10) %>%  
-        kbl(col.names = c("Sentence", "Year", "Title", "Journal", "Authors", "Similarity")) %>% 
+        kbl(escape = FALSE, col.names = c("Sentence", "Year", "Title", "Journal", "Authors", "Similarity")) %>% 
         kable_styling(bootstrap_options = c("striped","condensed"),
                       font_size = 13) %>% 
         print()
