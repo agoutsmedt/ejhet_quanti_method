@@ -110,7 +110,7 @@ balanced_sample <- bert_df %>%
                            breaks = c(1900, 1920, seq(1940, 2020, by = 10)), 
                            labels = paste0(c(1900, 1920, seq(1940, 2010, by = 10)), "-", c(1919, seq(1939, 2019, by = 10))))) %>%
   group_by(time_window) %>%
-  slice_sample(n = 3000) %>%
+  slice_sample(n = 4000) %>%
   ungroup()
 
 # 2. Fit PCA on this sample
@@ -270,7 +270,7 @@ window_order <- data.frame(
   window_index = seq_along(time_windows)
 )
 
-similarity_threshold <- 0.5
+similarity_threshold <- 0.7
 cosine_tbl <- as.data.frame(cosine_sim) %>% 
   mutate(cluster_A = centroids$cluster_original_id) %>%
   pivot_longer(-cluster_A, names_to = "cluster_B", values_to = "similarity") %>%
