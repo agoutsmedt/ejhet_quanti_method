@@ -235,7 +235,7 @@ nb_clusters <- documents_cluster %>%
   length
 if(nb_clusters > length(palette_colors)) message("no sufficient colors")
 cluster_colors <- palette_colors[1:nb_clusters]
-names(cluster_colors) <- documents_cluster$new_cluster %>% 
+names(cluster_colors) <- documents_cluster$label %>% 
   unique
 ```
 
@@ -248,21 +248,18 @@ label_alluvial_position <- documents_cluster %>%
   mutate(label_alluvial = label) %>% 
   distinct(new_cluster, label_alluvial, window)
 
-documents_cluster <- documents_cluster %>% 
-  networkflow::minimize_crossing_alluvial(intertemporal_cluster_column = "new_cluster",
-                                          node_id = "sentence_id",
-                                          window_column = "window")
 alluvial <- documents_cluster %>%
-  count(window, new_cluster, minimize_crossing_order, label) %>% 
+  mutate(rank = str_extract(new_cluster, "\\d+$") %>% as.integer) %>% 
+  count(window, new_cluster, rank, label) %>% 
   left_join(label_alluvial_position) %>% 
   mutate(percent = n / sum(n), .by = window,
-         new_cluster = fct_reorder(new_cluster, minimize_crossing_order, min, .desc = TRUE)) %>%
+         label = fct_reorder(label, rank, max, .desc = TRUE)) %>%
   #  mutate(new_cluster = factor(new_cluster, levels= all_clusters)) %>% 
-  ggplot(aes(x = window, y = percent, stratum = new_cluster, alluvium = new_cluster,
-             fill = new_cluster)) +
+  ggplot(aes(x = window, y = percent, stratum = label, alluvium = label,
+             fill = label)) +
   geom_flow(alpha = 0.9) +
-  geom_stratum() +
-  geom_text(aes(label = str_wrap(label_alluvial, 25)), stat = "stratum", size = 3) +
+  geom_stratum(alpha = 0.9) +
+  geom_text(aes(label = str_wrap(label_alluvial, 30)), stat = "stratum", size = 4) +
   labs(title = "Cluster Persistence Across Time Windows",
        x = "Time Period",
        y = "Percentage of Documents",
@@ -275,7 +272,7 @@ alluvial <- documents_cluster %>%
 ggsave(here("pictures", "intertemporal_clusters_alluvial.png"),
        alluvial,
        units = "cm",
-       width = 50,
+       width = 55,
        height = 40,
        dpi = 300)
 
@@ -285,12 +282,13 @@ knitr::include_graphics(here("pictures", "intertemporal_clusters_alluvial.png"))
 ```{r alluvial-absolute}
 alluvial_absolute <- documents_cluster %>%
   filter(publication_year > 1949) %>% 
-  count(window, new_cluster, label) %>% 
+  mutate(rank = str_extract(new_cluster, "\\d+$") %>% as.integer) %>% 
+  count(window, new_cluster, label, rank) %>% 
   left_join(label_alluvial_position) %>% 
-  mutate(percent = n / sum(n), .by = window) %>%
-  #  mutate(new_cluster = factor(new_cluster, levels= all_clusters)) %>% 
-  ggplot(aes(x = window, y = n, stratum = new_cluster, alluvium = new_cluster,
-             fill = new_cluster)) +
+  mutate(percent = n / sum(n), .by = window,
+         label = fct_reorder(label, rank, max, .desc = TRUE)) %>%
+  ggplot(aes(x = window, y = n, stratum = label, alluvium = label,
+             fill = label)) +
   geom_flow(alpha = 0.9) +
   geom_stratum() +
   geom_text(aes(label = str_wrap(label_alluvial, 25)), stat = "stratum", size = 3) +
@@ -314,17 +312,19 @@ knitr::include_graphics(here("pictures", "intertemporal_clusters_alluvial_absolu
 
 ```{r graph-top-terms}
 top_terms_plot <- top_terms_cluster %>% 
-  mutate(token = reorder_within(token, tf_idf, new_cluster)) %>% 
-  
-  ggplot(aes(x = token, y = tf_idf, fill = new_cluster)) +
+  left_join(distinct(documents_cluster, new_cluster, label)) %>% 
+  mutate(token = reorder_within(token, tf_idf, new_cluster),
+         rank = str_extract(new_cluster, "\\d+$") %>% as.integer) %>% 
+  ggplot(aes(x = token, y = tf_idf, fill = label)) +
   geom_col(show.legend = FALSE) +
-  facet_wrap(~ new_cluster, scales = "free") +
+  facet_wrap(~ fct_reorder(new_cluster, rank), scales = "free") +
   coord_flip() +
   scale_x_reordered() +
   labs(title = "Top 15 TF-IDF Tokens per Intertemporal Cluster",
        x = "Token", y = "TF-IDF") +
   theme_bw(base_size = 12) +
   scale_fill_manual(values = cluster_colors)
+
 ggsave(here("pictures", "tf_idf_cluster_rationality.png"),
        top_terms_plot,
        width = 80,
@@ -338,7 +338,7 @@ knitr::include_graphics(here("pictures", "tf_idf_cluster_rationality.png"))
 ```{r geom-density-1}
 areas_cluster_1900 <- documents_cluster %>% 
   filter(publication_year < 1950) %>% 
-ggplot(aes(x = publication_year, y = after_stat(count), fill = new_cluster)) +
+ggplot(aes(x = publication_year, y = after_stat(count), fill = label)) +
   geom_density(position = "fill", show.legend = TRUE, adjust = 9/10) +
   theme_minimal() +
   labs(title = "Proportion of Clusters Over Time",
@@ -358,7 +358,7 @@ plotly::ggplotly(areas_cluster_1900,
 ```{r geom-density-2}
 areas_cluster_1950 <- documents_cluster %>% 
   filter(publication_year >= 1950) %>% 
-ggplot(aes(x = publication_year, y = after_stat(count), fill = new_cluster)) +
+ggplot(aes(x = publication_year, y = after_stat(count), fill = label)) +
   geom_density(position = "fill", show.legend = TRUE, adjust = 9/10) +
   theme_minimal() +
   labs(title = "Proportion of Clusters Over Time",
@@ -378,7 +378,7 @@ plotly::ggplotly(areas_cluster_1950,
 ```{r geom-density-3}
 areas_cluster_1970 <- documents_cluster %>% 
   filter(publication_year >= 1970) %>% 
-ggplot(aes(x = publication_year, y = after_stat(count), fill = new_cluster)) +
+ggplot(aes(x = publication_year, y = after_stat(count), fill = label)) +
   geom_density(position = "fill", show.legend = TRUE, adjust = 9/10) +
   theme_minimal() +
   labs(title = "Proportion of Clusters Over Time",
