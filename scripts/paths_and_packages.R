@@ -49,10 +49,12 @@ if(str_detect(getwd(), "goutsmed")){
   if(str_detect(getwd(), "Admin")) {
     data_path <- "C:/Users/Admin/MEGA/data/jstor"
     jstor_raw_data <- data_path # I'm supposing you're not doing the same for this data
+    wos_data_path <- "C:/Users/Admin/MEGA/data/wos"
   } else {
     if(str_detect(getwd(), "thomd")) {
       data_path <- "C:/Users/thomd/MEGA/data/jstor"
       jstor_raw_data <- data_path
+      wos_data_path <- "C:/Users/thomd/MEGA/data/wos"
     }}
 }
 

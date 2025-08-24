@@ -30,6 +30,7 @@ nodes <- map(graphs, ~ . %N>% as_tibble()) %>%
   mutate(value_col = if_else(is.na(value_col), dynamic_cluster_leiden, value_col),
          ID_Art = as.integer(ID_Art)) %>% 
   distinct(ID_Art, value_col, time_window)
+
 refs <- read_parquet(here::here(wos_data_path, "all_ref.parquet"), as_data_frame = FALSE) %>% 
   filter(ID_Art %in% nodes$ID_Art) %>% 
   select(ID_Art, ItemID_Ref, Annee, Nom, Revue_Abbrege) %>% 

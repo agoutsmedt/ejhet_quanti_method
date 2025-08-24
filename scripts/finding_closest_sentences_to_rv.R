@@ -94,3 +94,28 @@ for (year in years_to_do) {
           here::here(data_path,
                      glue::glue("closest_sentences_0.01_filtered_rationality_score.rds")))
 }
+
+
+# load the results
+closest_sentences <- readRDS(here::here(data_path, "closest_sentences_0.01_filtered_rationality_score.rds"))
+
+df_closed_sentences <- bind_rows(closest_sentences)
+
+# plot distribution of sentences by year
+
+df_closed_sentences %>%
+  filter(publication_year < 2020) %>%
+  count(publication_year) %>%
+  ggplot(aes(x = publication_year, y = n)) +
+  geom_point() +
+  labs(
+    x = "Year",
+    y = "Number of sentences"
+  ) +
+  theme_light(base_size = 12)
+
+# save the results
+ggsave(
+  filename = here::here(image_path_temp, "distribution_closest_sentences_by_year.png"),
+  width = 10, height = 6, units = "in", dpi = 300
+)
