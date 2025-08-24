@@ -20,20 +20,10 @@ stop_words = set(stopwords.words('english'))
 def normalize_token(tok):
     return re.sub(r'\W+', '', tok.lower())
 
-SELECTED_MODEL = "bert"  # "bert" or "econbert"
-
-if SELECTED_MODEL == "econbert":
-    model_type = "roberta"
-    model_name = "econbert"
-    tokenizer_path = "econbert/EconBERT_Model/econbert_tokenizer"
-    tokenizer = RobertaTokenizer.from_pretrained(tokenizer_path)
-elif SELECTED_MODEL == "bert":
-    model_type = "bert"
-    model_name = "bert-base-uncased"
-    tokenizer = BertTokenizer.from_pretrained(model_name)
-else:
-    raise ValueError("Unsupported model")
-
+SELECTED_MODEL = "bert"
+model_type = "bert"
+model_name = "bert-base-uncased"
+tokenizer = BertTokenizer.from_pretrained(model_name)
 
 # --------------------------- PATHS --------------------------- #
 
