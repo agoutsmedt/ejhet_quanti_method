@@ -6,6 +6,12 @@ pacman::p_load(shiny, shinycssloaders)
 
 graphs <- readRDS(here::here(data_path, "networks_1960_2014_10_year_windows_0.1_rationality_score.RDS"))
 labels <- readRDS(here::here(data_path, "label_ai_1960_2014_10_year_windows_0.1_rationality_score.RDS"))
+match_jstor_wos <- readRDS(here::here(data_path, "final_match.RDS")) %>% 
+  filter(!is.na(id_match_final)) %>%
+  distinct(url = id_jstor, ID_Art = id_match_final) %>% 
+  mutate(id_jstor = str_extract(url, "\\/[0-9]+$") %>% str_remove(., "/"),
+         ID_Art = as.character(ID_Art)) %>% 
+  distinct(ID_Art, .keep_all = TRUE)
 
 # add labels to the list of graphs
 
@@ -14,6 +20,7 @@ graphs <- lapply(graphs, function(graph) {
   graph <- graph %>% 
     activate(nodes) %>% 
     left_join(labels, by = c("dynamic_cluster_leiden" = "id_col")) %>%
+    left_join(match_jstor_wos, by = c("ID_Art" = "ID_Art")) %>%
     arrange(desc(node_size)) %>% 
     rename(color = main_colors) %>% 
     mutate(nodes_tooltip = paste0(Nom, " \\(", Annee_Bibliographique, "\\) ", Titre) %>% str_remove_all(., "[:punct:]"),
@@ -24,6 +31,10 @@ graphs <- lapply(graphs, function(graph) {
     rename(color = color_edges)
 })
 
+closest_sentences <- read_rds(here::here(data_path, "closest_sentences_0.01_filtered_rationality_score.rds")) %>% 
+  bind_rows() %>% 
+  filter(id_jstor %in% match_jstor_wos$id)
+
 # Adding references
 nodes <- map(graphs, ~ . %N>% as_tibble()) %>% 
   bind_rows() %>% 
@@ -31,7 +42,7 @@ nodes <- map(graphs, ~ . %N>% as_tibble()) %>%
          ID_Art = as.integer(ID_Art)) %>% 
   distinct(ID_Art, value_col, time_window)
 
-refs <- read_parquet(here::here(wos_data_path, "all_ref.parquet"), as_data_frame = FALSE) %>% 
+refs <- open_dataset(here::here(wos_data_path, "all_ref.parquet"), format = "parquet") %>% 
   filter(ID_Art %in% nodes$ID_Art) %>% 
   select(ID_Art, ItemID_Ref, Annee, Nom, Revue_Abbrege) %>% 
   collect()
@@ -61,6 +72,8 @@ top_refs_without_id <- nodes %>%
   filter(n > 1) %>%
  # left_join(refs %>% distinct(ItemID_Ref, Nom, Annee, Revue_Abbrege), by = "ItemID_Ref", relationship = "many-to-many") %>% 
   distinct(value_col, time_window, Nom, Annee, nb_cit = n) 
+
+rm(refs)
 
 # Calculating circulation of nodes between clusters over time
 alluvial_data <- networkflow::networks_to_alluv(graphs,
