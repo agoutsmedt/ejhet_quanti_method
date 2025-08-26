@@ -96,6 +96,7 @@ launch_network_app <- function(
     cluster_information,
     cluster_tooltip = NULL,
     node_id,
+    cluster_sentences,
     top_references,
     top_references_without_id,
     cluster_origins,
@@ -341,6 +342,8 @@ launch_network_app <- function(
         tagList(
           shiny::h4(paste0("Documents in ", cl)),
           DT::DTOutput("cluster_docs"),
+          shiny::h4(paste0("Closest sentences for ", cl)),
+          DT::DTOutput("cluster_sentences"),
           shiny::h4(paste0("Top References of ", cl)),
           DT::DTOutput("cluster_refs"),
           shiny::h4(paste0("Top References (without ID) of ", cl)),
@@ -384,10 +387,10 @@ launch_network_app <- function(
         dplyr::arrange(.graph) %>% 
         dplyr::select(dplyr::any_of(c(
           "time_window", cluster_id, cluster_information, node_size
-        )))
+        )), -sentence)
         
       
-      DT::datatable(out, options = list(pageLength = 10))
+      DT::datatable(out, options = list(pageLength = 10), escape = FALSE, rownames = FALSE)
     })
     
     
@@ -399,7 +402,27 @@ launch_network_app <- function(
       nodes_df %>%
         dplyr::filter(!!cluster_sym == selected_cluster()) %>%
         dplyr::select(all_of(cluster_information)) %>%
-        DT::datatable(options = list(pageLength = 10))
+        DT::datatable(options = list(pageLength = 10), escape = FALSE, rownames = FALSE)
+    })
+    
+    output$cluster_sentences <- DT::renderDT({
+      req(selected_cluster())
+      g_tbl <- active_graph()
+      
+      # join on (time_window, cluster_id) exactly like top_references
+      sentences <- g_tbl %>%
+        tidygraph::activate("nodes") %>%
+        as.data.frame() %>%
+        dplyr::distinct(!!cluster_sym, time_window) %>%
+        dplyr::left_join(closest_sentences)
+      
+      tab <- sentences %>%
+        dplyr::filter(!!cluster_sym == selected_cluster()) %>%
+        # pick reasonable columns if present
+        dplyr::select(dplyr::any_of(c(
+          cluster_information, "Sentence", "Similarity"
+        )))
+      DT::datatable(tab, escape = FALSE, options = list(pageLength = 10), rownames = FALSE)
     })
     
     output$cluster_refs <- DT::renderDT({
@@ -426,7 +449,7 @@ launch_network_app <- function(
         dplyr::left_join(top_references_without_id)
       main_refs_cluster %>%
         dplyr::filter(!!cluster_sym == selected_cluster()) %>%
-        dplyr::select(Nom, Annee, nb_cit) %>%
+        dplyr::select(Nom, Annee, Revue_Abbrege, nb_cit) %>%
         DT::datatable(options = list(pageLength = 10))
     })
     

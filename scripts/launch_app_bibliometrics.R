@@ -8,10 +8,20 @@ graphs <- readRDS(here::here(data_path, "networks_1960_2014_10_year_windows_0.1_
 labels <- readRDS(here::here(data_path, "label_ai_1960_2014_10_year_windows_0.1_rationality_score.RDS"))
 match_jstor_wos <- readRDS(here::here(data_path, "final_match.RDS")) %>% 
   filter(!is.na(id_match_final)) %>%
-  distinct(url = id_jstor, ID_Art = id_match_final) %>% 
-  mutate(id_jstor = str_extract(url, "\\/[0-9]+$") %>% str_remove(., "/"),
+  distinct(url_jstor = id_jstor, ID_Art = id_match_final) %>% 
+  mutate(id_jstor = str_extract(url_jstor, "\\/[0-9]+$") %>% str_remove(., "/"),
          ID_Art = as.character(ID_Art)) %>% 
   distinct(ID_Art, .keep_all = TRUE)
+
+sentences <- read_rds(here::here(data_path, "closest_sentences_0.01_filtered_rationality_score.rds")) %>% 
+  bind_rows() %>% 
+  left_join(match_jstor_wos, by = c("id" = "id_jstor"), 
+            relationship = "many-to-many")
+
+article_sentences <- sentences %>% 
+  group_by(ID_Art) %>%
+  slice_max(order_by = similarity, n = 1, with_ties = FALSE) %>% 
+  select(ID_Art, sentence, similarity)
 
 # add labels to the list of graphs
 
@@ -21,26 +31,42 @@ graphs <- lapply(graphs, function(graph) {
     activate(nodes) %>% 
     left_join(labels, by = c("dynamic_cluster_leiden" = "id_col")) %>%
     left_join(match_jstor_wos, by = c("ID_Art" = "ID_Art")) %>%
+    left_join(article_sentences, by = c("ID_Art" = "ID_Art")) %>%
     arrange(desc(node_size)) %>% 
     rename(color = main_colors) %>% 
     mutate(nodes_tooltip = paste0(Nom, " \\(", Annee_Bibliographique, "\\) ", Titre) %>% str_remove_all(., "[:punct:]"),
-           value_col = if_else(is.na(value_col), dynamic_cluster_leiden, value_col)) 
+           value_col = if_else(is.na(value_col), dynamic_cluster_leiden, value_col),
+           Titre = if_else(!is.na(url_jstor), glue("<a href='{url_jstor}' target='_blank'>{Titre}</a>"), Titre))
   
   graph <- graph %>% 
     activate(edges) %>%
     rename(color = color_edges)
+  
+  # Calculating participation coefficient
+  graph <- graph %N>%
+    mutate(total_degree = centrality_degree(mode = "all")) %>%  # Total degree of the node
+    mutate(participation_coefficient = sapply(1:n(), function(i) {
+      neighbors <- neighbors(graph, i, mode = "all") # Get neighbors
+      if(length(neighbors) > 3) { # filter by minimum number of neighbors
+        neighbor_communities <- V(graph)[neighbors]$cluster_leiden # Get communities of neighbors
+        community_counts <- table(neighbor_communities) # Count connections per community
+        1 - sum((community_counts / total_degree[i])^2) # Participation coefficient formula 
+      } else {
+        return(NA)
+      }
+    })
+    )
+  
+  graph <- graph %N>% 
+    mutate(participation_coefficient = round(participation_coefficient, 3),
+           similarity = round(similarity, 3))
 })
-
-closest_sentences <- read_rds(here::here(data_path, "closest_sentences_0.01_filtered_rationality_score.rds")) %>% 
-  bind_rows() %>% 
-  filter(id_jstor %in% match_jstor_wos$id)
 
 # Adding references
 nodes <- map(graphs, ~ . %N>% as_tibble()) %>% 
   bind_rows() %>% 
   mutate(value_col = if_else(is.na(value_col), dynamic_cluster_leiden, value_col),
-         ID_Art = as.integer(ID_Art)) %>% 
-  distinct(ID_Art, value_col, time_window)
+         ID_Art = as.integer(ID_Art))
 
 refs <- open_dataset(here::here(wos_data_path, "all_ref.parquet"), format = "parquet") %>% 
   filter(ID_Art %in% nodes$ID_Art) %>% 
@@ -48,6 +74,7 @@ refs <- open_dataset(here::here(wos_data_path, "all_ref.parquet"), format = "par
   collect()
 
 top_refs <- nodes %>% 
+  distinct(ID_Art, value_col, time_window) %>% 
   left_join(refs, by = "ID_Art", relationship = "many-to-many") %>% 
   filter(ItemID_Ref != 0) %>% 
   group_by(value_col, time_window, ItemID_Ref) %>% 
@@ -61,19 +88,35 @@ top_refs <- nodes %>%
   distinct(value_col, time_window, ItemID_Ref, nb_cit = n, .keep_all = TRUE) 
 
 top_refs_without_id <- nodes %>%  
+  distinct(ID_Art, value_col, time_window) %>% 
   left_join(refs, by = "ID_Art", relationship = "many-to-many") %>% 
   filter(ItemID_Ref == 0 & Annee != 0 & Nom != "") %>%
   group_by(value_col, time_window, Nom, Annee) %>% 
-  summarise(n = n(), .groups = "drop") %>% 
+  add_count() %>%
+  filter(n > 1) %>%
+  distinct(ID_Art, value_col, time_window, .keep_all = TRUE) %>%
   arrange(time_window, value_col, desc(n)) %>% 
   group_by(time_window, value_col) %>% 
   slice_head(n = 10) %>% 
   ungroup() %>% 
-  filter(n > 1) %>%
  # left_join(refs %>% distinct(ItemID_Ref, Nom, Annee, Revue_Abbrege), by = "ItemID_Ref", relationship = "many-to-many") %>% 
-  distinct(value_col, time_window, Nom, Annee, nb_cit = n) 
+  select(value_col, time_window, Nom, Annee, Revue_Abbrege, nb_cit = n) %>% 
+  distinct(value_col, time_window, Nom, Annee, .keep_all = TRUE) 
 
 rm(refs)
+
+# Adding closest sentences to each cluster
+closest_sentences <- sentences %>%
+  mutate(ID_Art = as.integer(ID_Art)) %>% 
+  right_join(select(nodes, ID_Art, Annee_Bibliographique, Nom, Titre, value_col, time_window), 
+             by = c("ID_Art" = "ID_Art"), 
+             relationship = "many-to-many") %>%
+  distinct(value_col, time_window, Annee_Bibliographique, Nom, Titre, sentence, similarity) %>%
+  group_by(value_col, time_window) %>% 
+  slice_max(order_by = similarity, n = 15, with_ties = FALSE) %>% 
+  mutate(similarity = round(similarity, 3)) %>% 
+  arrange(desc(similarity))
+  
 
 # Calculating circulation of nodes between clusters over time
 alluvial_data <- networkflow::networks_to_alluv(graphs,
@@ -137,8 +180,9 @@ tf_idf <- networkflow::extract_tfidf(graphs,
 launch_network_app(
     graph_tbl = graphs, 
     cluster_id = "value_col", 
-    cluster_information = c("Titre", "Annee_Bibliographique", "Nom", "node_size"),
+    cluster_information = c("Titre", "Annee_Bibliographique", "Nom", "node_size", "participation_coefficient", "sentence"),
     cluster_tooltip = "Click on cluster to see more information",
+    cluster_sentences = closest_sentences,
     top_references = top_refs,
     top_references_without_id = top_refs_without_id,
     cluster_origins = cluster_origins,
