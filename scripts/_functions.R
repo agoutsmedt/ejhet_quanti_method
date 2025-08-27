@@ -348,7 +348,7 @@ launch_network_app <- function(
           DT::DTOutput("cluster_refs"),
           shiny::h4(paste0("Top References (without ID) of ", cl)),
           DT::DTOutput("cluster_refs_without_id"),
-          shiny::h4(paste0("Cluster tf-idf for ", cl, " (t → t+1)")),
+          shiny::h4(paste0("Cluster tf-idf for ", cl)),
           DT::DTOutput("cluster_tf_idf"),
           shiny::h4(paste0("Cluster origins for ", cl, " (t-1 → t)")),
           DT::DTOutput("cluster_origins_table"),
@@ -414,13 +414,13 @@ launch_network_app <- function(
         tidygraph::activate("nodes") %>%
         as.data.frame() %>%
         dplyr::distinct(!!cluster_sym, time_window) %>%
-        dplyr::left_join(closest_sentences)
+        dplyr::left_join(cluster_sentences)
       
       tab <- sentences %>%
         dplyr::filter(!!cluster_sym == selected_cluster()) %>%
         # pick reasonable columns if present
         dplyr::select(dplyr::any_of(c(
-          cluster_information, "Sentence", "Similarity"
+          cluster_information, "sentence", "similarity"
         )))
       DT::datatable(tab, escape = FALSE, options = list(pageLength = 10), rownames = FALSE)
     })

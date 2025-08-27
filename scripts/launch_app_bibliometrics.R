@@ -35,8 +35,7 @@ graphs <- lapply(graphs, function(graph) {
     arrange(desc(node_size)) %>% 
     rename(color = main_colors) %>% 
     mutate(nodes_tooltip = paste0(Nom, " \\(", Annee_Bibliographique, "\\) ", Titre) %>% str_remove_all(., "[:punct:]"),
-           value_col = if_else(is.na(value_col), dynamic_cluster_leiden, value_col),
-           Titre = if_else(!is.na(url_jstor), glue("<a href='{url_jstor}' target='_blank'>{Titre}</a>"), Titre))
+           value_col = if_else(is.na(value_col), dynamic_cluster_leiden, value_col))
   
   graph <- graph %>% 
     activate(edges) %>%
@@ -66,7 +65,8 @@ graphs <- lapply(graphs, function(graph) {
 nodes <- map(graphs, ~ . %N>% as_tibble()) %>% 
   bind_rows() %>% 
   mutate(value_col = if_else(is.na(value_col), dynamic_cluster_leiden, value_col),
-         ID_Art = as.integer(ID_Art))
+         ID_Art = as.integer(ID_Art),
+         Titre = if_else(!is.na(url_jstor), glue("<a href='{url_jstor}' target='_blank'>{Titre}</a>"), Titre))
 
 refs <- open_dataset(here::here(wos_data_path, "all_ref.parquet"), format = "parquet") %>% 
   filter(ID_Art %in% nodes$ID_Art) %>% 
@@ -175,6 +175,13 @@ tf_idf <- networkflow::extract_tfidf(graphs,
                                      nb_terms = 10) %>% 
   mutate(time_window = str_c(as.integer(list_names), "-", as.integer(list_names) + 9)) %>% 
   select(-list_names)
+
+graphs <- lapply(graphs, function(graph) {
+  # We change the title at the end as titles are used to compute tf_idf
+  graph <- graph %>% 
+    activate(nodes) %>% 
+    mutate(Titre = if_else(!is.na(url_jstor), glue("<a href='{url_jstor}' target='_blank'>{Titre}</a>"), Titre))
+})
   
 # Lauching the app
 launch_network_app(
