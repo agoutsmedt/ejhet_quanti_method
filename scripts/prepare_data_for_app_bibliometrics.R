@@ -1,13 +1,19 @@
 # Loading data
-graphs <- readRDS(here::here(
-  data_path,
-  "networks_1960_2014_10_year_windows_0.1_rationality_score.RDS"
-))
+complete_graphs <- FALSE
 
-labels <- readRDS(here::here(
-  data_path,
-  "label_ai_1960_2014_10_year_windows_0.1_rationality_score.RDS"
-))
+if(complete_graphs){
+  graphs <- readRDS(here::here(
+    data_path,
+    "networks_1960_2014_10_year_windows_0.1_rationality_score.RDS"
+  ))
+  
+  labels <- readRDS(here::here(
+    data_path,
+    "label_ai_1960_2014_10_year_windows_0.1_rationality_score.RDS"
+  ))
+} else {
+  graphs <- readRDS(here::here(data_path, "networks_1960_2014_10_year_windows_0.1_rationality_score_with_roles.RDS"))
+}
 
 match_jstor_wos <- readRDS(here::here(data_path, "final_match.RDS")) %>%
   filter(!is.na(id_match_final)) %>%
@@ -38,54 +44,118 @@ article_sentences <- sentences %>%
   select(ID_Art, sentence, similarity)
 
 # add labels to the list of graphs
+if(complete_graphs){
 graphs <- lapply(graphs, function(graph) {
-  graph <- graph %>%
-    activate(nodes) %>%
+  
+  graph <- graph %>% 
+    activate(nodes) %>% 
     left_join(labels, by = c("dynamic_cluster_leiden" = "id_col")) %>%
     left_join(match_jstor_wos, by = c("ID_Art" = "ID_Art")) %>%
     left_join(article_sentences, by = c("ID_Art" = "ID_Art")) %>%
-    arrange(desc(node_size)) %>%
-    rename(color = main_colors) %>%
-    mutate(
-      nodes_tooltip = paste0(
-        Nom,
-        " \\(",
-        Annee_Bibliographique,
-        "\\) ",
-        Titre
-      ) %>%
-        str_remove_all(., "[:punct:]"),
-      value_col = if_else(is.na(value_col), dynamic_cluster_leiden, value_col)
-    )
-
-  graph <- graph %>%
+    arrange(desc(node_size)) %>% 
+    rename(color = main_colors) %>% 
+    mutate(nodes_tooltip = paste0(Nom, " \\(", Annee_Bibliographique, "\\) ", Titre) %>% 
+             str_replace_all(., "[:punct:]", " ") %>% 
+             str_squish(),
+           value_col = if_else(is.na(value_col), dynamic_cluster_leiden, value_col))
+  
+  graph <- graph %>% 
     activate(edges) %>%
     rename(color = color_edges)
+  
+})
 
-  # Calculating participation coefficient
+# Calculating Guimerà–Amaral roles
+#' - P tells you the scope of a node’s connections (local vs cross-cluster).
+#' - z tells you the intensity of a node’s position inside its cluster (hub vs peripheral).
+#' - Together they classify each paper’s role: insider, bridge, local hub, or global connector.
+graphs <- lapply(graphs, function(graph) {
+  cli::cli_alert_info("Calculating Guimerà–Amaral roles for graph {graph %N>% pull(time_window) %>% unique()} with {gorder(graph)} nodes and {gsize(graph)} edges.")
+  total_strength <- strength(graph, vids = V(graph), mode = "all", weights = E(graph)$weight)
+  
+  # Helper: for a node i, return a named vector of strength to each neighbor community
+  .community_strength_i <- function(i){
+    ei <- incident(graph, i, mode = "all")
+    if(length(ei) == 0) return(numeric(0))
+    w  <- E(graph)[ei]$weight
+    # other endpoint of each incident edge
+    ends_i <- ends(graph, ei, names = FALSE)
+    other  <- ifelse(ends_i[,1] == i, ends_i[,2], ends_i[,1])
+    comms  <- V(graph)$cluster_leiden[other]
+    tapply(w, comms, sum)
+  }
+  
+  # 2) Weighted participation coefficient
+  #    P_i = 1 - sum_c ( s_ic / s_i )^2   where s_ic is strength to community c
+  P <- sapply(seq_len(gorder(graph)), function(i){
+    if(total_strength[i] > 0){
+      cs <- .community_strength_i(i)
+      if(length(cs) > 0) {                           # keep your small-degree filter
+        1 - sum((cs / total_strength[i])^2)
+      } else {
+        NA_real_
+      }
+    } else {
+      NA_real_
+    }
+  })
+  
+  # 3) Within-module strength z-score
+  # z_i = ( s_i^in - mean_s^in_cluster ) / sd_s^in_cluster
+  # where s_i^in = sum of weights from i to nodes in its own cluster
+  own_comm <- V(graph)$cluster_leiden
+  s_in <- sapply(seq_len(gorder(graph)), function(i){
+    ei <- incident(graph, i, mode = "all")
+    if(length(ei) == 0) return(0)
+    ends_i <- ends(graph, ei, names = FALSE)
+    other  <- ifelse(ends_i[,1] == i, ends_i[,2], ends_i[,1])
+    mask   <- own_comm[other] == own_comm[i]
+    if(!any(mask)) return(0)
+    sum(E(graph)[ei][mask]$weight)
+  })
+  
+  # compute z within each community
+  z <- numeric(gorder(graph))
+  for(comm in unique(own_comm)){
+    idx   <- which(own_comm == comm)
+    mu    <- mean(s_in[idx])
+    sdv   <- sd(s_in[idx])
+    if(is.na(sdv) || sdv == 0) {
+      z[idx] <- 0
+    } else {
+      z[idx] <- (s_in[idx] - mu) / sdv
+    }
+  }
+  
+  # 4) Attach metrics and classify nodes by Guimerà–Amaral roles
   graph <- graph %N>%
-    mutate(total_degree = centrality_degree(mode = "all")) %>% # Total degree of the node
     mutate(
-      participation_coefficient = sapply(1:n(), function(i) {
-        neighbors <- neighbors(graph, i, mode = "all") # Get neighbors
-        if (length(neighbors) > 3) {
-          # filter by minimum number of neighbors
-          neighbor_communities <- V(graph)[neighbors]$cluster_leiden # Get communities of neighbors
-          community_counts <- table(neighbor_communities) # Count connections per community
-          1 - sum((community_counts / total_degree[i])^2) # Participation coefficient formula
-        } else {
-          return(NA)
-        }
-      })
-    )
-
-  graph <- graph %N>%
-    mutate(
-      participation_coefficient = round(participation_coefficient, 3),
-      similarity = round(similarity, 3)
+      total_strength = total_strength,
+      participation_coefficient = P,
+      z_within = z,
+      role = dplyr::case_when(
+        z_within <  2.5 & participation_coefficient <= 0.05 ~ "ultra-peripheral",
+        z_within <  2.5 & participation_coefficient <= 0.62 ~ "peripheral",
+        z_within <  2.5 & participation_coefficient <= 0.80 ~ "connector",
+        z_within <  2.5                                       ~ "kinless",
+        z_within >= 2.5 & participation_coefficient <= 0.30 ~ "provincial hub",
+        z_within >= 2.5 & participation_coefficient <= 0.75 ~ "connector hub",
+        TRUE                                                ~ "kinless hub"
+      )
     )
 })
 
+# rounding graph statistics:
+graphs <- lapply(graphs, function(graph) {
+  graph <- graph %N>%
+    mutate(
+      similarity = round(similarity, 3),
+      participation_coefficient = round(participation_coefficient, 3),
+      z_within = round(z_within, 3)
+    )
+})
+
+}
 
 # Adding references
 nodes <- map(graphs, ~ . %N>% as_tibble()) %>%
@@ -280,7 +350,6 @@ graphs <- lapply(graphs, function(graph) {
       )
     )
 })
-
 
 # save all data required for the app
 saveRDS(
