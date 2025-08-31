@@ -132,17 +132,57 @@ graphs <- lapply(graphs, function(graph) {
     mutate(
       total_strength = total_strength,
       participation_coefficient = P,
-      z_within = z,
-      role = dplyr::case_when(
-        z_within <  2.5 & participation_coefficient <= 0.05 ~ "ultra-peripheral",
-        z_within <  2.5 & participation_coefficient <= 0.62 ~ "peripheral",
-        z_within <  2.5 & participation_coefficient <= 0.80 ~ "connector",
-        z_within <  2.5                                       ~ "kinless",
-        z_within >= 2.5 & participation_coefficient <= 0.30 ~ "provincial hub",
-        z_within >= 2.5 & participation_coefficient <= 0.75 ~ "connector hub",
-        TRUE                                                ~ "kinless hub"
-      )
+      z_within = z
     )
+})
+
+#' The last thing to do is to choose a threshold which depends of the distribution of all our
+#' z and P values. The original paper used z = 2.5 and P = 0.62 and 0.80 for non-hubs, but
+#' it should be adapted to our data.
+choose_role_thresholds <- function(z, P, hub_q = 0.975, k_nonhub = 4, k_hub = 3) {
+  stopifnot(length(z) == length(P))
+  z  <- z[is.finite(z)]; P <- P[is.finite(P)]
+  if (!length(z)) stop("empty z")
+  
+  hub_thr <- unname(stats::quantile(z, hub_q, na.rm = TRUE))
+  
+  nonhub_P <- P[z <  hub_thr]
+  hub_P    <- P[z >= hub_thr]
+  
+  get_breaks <- function(x, k, fallback) {
+    if (length(x) >= k && length(unique(x)) >= k) {
+      km <- stats::kmeans(x, centers = k, iter.max = 100)
+      centers <- sort(as.numeric(km$centers))
+      sort((centers[-k] + centers[-1]) / 2)         # midpoints between centers
+    } else fallback
+  }
+  
+  nonhub_brks <- get_breaks(nonhub_P, k_nonhub, c(0.05, 0.62, 0.80))
+  hub_brks    <- get_breaks(hub_P,    k_hub,    c(0.30, 0.75))
+  
+  list(hub_z = hub_thr, nonhub_P = nonhub_brks, hub_P = hub_brks)
+}
+
+# Extract data for all our graphs to choose thresholds
+all_graphs_data <- map(graphs, ~ . %N>% as_tibble()) %>% 
+  bind_rows() %>%
+  select(ID_Art, z_within, participation_coefficient)
+thr <- choose_role_thresholds(z = all_graphs_data$z_within,
+                              P = all_graphs_data$participation_coefficient)
+
+graphs <- lapply(graphs, function(graph) {
+graph <- graph %N>%
+  dplyr::mutate(
+    role = dplyr::case_when(
+      z_within <  thr$hub_z & participation_coefficient <= thr$nonhub_P[1] ~ "ultra-peripheral",
+      z_within <  thr$hub_z & participation_coefficient <= thr$nonhub_P[2] ~ "peripheral",
+      z_within <  thr$hub_z & participation_coefficient <= thr$nonhub_P[3] ~ "connector",
+      z_within <  thr$hub_z                                                ~ "kinless",
+      z_within >= thr$hub_z & participation_coefficient <= thr$hub_P[1]    ~ "provincial hub",
+      z_within >= thr$hub_z & participation_coefficient <= thr$hub_P[2]    ~ "connector hub",
+      TRUE                                                                 ~ "kinless hub"
+    )
+  )
 })
 
 # rounding graph statistics:
@@ -155,6 +195,7 @@ graphs <- lapply(graphs, function(graph) {
     )
 })
 
+saveRDS(graphs, here::here(data_path, "networks_1960_2014_10_year_windows_0.1_rationality_score_with_roles.RDS"))
 }
 
 # Adding references
