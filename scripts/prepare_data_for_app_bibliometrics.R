@@ -186,7 +186,7 @@ top_refs <- nodes %>%
   summarise(n = n(), .groups = "drop") %>%
   arrange(time_window, value_col, desc(n)) %>%
   group_by(time_window, value_col) %>%
-  slice_head(n = 10) %>%
+  slice_head(n = 20) %>%
   ungroup() %>%
   filter(n > 1) %>%
   left_join(
@@ -331,7 +331,7 @@ tf_idf <- networkflow::extract_tfidf(
   text_column = "Titre",
   grouping_column = "value_col",
   grouping_across_list = TRUE,
-  nb_terms = 10
+  nb_terms = 20
 ) %>%
   mutate(
     time_window = str_c(as.integer(list_names), "-", as.integer(list_names) + 9)

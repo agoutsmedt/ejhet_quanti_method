@@ -395,14 +395,25 @@ launch_network_app <- function(
       
       out <- nodes_all |>
         dplyr::filter(.data[[id_chr]] == selected_node_id()) |>
-        dplyr::arrange(.graph) %>% 
-        dplyr::select(dplyr::any_of(c(
-          "time_window", cluster_id, cluster_information, node_size
-        )), -sentence)
-        
+        dplyr::arrange(.graph) |>
+        dplyr::select(dplyr::any_of(c("time_window", cluster_id, cluster_information, node_size)), -sentence)
       
-      DT::datatable(out, options = list(pageLength = 10), escape = FALSE, rownames = FALSE)
+      tbl <- DT::datatable(out, options = list(pageLength = 10), escape = FALSE, rownames = FALSE)
+      
+      if (is_list_graph && "time_window" %in% names(out)) {
+        lv  <- unique(out$time_window)
+        year <- lv %>% str_extract("^\\d+")
+        col <- ifelse(year == input$selected_graph, "#fff3cd", "")  # pale yellow
+        tbl <- DT::formatStyle(
+          tbl, "time_window",
+          target = "row",
+          backgroundColor = DT::styleEqual(lv, col)
+        )
+      }
+      
+      tbl
     })
+    
     
     
     output$cluster_docs <- DT::renderDT({
@@ -541,7 +552,7 @@ launch_network_app <- function(
         main_refs_cluster %>%
         dplyr::filter(!!cluster_sym == selected_cluster()) %>%
         dplyr::select(Nom, Annee, Revue_Abbrege, nb_cit) %>%
-        DT::datatable(options = list(pageLength = 10))
+        DT::datatable(options = list(pageLength = 20))
     })
     
     output$cluster_refs_without_id <- DT::renderDT({
@@ -571,7 +582,7 @@ launch_network_app <- function(
         dplyr::filter(!!cluster_sym == selected_cluster()) %>%
         dplyr::select(term, tf_idf) %>%
         mutate(tf_idf = round(tf_idf, 4)) %>%
-        DT::datatable(options = list(pageLength = 10))
+        DT::datatable(options = list(pageLength = 20))
     })
     
     output$cluster_origins_table <- DT::renderDT({
