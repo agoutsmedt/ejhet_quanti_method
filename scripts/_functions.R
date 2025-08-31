@@ -509,7 +509,7 @@ launch_network_app <- function(
       DT::datatable(
         shown,
         filter = "top",
-        escape = -which(cols == "role"),  # do not escape role HTML; escape others
+        escape = -which(cols %in% c("role", "Titre")),  # do not escape role HTML; escape others
         rownames = FALSE,
         options = list(
           dom = "lfrtip",
