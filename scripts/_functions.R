@@ -119,7 +119,8 @@ launch_network_app <- function(
     requireNamespace("shinycssloaders"),
     requireNamespace("tidygraph"),
     requireNamespace("networkflow"),
-    requireNamespace("cli")
+    requireNamespace("cli"),
+    requireNamespace("htmltools")  # add
   )
   
   # Validate input
@@ -213,6 +214,15 @@ launch_network_app <- function(
     active_graph <- shiny::reactive({
       if (is_list_graph) graph_tbl[[input$selected_graph]] else graph_tbl
     })
+    
+    cluster_nodes_raw <- shiny::reactive({
+      req(selected_cluster())
+      g_tbl <- active_graph()
+      tidygraph::activate(g_tbl, "nodes") |>
+        as.data.frame() |>
+        dplyr::filter(!!cluster_sym == selected_cluster())
+    })
+    
     
     output$network_plot <- ggiraph::renderGirafe({
       g_tbl <- active_graph()
@@ -341,6 +351,7 @@ launch_network_app <- function(
               else as.character(selected_cluster())
         tagList(
           shiny::h4(paste0("Documents in ", cl)),
+          shiny::uiOutput("role_filter_ui"),
           DT::DTOutput("cluster_docs"),
           shiny::h4(paste0("Closest sentences for ", cl)),
           DT::DTOutput("cluster_sentences"),
@@ -395,14 +406,108 @@ launch_network_app <- function(
     
     
     output$cluster_docs <- DT::renderDT({
-      req(selected_cluster())
-      g_tbl <- active_graph()
-      nodes_df <- tidygraph::activate(g_tbl, "nodes") %>% as.data.frame()
+      df <- cluster_nodes_raw()
       
-      nodes_df %>%
-        dplyr::filter(!!cluster_sym == selected_cluster()) %>%
-        dplyr::select(all_of(cluster_information)) %>%
-        DT::datatable(options = list(pageLength = 10), escape = FALSE, rownames = FALSE)
+      # role filter before formatting
+      if (!is.null(input$role_filter) && input$role_filter != "All" && "role" %in% names(df)) {
+        df <- dplyr::filter(df, .data$role == input$role_filter)
+      }
+      
+      # Long role descriptions
+      role_expl <- c(
+        R1 = "Ultra-peripheral node: z low, P < 0.05. Almost all links within its module.",
+        R2 = "Peripheral node: z low, 0.05 ≤ P < 0.62. Mostly within-module links.",
+        R3 = "Connector node: z low, 0.62 ≤ P < 0.80. Many links to other modules.",
+        R4 = "Kinless node: z low, P ≥ 0.80. Links spread across modules.",
+        R5 = "Provincial hub: z high, P < 0.30. Hub inside its module.",
+        R6 = "Connector hub: z high, 0.30 ≤ P < 0.75. Hub bridging modules.",
+        R7 = "Kinless hub: z high, P ≥ 0.75. Hub linked broadly across modules."
+      )
+      role_alias <- c(
+        "ultra-peripheral"="R1","peripheral"="R2","connector"="R3","kinless"="R4",
+        "provincial hub"="R5","connector hub"="R6","kinless hub"="R7"
+      )
+      norm_label <- function(x) {
+        x <- trimws(as.character(x))
+        x <- gsub("[\u2010-\u2015]", "-", x); x <- gsub("\\s+", " ", x)
+        tolower(x)
+      }
+      
+      # Wrap role with tooltip
+      if ("role" %in% names(df)) {
+        df$role <- vapply(df$role, function(val) {
+          key  <- role_alias[[ norm_label(val) ]]
+          desc <- if (!is.null(key)) role_expl[[key]] else "Role description unavailable"
+          sprintf('<span title="%s">%s</span>',
+                  htmltools::htmlEscape(desc),
+                  htmltools::htmlEscape(as.character(val)))
+        }, FUN.VALUE = character(1))
+      }
+      
+      # --- detailed, human-friendly tooltips ---
+      z_expl <- paste(
+        "Within-module degree z-score (z).",
+        "Definition: for node i in cluster C:",
+        "  z = (k_iC - mean(k_C)) / sd(k_C)",
+        "  k_iC = links (or total link weight) from i to nodes in C.",
+        "Meaning: how hub-like i is inside its own cluster compared with peers.",
+        "Rules of thumb: z≈0 average; z>2.5 hub; z<0 below average.",
+        "Weighted graphs: use strengths (sum of weights) instead of counts.",
+        sep = "\n"
+      )
+      
+      p_expl <- paste(
+        "Participation coefficient P in [0,1].",
+        "Definition: P = 1 - sum_over_clusters (k_iC / k_i)^2",
+        "  k_iC = links (or total link weight) from i to cluster C; k_i = total links of i.",
+        "Meaning: distribution of i's links across clusters.",
+        "Rules of thumb: 0 = all links in one cluster; ~0.05 very local;",
+        "  ~0.30 local hub; ~0.62 connector across clusters; >=0.80 kinless-like.",
+        "Weighted graphs: use strengths (sum of weights) instead of counts.",
+        sep = "\n"
+      )
+      
+      # z_within tooltip
+      if ("z_within" %in% names(df)) {
+        df$z_within <- sprintf(
+          '<span title="%s">%s</span>',
+          htmltools::htmlEscape(z_expl),
+          htmltools::htmlEscape(formatC(df$z_within, digits = 3, format = "fg"))
+        )
+      }
+      
+      # participation_coefficient tooltip
+      if ("participation_coefficient" %in% names(df)) {
+        df$participation_coefficient <- sprintf(
+          '<span title="%s">%s</span>',
+          htmltools::htmlEscape(p_expl),
+          htmltools::htmlEscape(formatC(df$participation_coefficient, digits = 3, format = "fg"))
+        )
+      }
+      
+      
+      shown_cols <- intersect(cluster_information, names(df))
+      if (!length(shown_cols)) shown_cols <- setdiff(names(df), c("x","y",".graph"))
+      shown <- df |> dplyr::select(dplyr::all_of(shown_cols))
+      
+      DT::datatable(
+        shown,
+        filter = "top",
+        escape = FALSE,     # keep the <span title=...>
+        rownames = FALSE,
+        options = list(dom = "lfrtip", searchHighlight = TRUE)
+      )
+    })
+    
+    
+    output$role_filter_ui <- shiny::renderUI({
+      df <- cluster_nodes_raw()
+      roles <- sort(unique(as.character(df$role)))
+      if (!length(roles)) return(NULL)
+      shiny::selectInput(
+        "role_filter", "Filter by role:",
+        choices = c("All", roles), selected = "All"
+      )
     })
     
     output$cluster_sentences <- DT::renderDT({
