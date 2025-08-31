@@ -120,7 +120,8 @@ launch_network_app <- function(
     requireNamespace("tidygraph"),
     requireNamespace("networkflow"),
     requireNamespace("cli"),
-    requireNamespace("htmltools")  # add
+    requireNamespace("htmltools"),
+    requireNamespace("jsonlite")# add
   )
   
   # Validate input
@@ -419,20 +420,20 @@ launch_network_app <- function(
     output$cluster_docs <- DT::renderDT({
       df <- cluster_nodes_raw()
       
-      # role filter before formatting
+      # role filter
       if (!is.null(input$role_filter) && input$role_filter != "All" && "role" %in% names(df)) {
         df <- dplyr::filter(df, .data$role == input$role_filter)
       }
       
-      # Long role descriptions
+      # role tooltips (HTML)
       role_expl <- c(
-        R1 = "Ultra-peripheral node: z low, P < 0.05. Almost all links within its module.",
-        R2 = "Peripheral node: z low, 0.05 ≤ P < 0.62. Mostly within-module links.",
-        R3 = "Connector node: z low, 0.62 ≤ P < 0.80. Many links to other modules.",
-        R4 = "Kinless node: z low, P ≥ 0.80. Links spread across modules.",
-        R5 = "Provincial hub: z high, P < 0.30. Hub inside its module.",
-        R6 = "Connector hub: z high, 0.30 ≤ P < 0.75. Hub bridging modules.",
-        R7 = "Kinless hub: z high, P ≥ 0.75. Hub linked broadly across modules."
+        R1="Ultra-peripheral node: z low, P < 0.05. Almost all links within its cluster.",
+        R2="Peripheral node: z low, 0.05 ≤ P < 0.62. Mostly within-cluster links.",
+        R3="Connector node: z low, 0.62 ≤ P < 0.80. Many links to other clusters.",
+        R4="Kinless node: z low, P ≥ 0.80. Links spread across clusters.",
+        R5="Provincial hub: z high, P < 0.30. Hub inside its cluster.",
+        R6="Connector hub: z high, 0.30 ≤ P < 0.75. Hub bridging clusters.",
+        R7="Kinless hub: z high, P ≥ 0.75. Hub linked broadly across clusters."
       )
       role_alias <- c(
         "ultra-peripheral"="R1","peripheral"="R2","connector"="R3","kinless"="R4",
@@ -443,8 +444,6 @@ launch_network_app <- function(
         x <- gsub("[\u2010-\u2015]", "-", x); x <- gsub("\\s+", " ", x)
         tolower(x)
       }
-      
-      # Wrap role with tooltip
       if ("role" %in% names(df)) {
         df$role <- vapply(df$role, function(val) {
           key  <- role_alias[[ norm_label(val) ]]
@@ -455,60 +454,72 @@ launch_network_app <- function(
         }, FUN.VALUE = character(1))
       }
       
-      # --- detailed, human-friendly tooltips ---
-      z_expl <- paste(
-        "Within-module degree z-score (z).",
-        "Definition: for node i in cluster C:",
-        "  z = (k_iC - mean(k_C)) / sd(k_C)",
-        "  k_iC = links (or total link weight) from i to nodes in C.",
-        "Meaning: how hub-like i is inside its own cluster compared with peers.",
-        "Rules of thumb: z≈0 average; z>2.5 hub; z<0 below average.",
-        "Weighted graphs: use strengths (sum of weights) instead of counts.",
-        sep = "\n"
-      )
-      
-      p_expl <- paste(
-        "Participation coefficient P in [0,1].",
-        "Definition: P = 1 - sum_over_clusters (k_iC / k_i)^2",
-        "  k_iC = links (or total link weight) from i to cluster C; k_i = total links of i.",
-        "Meaning: distribution of i's links across clusters.",
-        "Rules of thumb: 0 = all links in one cluster; ~0.05 very local;",
-        "  ~0.30 local hub; ~0.62 connector across clusters; >=0.80 kinless-like.",
-        "Weighted graphs: use strengths (sum of weights) instead of counts.",
-        sep = "\n"
-      )
-      
-      # z_within tooltip
-      if ("z_within" %in% names(df)) {
-        df$z_within <- sprintf(
-          '<span title="%s">%s</span>',
-          htmltools::htmlEscape(z_expl),
-          htmltools::htmlEscape(formatC(df$z_within, digits = 3, format = "fg"))
-        )
-      }
-      
-      # participation_coefficient tooltip
-      if ("participation_coefficient" %in% names(df)) {
-        df$participation_coefficient <- sprintf(
-          '<span title="%s">%s</span>',
-          htmltools::htmlEscape(p_expl),
-          htmltools::htmlEscape(formatC(df$participation_coefficient, digits = 3, format = "fg"))
-        )
-      }
-      
-      
       shown_cols <- intersect(cluster_information, names(df))
       if (!length(shown_cols)) shown_cols <- setdiff(names(df), c("x","y",".graph"))
       shown <- df |> dplyr::select(dplyr::all_of(shown_cols))
       
+      # indices of numeric columns to tooltip (0-based for DataTables)
+      cols <- colnames(shown)
+      # indices (0-based)
+      cols <- colnames(shown)
+      z_idx <- match("z_within", cols) - 1L
+      p_idx <- match("participation_coefficient", cols) - 1L
+      
+      # detailed tooltips
+      z_expl <- paste(
+        "Within-cluster degree z (standardized).",
+        "Formula: z = (k_iC - mean(k_C)) / sd(k_C),",
+        "  k_iC = links/weight from node i to nodes in its cluster C.",
+        "Interpretation: higher = more hub-like inside its cluster; ~0 = average.",
+        "Rule of thumb: z > 2.5 → hub.",
+        sep = "\n"
+      )
+      p_expl <- paste(
+        "Participation coefficient P ∈ [0,1].",
+        "Formula: P = 1 - Σ_C (k_iC / k_i)^2,",
+        "  k_iC = links/weight from i to cluster C; k_i = total links/weight of i.",
+        "Interpretation: 0 = all links in one cluster; 1 = evenly spread across clusters.",
+        "Typical cutoffs: ~0.05 local, ~0.30 local hub, ~0.62 connector, ≥0.80 kinless-like.",
+        sep = "\n"
+      )
+      
+      # JS callback to add title=... without changing data types
+      
+      js_row_cb <- DT::JS(paste0(
+        "function(row,data){",
+        if (!is.na(z_idx))
+          paste0("$('td:eq(", z_idx, ")', row).attr('title', ",
+                 jsonlite::toJSON(z_expl, auto_unbox = TRUE), ");")
+        else "",
+        if (!is.na(p_idx))
+          paste0("$('td:eq(", p_idx, ")', row).attr('title', ",
+                 jsonlite::toJSON(p_expl, auto_unbox = TRUE), ");")
+        else "",
+        "}"
+      ))
+      
+      # format numbers for display only; keep raw for sort/filter
+      num_renderer <- DT::JS(
+        "function(data,type,row,meta){ if(type === 'display'){ if(data == null) return ''; return Number(data).toFixed(3);} return data; }"
+      )
+      col_defs <- list()
+      if (!is.na(z_idx)) col_defs <- c(col_defs, list(list(targets = z_idx, render = num_renderer)))
+      if (!is.na(p_idx)) col_defs <- c(col_defs, list(list(targets = p_idx, render = num_renderer)))
+      
       DT::datatable(
         shown,
         filter = "top",
-        escape = FALSE,     # keep the <span title=...>
+        escape = -which(cols == "role"),  # do not escape role HTML; escape others
         rownames = FALSE,
-        options = list(dom = "lfrtip", searchHighlight = TRUE)
+        options = list(
+          dom = "lfrtip",
+          searchHighlight = TRUE,
+          rowCallback = js_row_cb,
+          columnDefs = col_defs
+        )
       )
     })
+    
     
     
     output$role_filter_ui <- shiny::renderUI({
