@@ -187,8 +187,8 @@ process_window <- function(years, df) {
   set.seed(89)
   tune_res <- tune_cluster(
     kmeans_wf,
-    resamples = vfold_cv(reduced_data, v = 4),
-    grid = tibble(num_clusters = 2:20),
+    resamples = vfold_cv(reduced_data, v = 5),
+    grid = tibble(num_clusters = 4:25),
     metrics = cluster_metric_set(sse_ratio),
     control = control_grid(parallel_over = "everything", allow_par = TRUE)
   )
@@ -270,7 +270,7 @@ window_order <- data.frame(
   window_index = seq_along(time_windows)
 )
 
-similarity_threshold <- 0.7
+similarity_threshold <- 0.75
 cosine_tbl <- as.data.frame(cosine_sim) %>% 
   mutate(cluster_A = centroids$cluster_original_id) %>%
   pivot_longer(-cluster_A, names_to = "cluster_B", values_to = "similarity") %>%
