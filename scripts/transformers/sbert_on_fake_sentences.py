@@ -8,7 +8,6 @@ import paths
 
 # ---------------- PARAMETERS ---------------- #
 JSTOR_RAW_DATA_PATH = paths.jstor_raw_data
-OUTPUT_DIR = os.path.join(JSTOR_RAW_DATA_PATH, "sentences_embeddings")
 SENTENCE_BERT_MODEL = "all-mpnet-base-v2"
 YEARS = [1925, 1950, 1975, 2000]
 TOP_K = 5
@@ -66,5 +65,5 @@ results_df = pd.DataFrame(all_rows, columns=["year", "rank", "similarity", "sent
 print(results_df)
 
 # save in feather 
-output_path = os.path.join(OUTPUT_DIR, "top_5_sentences_to_fake_sentence.feather")
+output_path = os.path.join(JSTOR_RAW_DATA_PATH, "top_5_sentences_to_fake_sentence.feather")
 results_df.to_feather(output_path)

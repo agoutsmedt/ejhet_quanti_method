@@ -1,5 +1,6 @@
 ---
-title: "A history of rationality in economics: a computational approach" 
+title: "A history of rationality in economics"
+subtitle: "a computational approach" 
 author: 
   - name: "Thomas Delcey"
     affiliation: "Université de Bourgogne"
@@ -10,9 +11,12 @@ author:
   - name: "Alexandre Truc"
     affiliation: "Université du CNRS"
     email: "Alexandre.truc[at]auCNRSpointFr"
-format:
+format: 
   revealjs: 
-    transition: convex
+    theme: 
+      - custom_clean.scss
+    css: custom.css
+    transition: fade
     slide-number: true
     toc: false 
     toc-depth: 1
@@ -25,6 +29,114 @@ format:
     lightbox: true
 ---
 
-## Introduction 
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| include: false
 
-## Slide 1 
+
+# move to the root directory of the project with "here::here()"
+source(here::here("scripts", "paths_and_packages.R"))
+
+```
+
+## Context 
+
+- Special issue: methods in the history of economic thought (HET).
+
+- Aim: contribute a methodological essay showing how quantitative tools can enrich HET.
+
+- A concrete case study, not a review of methods.
+
+## Our contribution
+
+- The meanings of rationality in economics in the 20<sup>th</sup> century: 
+  - Interests for many historians.  
+  - Focus on how computational methods help to draw large picture. 
+
+. . . 
+
+- A concrete methodological discussion following the workflow of our analysis: 
+  - What is challenging, what worked well, what did not, what could be improved. 
+
+## Historiography on rationality  
+
+- On rationality: 
+
+## From sources to corpus 
+
+
+- Challenges: 
+  - What sources to use? 
+  - How to access them?
+
+. . . 
+
+- Our choice: fulltexts of the JSTOR database. 
+  - Completed with Web of Science for citation data.
+
+## 
+
+::: {#fig-distribution layout-ncol=2}
+![Overtime](images/documents_distribution_fulltext_database.png){width=90%}
+
+![Languages](images/language_distribution_fulltext_database.png){width=90%}
+
+Distribution of documents in the JSTOR fulltext database
+::: 
+
+
+## Simple exploration of the corpus
+
+::: {#fig-exploration layout-ncol=2}
+
+![Frequency](images/relative_freq_rationality_and_rational.png)
+
+![Neighbor words of terms of “rational” and “rationality”](images/Top_neighbor_words_both.png)
+
+Exploration of the corpus with simple text analysis tools
+
+::: 
+
+
+## Which computational methods?
+
+::: {#fig-computation_methods layout-ncol=2}
+
+![Network and bibliometric analysis](images/example_network.jpg){width=70%}
+
+![Topic modeling](images/example_topic_model.png){width=60%}
+
+Illustrations of common computational methods in HET for large-scale analysis
+
+:::
+
+## Introducing LLMs to HET  
+
+![A simplified representation of words embeddings](images/fake_semantic_space_words_in_2D.png){#fig-vector_space width=80%}
+
+
+## Sentence embeddings
+
+. . . 
+
+```{r}
+#| echo: false
+#| message: false 
+#| warning: false
+#| label: tbl-top_sentences
+#| tbl-cap: "Closest sentences from our corpus to the fake sentence 'Economic agents are supposed to be rational.'"
+
+
+# load data OUTPUT_FILE = top_5_sentences_to_fake_sentence.feather
+
+data <- arrow::read_feather(here::here(data_path, "top_5_sentences_to_fake_sentence.feather"))
+
+data |> 
+  filter(rank < 4, year %in% c(2000)) |>
+  # kable the table
+  select(year, sentence, similarity) |>
+  knitr::kable() |> 
+  kableExtra::kable_styling(full_width = F)
+```

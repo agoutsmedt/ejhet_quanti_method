@@ -1,0 +1,12 @@
+/*-- scss:defaults --*/
+
+$body-color: #131516;
+
+/*-- scss:rules --*/
+
+.highlight-last  {
+  color: #131516;
+  .current-fragment {
+    color: #107895;
+  }
+}
