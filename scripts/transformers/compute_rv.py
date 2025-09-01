@@ -17,17 +17,18 @@ JSTOR_RAW_DATA_PATH = paths.jstor_raw_data
 EMBEDDINGS_FOLDER = os.path.join(JSTOR_RAW_DATA_PATH, "sentences_embeddings")
 pattern = os.path.join(EMBEDDINGS_FOLDER, "sentence_embeddings_*.feather")
 all_files = glob.glob(pattern)
-output_file = os.path.join(JSTOR_RAW_DATA_PATH, "representative_vectors.feather")
+
+# Parameters
+WINDOW_SIZE = 5  
+
+# output file based on window size
+output_file = os.path.join(JSTOR_RAW_DATA_PATH, f"representative_vectors_window_{WINDOW_SIZE}.feather")
 
 # Extract available years
 all_years = sorted([
     int(re.search(r"(\d{4})", os.path.basename(f)).group(1))
     for f in all_files
 ])
-
-# --- nouveau paramètre : fenêtre réduite à ±2 ans
-WINDOW_SIZE = 2  # donc année -2 à année +2
-
 
 
 # Remove noisy decades

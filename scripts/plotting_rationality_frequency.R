@@ -1,18 +1,19 @@
 # paths and packages
 source(file.path("scripts", "paths_and_packages.R"))
 
-library(scales)   # pour breaks/labels si besoin
+library(scales) # pour breaks/labels si besoin
 
 REL_FREQ_PARQUET <- "relative_freq_merged_by_year.parquet"
-df <- read_parquet(file.path(data_path, REL_FREQ_PARQUET)) 
+df <- read_parquet(file.path(data_path, REL_FREQ_PARQUET))
 
-# check the columns types 
-df <- df |> mutate(
+# check the columns types
+df <- df |>
+  mutate(
     year = as.integer(year),
-    token = as.character(token))
+    token = as.character(token)
+  )
 
 plot_unigram <- function(df, token_query) {
-  
   query <- tolower(token_query)
 
   df <- df %>%
@@ -45,14 +46,14 @@ plot_unigram <- function(df, token_query) {
 # Exemple
 plot_unigram(df = df, token_query = "rationality")
 
-# plot and save a search query of "rationality" and "rational" in a same graph 
+# plot and save a search query of "rationality" and "rational" in a same graph
 
-df_filtered <- df |> 
-  mutate(token_lower = str_to_lower(token)) |> 
+df_filtered <- df |>
+  mutate(token_lower = str_to_lower(token)) |>
   filter(token_lower == "rational" | token_lower == "rationality")
 
 
-df_filtered |> 
+df_filtered |>
   ggplot(aes(x = as.integer(year), y = relative_freq, color = token_lower)) +
   geom_point() +
   geom_smooth(method = "loess", se = FALSE, size = 1) +
@@ -61,12 +62,14 @@ df_filtered |>
     y = "Relative Frequency",
     color = "Words",
   ) +
-  scico::scale_color_scico_d(palette = "acton") +
+  ggsci::scale_color_npg() +
   scale_x_continuous(breaks = seq(1880, max(df$year), by = 20)) +
-  theme_light() 
+  theme_light(base_size = 20)
 
 # Save the plot
 
-ggsave(file.path(image_path, "relative_freq_rationality_and_rational.png"), width = 10, height = 6)
-
-
+ggsave(
+  file.path(image_path, "relative_freq_rationality_and_rational.png"),
+  width = 10,
+  height = 6
+)

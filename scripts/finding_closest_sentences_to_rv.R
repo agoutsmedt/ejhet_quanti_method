@@ -7,10 +7,16 @@ source(file.path("scripts", "paths_and_packages.R"))
 p_load(text2vec)
 
 # Load per-year representative vectors (list-column: embedding_by_year_centered)
-representative_vectors <- read_feather(here::here(data_path, "representative_vectors.feather"))
+representative_vectors <- read_feather(here::here(
+  data_path,
+  "representative_vectors_window_5.feather"
+))
 
 # Load sentences to delete
-sentences_to_delete <- read_feather(here::here(data_path, "sentences_to_delete.feather"))
+sentences_to_delete <- read_feather(here::here(
+  data_path,
+  "sentences_to_delete.feather"
+))
 
 
 # --- CONFIG -------------------------------------------------------------------
@@ -24,13 +30,18 @@ sentence_files <- list.files(emb_dir)
 # --- RESUME LOGIC -------------------------------------------------------------
 # If a previous results file exists, resume from it; otherwise initialize a list
 existing_sentence_file <- list.files(data_path) %>%
-  .[str_detect(., "^closest_sentences_\\d+\\.\\d+_filtered_rationality_score\\.rds$")]   # NOTE: stricter regex
+  .[str_detect(
+    .,
+    "^closest_sentences_\\d+\\.\\d+_filtered_rationality_score_window_5\\.rds$"
+  )] # NOTE: stricter regex
 
 if (length(existing_sentence_file) > 0) {
   list_sentences <- readRDS(here::here(data_path, existing_sentence_file))
   # years_done: names with a non-empty data.frame/tibble entry
   years_done <- names(compact(list_sentences))
-  years_to_do <- representative_vectors$year[!representative_vectors$year %in% years_done]
+  years_to_do <- representative_vectors$year[
+    !representative_vectors$year %in% years_done
+  ]
 } else {
   list_sentences <- vector("list", length(representative_vectors$year))
   names(list_sentences) <- representative_vectors$year
@@ -40,14 +51,14 @@ if (length(existing_sentence_file) > 0) {
 # --- MAIN LOOP ---------------------------------------------------------------
 for (year in years_to_do) {
   cli::cli_alert_info("Processing year {year}...")
-  
+
   # 1) Representative vector for this year (numeric length == embedding dim)
   representative_vector <- representative_vectors %>%
     filter(year == !!year) %>%
     pull(embedding_by_year_centered) %>%
     unlist() %>%
     as.numeric()
-  
+
   # 2) Load that year's sentence embeddings: tibble with list-col `embedding`
   sentence_embeddings <- read_feather(
     here::here(emb_dir, glue("sentence_embeddings_{year}.feather"))
@@ -60,22 +71,25 @@ for (year in years_to_do) {
 
   sentence_embeddings <- sentence_embeddings %>%
     filter(!sentence %in% sentences_year_to_delete)
-  
+
   # 3) Build an embedding matrix (rows = sentences, cols = embedding dims)
   #    NOTE: do.call(rbind, ...) allocates once; OK if per-year file fits RAM
   emb_matrix <- do.call(rbind, sentence_embeddings$embedding)
-  
+
   # 4) Cosine similarity between all sentences and the representative vector
   #    text2vec::sim2 returns a matrix; coerce to numeric vector for safety
-  sims_mat <- sim2(emb_matrix,
-                   matrix(representative_vector, nrow = 1),
-                   method = "cosine", norm = "l2")
-  sims <- as.numeric(sims_mat[, 1])   # NOTE: avoid matrix recycling pitfalls
-  
+  sims_mat <- sim2(
+    emb_matrix,
+    matrix(representative_vector, nrow = 1),
+    method = "cosine",
+    norm = "l2"
+  )
+  sims <- as.numeric(sims_mat[, 1]) # NOTE: avoid matrix recycling pitfalls
+
   # 5) Keep top 1% within the year; attach mean(similarity) for that year
   #    NOTE: quantile over numeric vector (not matrix) for clarity
   cutoff <- stats::quantile(sims, 0.99, na.rm = TRUE)
-  
+
   list_sentences[[as.character(year)]] <- sentence_embeddings %>%
     mutate(
       similarity = sims,
@@ -84,20 +98,34 @@ for (year in years_to_do) {
     arrange(dplyr::desc(similarity)) %>%
     select(-embedding) %>%
     filter(similarity > cutoff)
-  
+
   # 6) Free memory used by large objects before next iteration
-  rm(sentence_embeddings, emb_matrix, sims_mat, sims, cutoff, sentences_year_to_delete)
+  rm(
+    sentence_embeddings,
+    emb_matrix,
+    sims_mat,
+    sims,
+    cutoff,
+    sentences_year_to_delete
+  )
   gc()
-  
+
   # 7) Persist progress after each year (robust to crashes)
-  saveRDS(list_sentences,
-          here::here(data_path,
-                     glue::glue("closest_sentences_0.01_filtered_rationality_score.rds")))
+  saveRDS(
+    list_sentences,
+    here::here(
+      data_path,
+      glue::glue("closest_sentences_0.01_filtered_rationality_score.rds")
+    )
+  )
 }
 
 
 # load the results
-closest_sentences <- readRDS(here::here(data_path, "closest_sentences_0.01_filtered_rationality_score.rds"))
+closest_sentences <- readRDS(here::here(
+  data_path,
+  "closest_sentences_0.01_filtered_rationality_score.rds"
+))
 
 df_closed_sentences <- bind_rows(closest_sentences)
 
@@ -116,6 +144,12 @@ df_closed_sentences %>%
 
 # save the results
 ggsave(
-  filename = here::here(image_path_temp, "distribution_closest_sentences_by_year.png"),
-  width = 10, height = 6, units = "in", dpi = 300
+  filename = here::here(
+    image_path_temp,
+    "distribution_closest_sentences_by_year.png"
+  ),
+  width = 10,
+  height = 6,
+  units = "in",
+  dpi = 300
 )

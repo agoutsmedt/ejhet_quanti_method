@@ -5,11 +5,29 @@ source(file.path("scripts", "paths_and_packages.R"))
 # load fulltext metadata
 metadata <- read_rds(file.path(data_path, "full_metadata_journals_cleaned.rds"))
 
-metadata |> distinct(refined_sub_type)
+# plot distribution overtime of articles
+
+gg <- metadata |>
+  rename(year = publication_year) |>
+  count(year) |>
+  ggplot(aes(x = year)) +
+  geom_point(aes(y = n)) +
+  labs(
+    x = "Year",
+    y = "Number of documents"
+  ) +
+  theme_light(base_size = 20)
+
+ggsave(
+  plot = gg,
+  file.path(image_path, "documents_distribution_fulltext_database.png"),
+  width = 8,
+  height = 9
+)
 
 # plot distribution of language
 
-metadata |>
+gg <- metadata |>
   mutate(
     language = str_extract(language, "^[^,]+"),
     language = ifelse(
@@ -36,10 +54,12 @@ metadata |>
     x = "Languages",
     y = ""
   ) +
-  theme_light(base_size = 14)
+  theme_light(base_size = 20)
 
 # save the plot
 ggsave(
-  file.path(image_path_temp, "language_distribution_fulltext_database.png"),
-  width = 9
+  plot = gg,
+  file.path(image_path, "language_distribution_fulltext_database.png"),
+  width = 8,
+  height = 9
 )
