@@ -21,12 +21,11 @@ pattern = os.path.join(EMBEDDINGS_FOLDER, "sentence_embeddings_*.feather")
 all_files = glob.glob(pattern)
 
 # load representative vectors
-R_VECTORS_FILE = os.path.join(JSTOR_RAW_DATA_PATH, "representative_vectors.feather")
+R_VECTORS_FILE = os.path.join(JSTOR_RAW_DATA_PATH, "representative_vectors_window_5.feather")
 df_rep = feather.read_feather(R_VECTORS_FILE)
 
 
 # --------------------------- COMPUTE AVERAGE VECTOR FOR EACH DOCUMENT --------------------------- #
-
 
 df_average_vectors_by_id = []
 
@@ -44,9 +43,15 @@ for file in tqdm(all_files):
     df_average_vectors_by_id.append(df)
 
 
+# Concatenate all dataframes
+df_average_vectors_by_id = pd.concat(df_average_vectors_by_id, ignore_index=True)
+
 # create columns to join 
 df_average_vectors_by_id["year"] = df_average_vectors_by_id["publication_year"]
 df_average_vectors_by_id["decade"] = (df_average_vectors_by_id["publication_year"] // 10) * 10
+
+# filter year < 1900 
+df_average_vectors_by_id = df_average_vectors_by_id[df_average_vectors_by_id["year"] >= 1900]
 
 # Merge embeddings by year
 df_merged = df_average_vectors_by_id.merge(
@@ -111,5 +116,5 @@ df_merged["cosine_sim_centered"] = similarities_by_centered
 
 
 # Sauvegarde
-output_file = os.path.join(JSTOR_RAW_DATA_PATH, "similarities_fulltexts.feather")
+output_file = os.path.join(JSTOR_RAW_DATA_PATH, "similarities_fulltexts_window_5.feather")
 df_merged.to_feather(output_file)

@@ -52,7 +52,7 @@ source(here::here("scripts", "paths_and_packages.R"))
 ## Our contribution
 
 - The meanings of rationality in economics in the 20<sup>th</sup> century: 
-  - Interests for many historians.  
+  - Of interest for many historians.  
   - Focus on how computational methods help to draw large picture. 
 
 . . . 
@@ -66,15 +66,15 @@ source(here::here("scripts", "paths_and_packages.R"))
 
 ## From sources to corpus 
 
+- Our main source: JSTOR fulltext database (X documents, Y pages, Z sentences).
 
-- Challenges: 
-  - What sources to use? 
-  - How to access them?
+- It is sometimes more challenging to get the data than to analyze it: 
+  - Access to the sources (JSTOR Data for Research). 
+  - Filtering documents (book reviewrs). 
+  - Cleanning texts (headers, acknowledgments, etc.).
+  - Matching datasets (JSTOR + WoS).
+  - Handling large datasets. 
 
-. . . 
-
-- Our choice: fulltexts of the JSTOR database. 
-  - Completed with Web of Science for citation data.
 
 ## 
 
@@ -106,7 +106,7 @@ Exploration of the corpus with simple text analysis tools
 
 ![Network and bibliometric analysis](images/example_network.jpg){width=70%}
 
-![Topic modeling](images/example_topic_model.png){width=60%}
+![Probablistic topic model](images/example_topic_model.png){width=60%}
 
 Illustrations of common computational methods in HET for large-scale analysis
 
@@ -126,7 +126,7 @@ Illustrations of common computational methods in HET for large-scale analysis
 #| message: false 
 #| warning: false
 #| label: tbl-top_sentences
-#| tbl-cap: "Closest sentences from our corpus to the fake sentence 'Economic agents are supposed to be rational.'"
+#| tbl-cap: "Closest sentences in 2000 to the fake sentence 'Economic agents are supposed to be rational.'"
 
 
 # load data OUTPUT_FILE = top_5_sentences_to_fake_sentence.feather

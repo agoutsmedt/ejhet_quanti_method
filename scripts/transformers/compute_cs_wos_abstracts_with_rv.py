@@ -22,7 +22,7 @@ all_files = glob.glob(pattern)
 
 
 # load representative vectors
-R_VECTORS_FILE = os.path.join(JSTOR_RAW_DATA_PATH, "representative_vectors.feather")
+R_VECTORS_FILE = os.path.join(JSTOR_RAW_DATA_PATH, "representative_vectors_window_5.feather")
 df_rep = feather.read_feather(R_VECTORS_FILE)
 
 
@@ -115,5 +115,5 @@ df_merged["cosine_sim_centered"] = similarities_by_centered
 
 
 # Sauvegarde
-output_file = os.path.join(JSTOR_RAW_DATA_PATH, "similarities_wos_abstracts.feather")
+output_file = os.path.join(JSTOR_RAW_DATA_PATH, "similarities_wos_abstracts_window_5.feather")
 df_merged.to_feather(output_file)
