@@ -1,19 +1,14 @@
 # Loading data
-complete_graphs <- FALSE
 
-if(complete_graphs){
-  graphs <- readRDS(here::here(
-    data_path,
-    "networks_1960_2014_10_year_windows_0.1_rationality_score.RDS"
+graphs <- readRDS(here::here(
+  data_path,
+  "networks_1960_2014_8_year_windows_0.1_rationality_score.RDS"
+))
+
+labels <- readRDS(here::here(
+  data_path,
+  "label_ai_1960_2014_8_year_windows_0.1_rationality_score.RDS"
   ))
-  
-  labels <- readRDS(here::here(
-    data_path,
-    "label_ai_1960_2014_10_year_windows_0.1_rationality_score.RDS"
-  ))
-} else {
-  graphs <- readRDS(here::here(data_path, "networks_1960_2014_10_year_windows_0.1_rationality_score_with_roles.RDS"))
-}
 
 match_jstor_wos <- readRDS(here::here(data_path, "final_match.RDS")) %>%
   filter(!is.na(id_match_final)) %>%
@@ -26,15 +21,15 @@ match_jstor_wos <- readRDS(here::here(data_path, "final_match.RDS")) %>%
 
 sentences <- read_rds(here::here(
   data_path,
-  "closest_sentences_0.01_filtered_rationality_score.rds"
+  "closest_sentences_0.01_filtered_rationality_score_window_5.rds"
 )) %>%
   bind_rows() %>%
+  filter(publication_year > 1959) %>% 
   left_join(
     match_jstor_wos,
     by = c("id" = "id_jstor"),
     relationship = "many-to-many"
   )
-
 
 # Getting the most representative sentence per article
 
@@ -44,7 +39,6 @@ article_sentences <- sentences %>%
   select(ID_Art, sentence, similarity)
 
 # add labels to the list of graphs
-if(complete_graphs){
 graphs <- lapply(graphs, function(graph) {
   
   graph <- graph %>% 
@@ -62,106 +56,48 @@ graphs <- lapply(graphs, function(graph) {
   graph <- graph %>% 
     activate(edges) %>%
     rename(color = color_edges)
-  
 })
 
 # Calculating Guimerà–Amaral roles
 #' - P tells you the scope of a node’s connections (local vs cross-cluster).
 #' - z tells you the intensity of a node’s position inside its cluster (hub vs peripheral).
 #' - Together they classify each paper’s role: insider, bridge, local hub, or global connector.
-graphs <- lapply(graphs, function(graph) {
-  cli::cli_alert_info("Calculating Guimerà–Amaral roles for graph {graph %N>% pull(time_window) %>% unique()} with {gorder(graph)} nodes and {gsize(graph)} edges.")
-  total_strength <- strength(graph, vids = V(graph), mode = "all", weights = E(graph)$weight)
-  
-  # Helper: for a node i, return a named vector of strength to each neighbor community
-  .community_strength_i <- function(i){
-    ei <- incident(graph, i, mode = "all")
-    if(length(ei) == 0) return(numeric(0))
-    w  <- E(graph)[ei]$weight
-    # other endpoint of each incident edge
-    ends_i <- ends(graph, ei, names = FALSE)
-    other  <- ifelse(ends_i[,1] == i, ends_i[,2], ends_i[,1])
-    comms  <- V(graph)$cluster_leiden[other]
-    tapply(w, comms, sum)
-  }
-  
-  # 2) Weighted participation coefficient
-  #    P_i = 1 - sum_c ( s_ic / s_i )^2   where s_ic is strength to community c
-  P <- sapply(seq_len(gorder(graph)), function(i){
-    if(total_strength[i] > 0){
-      cs <- .community_strength_i(i)
-      if(length(cs) > 0) {                           # keep your small-degree filter
-        1 - sum((cs / total_strength[i])^2)
-      } else {
-        NA_real_
-      }
-    } else {
-      NA_real_
-    }
-  })
-  
-  # 3) Within-module strength z-score
-  # z_i = ( s_i^in - mean_s^in_cluster ) / sd_s^in_cluster
-  # where s_i^in = sum of weights from i to nodes in its own cluster
-  own_comm <- V(graph)$cluster_leiden
-  s_in <- sapply(seq_len(gorder(graph)), function(i){
-    ei <- incident(graph, i, mode = "all")
-    if(length(ei) == 0) return(0)
-    ends_i <- ends(graph, ei, names = FALSE)
-    other  <- ifelse(ends_i[,1] == i, ends_i[,2], ends_i[,1])
-    mask   <- own_comm[other] == own_comm[i]
-    if(!any(mask)) return(0)
-    sum(E(graph)[ei][mask]$weight)
-  })
-  
-  # compute z within each community
-  z <- numeric(gorder(graph))
-  for(comm in unique(own_comm)){
-    idx   <- which(own_comm == comm)
-    mu    <- mean(s_in[idx])
-    sdv   <- sd(s_in[idx])
-    if(is.na(sdv) || sdv == 0) {
-      z[idx] <- 0
-    } else {
-      z[idx] <- (s_in[idx] - mu) / sdv
-    }
-  }
-  
-  # 4) Attach metrics and classify nodes by Guimerà–Amaral roles
-  graph <- graph %N>%
-    mutate(
-      total_strength = total_strength,
-      participation_coefficient = P,
-      z_within = z
-    )
+# Apply to all graphs (optionally parallelize with future.apply)
+graphs <- lapply(graphs, function(g) {
+  m <- compute_role_fast(g, comm_attr = "cluster_leiden", weight_attr = "weight")
+  g %N>% mutate(
+    total_strength = m$total_strength,
+    participation_coefficient = m$participation_coefficient,
+    z_within = m$z_within
+  )
 })
 
 #' The last thing to do is to choose a threshold which depends of the distribution of all our
 #' z and P values. The original paper used z = 2.5 and P = 0.62 and 0.80 for non-hubs, but
 #' it should be adapted to our data.
-choose_role_thresholds <- function(z, P, hub_q = 0.975, k_nonhub = 4, k_hub = 3) {
-  stopifnot(length(z) == length(P))
-  z  <- z[is.finite(z)]; P <- P[is.finite(P)]
-  if (!length(z)) stop("empty z")
-  
-  hub_thr <- unname(stats::quantile(z, hub_q, na.rm = TRUE))
-  
-  nonhub_P <- P[z <  hub_thr]
-  hub_P    <- P[z >= hub_thr]
-  
-  get_breaks <- function(x, k, fallback) {
-    if (length(x) >= k && length(unique(x)) >= k) {
-      km <- stats::kmeans(x, centers = k, iter.max = 100)
-      centers <- sort(as.numeric(km$centers))
-      sort((centers[-k] + centers[-1]) / 2)         # midpoints between centers
-    } else fallback
-  }
-  
-  nonhub_brks <- get_breaks(nonhub_P, k_nonhub, c(0.05, 0.62, 0.80))
-  hub_brks    <- get_breaks(hub_P,    k_hub,    c(0.30, 0.75))
-  
-  list(hub_z = hub_thr, nonhub_P = nonhub_brks, hub_P = hub_brks)
-}
+# choose_role_thresholds <- function(z, P, hub_q = 0.975, k_nonhub = 4, k_hub = 3) {
+#   stopifnot(length(z) == length(P))
+#   z  <- z[is.finite(z)]; P <- P[is.finite(P)]
+#   if (!length(z)) stop("empty z")
+#   
+#   hub_thr <- unname(stats::quantile(z, hub_q, na.rm = TRUE))
+#   
+#   nonhub_P <- P[z <  hub_thr]
+#   hub_P    <- P[z >= hub_thr]
+#   
+#   get_breaks <- function(x, k, fallback) {
+#     if (length(x) >= k && length(unique(x)) >= k) {
+#       km <- stats::kmeans(x, centers = k, iter.max = 100)
+#       centers <- sort(as.numeric(km$centers))
+#       sort((centers[-k] + centers[-1]) / 2)         # midpoints between centers
+#     } else fallback
+#   }
+#   
+#   nonhub_brks <- get_breaks(nonhub_P, k_nonhub, c(0.05, 0.62, 0.80))
+#   hub_brks    <- get_breaks(hub_P,    k_hub,    c(0.30, 0.75))
+#   
+#   list(hub_z = hub_thr, nonhub_P = nonhub_brks, hub_P = hub_brks)
+# }
 
 # Extract data for all our graphs to choose thresholds
 all_graphs_data <- map(graphs, ~ . %N>% as_tibble()) %>% 
@@ -195,10 +131,8 @@ graphs <- lapply(graphs, function(graph) {
     )
 })
 
-saveRDS(graphs, here::here(data_path, "networks_1960_2014_10_year_windows_0.1_rationality_score_with_roles.RDS"))
-}
-
 # Adding references
+cli::cli_alert_info("Adding references...")
 nodes <- map(graphs, ~ . %N>% as_tibble()) %>%
   bind_rows() %>%
   mutate(
@@ -256,6 +190,7 @@ top_refs_without_id <- nodes %>%
 rm(refs)
 
 # Adding closest sentences to each cluster
+cli::cli_alert_info("Adding closest sentences...")
 closest_sentences <- sentences %>%
   mutate(ID_Art = as.integer(ID_Art)) %>%
   right_join(
@@ -287,6 +222,7 @@ closest_sentences <- sentences %>%
 
 
 # Calculating circulation of nodes between clusters over time
+cli::cli_alert_info("Calculating circulation of nodes between clusters over time...")
 alluvial_data <- networkflow::networks_to_alluv(
   graphs,
   intertemporal_cluster_column = "dynamic_cluster_leiden",
@@ -355,17 +291,18 @@ for (win in window_levels) {
 
 cluster_origins <- bind_rows(cluster_origins) %>%
   mutate(
-    time_window = str_c(as.integer(window), "-", as.integer(window) + 9)
+    time_window = str_c(as.integer(window), "-", as.integer(window) + 7)
   ) %>%
   select(-window)
 
 cluster_destinies <- bind_rows(cluster_destinies) %>%
   mutate(
-    time_window = str_c(as.integer(window), "-", as.integer(window) + 9)
+    time_window = str_c(as.integer(window), "-", as.integer(window) + 7)
   ) %>%
   select(-window)
 
 # Calculating tf-idf per cluster per time window
+cli::cli_alert_info("Calculating tf-idf per cluster per time window...")
 tf_idf <- networkflow::extract_tfidf(
   graphs,
   n_gram = 3,
@@ -375,7 +312,7 @@ tf_idf <- networkflow::extract_tfidf(
   nb_terms = 20
 ) %>%
   mutate(
-    time_window = str_c(as.integer(list_names), "-", as.integer(list_names) + 9)
+    time_window = str_c(as.integer(list_names), "-", as.integer(list_names) + 7)
   ) %>%
   select(-list_names)
 

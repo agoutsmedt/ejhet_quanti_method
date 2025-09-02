@@ -717,3 +717,219 @@ label_cluster_llm <- function(graph_tbl,
   }
 }
 
+#' Fast P and z metrics for Guimerà–Amaral role analysis
+#'
+#' Compute, for every node, the total strength \eqn{s_i}, the participation
+#' coefficient \eqn{P_i}, and the within-cluster strength z-score \eqn{z_i},
+#' using a single pass over the edge list. This function **does not** assign
+#' discrete roles; it returns the metrics used to classify roles later.
+#'
+#' @details
+#' Let \eqn{C(v)} be the cluster/community of node \eqn{v} (taken from
+#' `comm_attr`). Let \eqn{w_{uv}} be the edge weight (from `weight_attr`).
+#'
+#' - **Strength to cluster \eqn{c}**: \eqn{s_{v,c} = \sum_{u \in c} w_{uv}}.
+#' - **Total strength**: \eqn{s_v = \sum_c s_{v,c}}.
+#' - **Participation coefficient**:
+#'   \deqn{P_v = 1 - \sum_c \left(\frac{s_{v,c}}{s_v}\right)^2,}
+#'   with \eqn{P_v \in [0,1]}. For isolates (\eqn{s_v = 0}), \eqn{P_v = NA}.
+#' - **Within-cluster z-score**:
+#'   \deqn{z_v = \frac{s_{v,C(v)} - \mu_{C(v)}}{\sigma_{C(v)}},}
+#'   where \eqn{\mu_{C}} and \eqn{\sigma_{C}} are the mean and SD of
+#'   \eqn{s_{u,C}} over nodes \eqn{u} in cluster \eqn{C}. If \eqn{\sigma_{C}=0}
+#'   (single-node or uniform cluster), \eqn{z_v = 0}.
+#'
+#' The computation treats the graph as undirected for strengths (each edge
+#' contributes to both endpoints). If direction matters, supply a symmetrized
+#' `weight_attr` beforehand or adapt the function.
+#'
+#' @param graph An `igraph` (or `tidygraph::tbl_graph`) object with:
+#'   - a vertex attribute `comm_attr` giving a cluster/community ID for every node,
+#'   - an optional edge attribute `weight_attr` (defaults to uniform weight 1 when missing).
+#' @param comm_attr Character scalar. Name of the vertex attribute holding cluster IDs.
+#'   Default: `"cluster_leiden"`.
+#' @param weight_attr Character scalar. Name of the edge attribute holding weights.
+#'   Default: `"weight"`.
+#'
+#' @return A named list of numeric vectors of length `vcount(graph)`:
+#' \describe{
+#'   \item{total_strength}{Total incident weight \eqn{s_v}.}
+#'   \item{participation_coefficient}{\eqn{P_v} in \[0,1\]; `NA` for isolates.}
+#'   \item{z_within}{Within-cluster z-score \eqn{z_v}.}
+#' }
+#'
+#' @section Performance:
+#' Single aggregation over the edge list. Time \eqn{O(E)}, memory \eqn{O(E)}.
+#' Suitable for large sparse graphs. No per-node `incident()` loops.
+#'
+#' @note To obtain discrete roles (e.g., R1–R7), learn thresholds on
+#' `z_within` and `participation_coefficient` (e.g., fixed or data-driven)
+#' and apply a `dplyr::case_when()` mapping.
+#'
+#' @examples
+#' # toy example
+#' library(igraph)
+#' g <- make_ring(6)
+#' V(g)$cluster_leiden <- c(1,1,1,2,2,2)
+#' E(g)$weight <- 1
+#' m <- compute_role_fast(g)  # list(total_strength, participation_coefficient, z_within)
+#' head(m$participation_coefficient)
+#'
+#' @references
+#' Guimerà, R., & Amaral, L. A. N. (2005). Functional cartography of complex
+#' metabolic networks. *Nature*, 433, 895–900.
+#'
+#' @seealso \code{\link{vcount}}, \code{\link{ecount}}
+#' @export
+compute_role_fast <- function(graph, comm_attr = "cluster_leiden", weight_attr = "weight") {
+
+  cli::cli_alert_info("Computing roles for graph with {gorder(graph)} nodes and {gsize(graph)} edges.")
+  n <- gorder(graph)
+  comm <- igraph::vertex_attr(graph, comm_attr)
+  if (is.null(comm)) stop("vertex attribute ", comm_attr, " missing")
+  comm <- as.integer(factor(comm, levels = unique(comm)))  # compact
+  
+  el <- igraph::as_edgelist(graph, names = FALSE)          # m x 2
+  w  <- igraph::edge_attr(graph, weight_attr)
+  if (is.null(w)) w <- rep(1, nrow(el))
+  
+  # Each edge contributes weight w to each endpoint toward the OTHER endpoint's community
+  dt <- data.table(node = c(el[,1], el[,2]),
+                   other= c(el[,2], el[,1]),
+                   w = c(w, w))
+  dt[, comm_other := comm[other]]
+  dt[, other := NULL]
+  
+  # s_ic: strength from node i to community c
+  s_ic <- dt[, .(s = sum(w)), by = .(node, comm = comm_other)]
+  
+  # total strength s_i
+  s_i  <- s_ic[, .(total_strength = sum(s)), by = node]
+  total_strength <- numeric(n); if (nrow(s_i)) total_strength[s_i$node] <- s_i$total_strength
+  
+  # Participation P_i = 1 - sum_c (s_ic / s_i)^2
+  tmp <- s_ic[s_i, on = "node"]                    # join s_i
+  tmp[, frac2 := (s / total_strength)^2]
+  Ptab <- tmp[, .(P = 1 - sum(frac2)), by = node]
+  P <- rep(NA_real_, n); if (nrow(Ptab)) P[Ptab$node] <- Ptab$P
+  P[total_strength == 0] <- NA_real_
+  
+  # s_in: strength to OWN community
+  setkey(s_ic, node, comm)
+  idx <- data.table(node = seq_len(n), comm = comm)
+  own <- s_ic[idx, .(node, s_in = s), nomatch = 0L]
+  s_in <- numeric(n); if (nrow(own)) s_in[own$node] <- own$s_in
+  
+  # z within each community
+  nd <- data.table(node = seq_len(n), comm = comm, s_in = s_in)
+  nd[, mu := mean(s_in), by = comm]
+  nd[, sdv := sd(s_in),  by = comm]
+  nd[, z := ifelse(is.finite(sdv) & sdv > 0, (s_in - mu) / sdv, 0)]
+  z <- nd$z
+  
+  list(total_strength = total_strength,
+       participation_coefficient = P,
+       z_within = z)
+}
+
+#' Data-driven cut points for Guimerà–Amaral role assignment
+#'
+#' Learn thresholds to classify nodes into Guimerà–Amaral roles using observed
+#' distributions of within-cluster z-scores and participation coefficients.
+#' The function estimates:
+#' \itemize{
+#'   \item a global hub threshold on \code{z} via a high quantile;
+#'   \item three non-hub \code{P} cut points (k=4 clusters → 3 cuts) by 1-D k-means;
+#'   \item two hub \code{P} cut points  (k=3 clusters → 2 cuts) by 1-D k-means.
+#' }
+#' If clustering is not feasible (too few points or unique values), canonical
+#' defaults are used: \code{c(0.05, 0.62, 0.80)} for non-hubs and
+#' \code{c(0.30, 0.75)} for hubs.
+#'
+#' @details
+#' Algorithm:
+#' \enumerate{
+#'   \item Compute \code{hub_z = quantile(z, hub_q)}.
+#'   \item Split \code{P} into non-hub (\code{z < hub_z}) and hub (\code{z >= hub_z}).
+#'   \item For each split, run \code{kmeans(P, centers = k)} when possible. Sort the
+#'         k centroids \eqn{c_1 < \dots < c_k} and define cut points as midpoints:
+#'         \eqn{(c_1+c_2)/2, \dots, (c_{k-1}+c_k)/2}.
+#' }
+#'
+#' Interpretation:
+#' \itemize{
+#'   \item \code{hub_z}: z cutoff separating hubs vs non-hubs.
+#'   \item \code{nonhub_P}: three P cuts mapping to ultra-peripheral, peripheral, connector, kinless.
+#'   \item \code{hub_P}: two P cuts mapping to provincial hub, connector hub, kinless hub.
+#' }
+#'
+#' Reproducibility: \code{kmeans} is deterministic given data, but you can set
+#' \code{set.seed()} for safety before calling. For cross-window comparability,
+#' estimate thresholds on pooled data or on a stratified sample with equal
+#' per-window sizes.
+#'
+#' @param z Numeric vector of within-cluster z-scores.
+#' @param P Numeric vector of participation coefficients in \eqn{[0,1]}.
+#' @param hub_q Numeric in \eqn{(0,1)}. Quantile of \code{z} used as the hub cutoff.
+#'   Default \code{0.975}.
+#' @param k_nonhub Integer. Number of k-means clusters for non-hub \code{P}.
+#'   Default \code{4}.
+#' @param k_hub Integer. Number of k-means clusters for hub \code{P}.
+#'   Default \code{3}.
+#'
+#' @return A list with components:
+#' \describe{
+#'   \item{\code{hub_z}}{Scalar z cutoff separating hubs and non-hubs.}
+#'   \item{\code{nonhub_P}}{Numeric vector of length 3 with P cut points for non-hubs
+#'                          (in increasing order).}
+#'   \item{\code{hub_P}}{Numeric vector of length 2 with P cut points for hubs
+#'                       (in increasing order).}
+#' }
+#'
+#' @examples
+#' set.seed(1)
+#' z <- c(rnorm(900, 0, 1), rnorm(100, 3, 0.6))     # many non-hubs, some hubs
+#' P <- runif(1000)
+#' thr <- choose_role_thresholds(z, P)
+#' thr$hub_z
+#' thr$nonhub_P
+#' thr$hub_P
+#'
+#' # Using the thresholds to assign roles (sketch):
+#' # dplyr::case_when(
+#' #   z <  thr$hub_z & P <= thr$nonhub_P[1] ~ "ultra-peripheral",
+#' #   z <  thr$hub_z & P <= thr$nonhub_P[2] ~ "peripheral",
+#' #   z <  thr$hub_z & P <= thr$nonhub_P[3] ~ "connector",
+#' #   z <  thr$hub_z                        ~ "kinless",
+#' #   z >= thr$hub_z & P <= thr$hub_P[1]    ~ "provincial hub",
+#' #   z >= thr$hub_z & P <= thr$hub_P[2]    ~ "connector hub",
+#' #   TRUE                                  ~ "kinless hub"
+#' # )
+#'
+#' @seealso \code{\link{compute_role_fast}}, \code{\link[stats]{kmeans}},
+#'   \code{\link[stats]{quantile}}
+#' @export
+choose_role_thresholds <- function(z, P, hub_q = 0.975, k_nonhub = 4, k_hub = 3) {
+  stopifnot(length(z) == length(P))
+  z  <- z[is.finite(z)]; P <- P[is.finite(P)]
+  if (!length(z)) stop("empty z")
+  
+  hub_thr <- unname(stats::quantile(z, hub_q, na.rm = TRUE))
+  
+  nonhub_P <- P[z <  hub_thr]
+  hub_P    <- P[z >= hub_thr]
+  
+  get_breaks <- function(x, k, fallback) {
+    if (length(x) >= k && length(unique(x)) >= k) {
+      km <- stats::kmeans(x, centers = k, iter.max = 100)
+      centers <- sort(as.numeric(km$centers))
+      sort((centers[-k] + centers[-1]) / 2)
+    } else fallback
+  }
+  
+  nonhub_brks <- get_breaks(nonhub_P, k_nonhub, c(0.05, 0.62, 0.80))
+  hub_brks    <- get_breaks(hub_P,    k_hub,    c(0.30, 0.75))
+  
+  list(hub_z = hub_thr, nonhub_P = nonhub_brks, hub_P = hub_brks)
+}
+
