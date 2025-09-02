@@ -187,8 +187,8 @@ process_window <- function(years, df) {
   set.seed(89)
   tune_res <- tune_cluster(
     kmeans_wf,
-    resamples = vfold_cv(reduced_data, v = 5),
-    grid = tibble(num_clusters = 4:25),
+    resamples = vfold_cv(reduced_data, v = 4),
+    grid = tibble(num_clusters = 5:30),
     metrics = cluster_metric_set(sse_ratio),
     control = control_grid(parallel_over = "everything", allow_par = TRUE)
   )
@@ -234,7 +234,7 @@ process_window <- function(years, df) {
 }
 # Process all time windows
 results <- map(time_windows, ~process_window(.x, bert_df))
-saveRDS(results, file.path(data_path, "clustering_rational_sentences.rds"))
+saveRDS(results, file.path(data_path, "clustering_rational_sentences_more.rds"))
 
 #' If necessary: `results <- readRDS(file.path(data_path, "clustering_rational_sentences.rds"))`
 
@@ -270,7 +270,7 @@ window_order <- data.frame(
   window_index = seq_along(time_windows)
 )
 
-similarity_threshold <- 0.75
+similarity_threshold <- 0.7
 cosine_tbl <- as.data.frame(cosine_sim) %>% 
   mutate(cluster_A = centroids$cluster_original_id) %>%
   pivot_longer(-cluster_A, names_to = "cluster_B", values_to = "similarity") %>%

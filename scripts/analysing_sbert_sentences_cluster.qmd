@@ -506,6 +506,7 @@ for(cluster in list_clusters){
       kbl(escape = FALSE, col.names = c("Sentence", "Title", "Year", "Journal", "Authors", "Similarity")) %>% 
       kable_styling(bootstrap_options = c("striped","condensed"),
                     font_size = 13) %>% 
+      column_spec(2, "3.5cm") %>% 
       print()
   }
   
@@ -514,10 +515,12 @@ for(cluster in list_clusters){
   
   top_sentences_filtered %>% 
     slice_max(similarity, n = 15) %>% 
+    mutate(similarity = round(similarity, 3)) %>% 
     select(sentence, title, publication_year, is_part_of, creator, similarity) %>% 
-    kbl(escape = FALSE, col.names = c("Sentence", "Year", "Title", "Journal", "Authors", "Similarity")) %>% 
+    kbl(escape = FALSE, col.names = c("Sentence", "Title", "Year", "Journal", "Authors", "Similarity")) %>% 
     kable_styling(bootstrap_options = c("striped","condensed"),
                   font_size = 13) %>% 
+    column_spec(2, "3.5cm") %>% 
     print()
   
   if(length(unique(cluster_data$window)) > 1){
@@ -525,15 +528,17 @@ for(cluster in list_clusters){
     cat("\n### Top sentence (in general) of the cluster for each time window{.panel-tabset}\n\n")
     
     for(decade in unique(cluster_data$window)){
-      cat(glue("#### Top terms {decade}\n\n"))
+      cat(glue("#### Top sentences {decade}\n\n"))
       
       top_sentences_filtered %>%
         filter(window == !! decade) %>%
         slice_max(similarity, n = 10) %>% 
+        mutate(similarity = round(similarity, 3)) %>% 
         select(sentence, title, publication_year, is_part_of, creator, similarity) %>% 
-        kbl(escape = FALSE, col.names = c("Sentence", "Year", "Title", "Journal", "Authors", "Similarity")) %>% 
+        kbl(escape = FALSE, col.names = c("Sentence", "Title", "Year", "Journal", "Authors", "Similarity")) %>% 
         kable_styling(bootstrap_options = c("striped","condensed"),
                       font_size = 13) %>% 
+        column_spec(2, "3.5cm") %>% 
         print()
     }
   }
@@ -546,7 +551,7 @@ for(cluster in list_clusters){
            n = n(),
            .by = id) %>% 
     distinct(title, publication_year, is_part_of, creator, n, mean_similarity) %>% 
-    slice_max(n, n = 10) %>% 
+    slice_max(n, n = 10, with_ties = FALSE) %>% 
     kbl(escape = FALSE, col.names = c("Title", "Year", "Journal", "Authors", "Number sentences", "Similarity")) %>% 
     kable_styling(bootstrap_options = c("striped","condensed"),
                   font_size = 13) %>% 
@@ -565,8 +570,8 @@ for(cluster in list_clusters){
                n = n(),
                .by = id) %>% 
         distinct(title, publication_year, is_part_of, creator, n, mean_similarity) %>% 
-        slice_max(n, n = 10) %>%  
-        kbl(escape = FALSE, col.names = c("Sentence", "Year", "Title", "Journal", "Authors", "Similarity")) %>% 
+        slice_max(n, n = 15, with_ties = FALSE) %>%  
+        kbl(escape = FALSE, col.names = c("Title", "Year", "Journal", "Authors", "Number sentences", "Similarity")) %>% 
         kable_styling(bootstrap_options = c("striped","condensed"),
                       font_size = 13) %>% 
         print()
@@ -581,7 +586,7 @@ for(cluster in list_clusters){
   # Extracting top terms in general and for window
   cluster_similarity %>% 
     filter(new_cluster == !!cluster & window_1 == decade) %>% 
-    slice_max(similarity, n = 10) %>%
+    slice_max(similarity, n = 15) %>%
     select(window = window_2, new_cluster = new_cluster_2, similarity) %>% 
     left_join(distinct(documents_cluster, new_cluster, label)) %>% 
     select(window, label, similarity) %>% 
