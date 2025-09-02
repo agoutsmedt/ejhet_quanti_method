@@ -115,7 +115,9 @@ for (year in years_to_do) {
     list_sentences,
     here::here(
       data_path,
-      glue::glue("closest_sentences_0.01_filtered_rationality_score.rds")
+      glue::glue(
+        "closest_sentences_0.01_filtered_rationality_score_window_5.rds"
+      )
     )
   )
 }

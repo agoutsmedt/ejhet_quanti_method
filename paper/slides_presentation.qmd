@@ -1,6 +1,6 @@
 ---
 title: "A history of rationality in economics"
-subtitle: "a computational approach" 
+subtitle: "A computational approach" 
 author: 
   - name: "Thomas Delcey"
     affiliation: "Université de Bourgogne"
@@ -24,7 +24,7 @@ format:
     embed-resources: true
     view-distance: 100
     progress: true
-    width: 1000
+    width: 1200
     margin: 0.05
     lightbox: true
 ---
@@ -52,7 +52,7 @@ source(here::here("scripts", "paths_and_packages.R"))
 ## Our contribution
 
 - The meanings of rationality in economics in the 20<sup>th</sup> century: 
-  - Interests for many historians.  
+  - Of interest for many historians.  
   - Focus on how computational methods help to draw large picture. 
 
 . . . 
@@ -60,21 +60,27 @@ source(here::here("scripts", "paths_and_packages.R"))
 - A concrete methodological discussion following the workflow of our analysis: 
   - What is challenging, what worked well, what did not, what could be improved. 
 
+## Outline of the presentation
+
+
 ## Historiography on rationality  
 
 - On rationality: 
 
 ## From sources to corpus 
 
+- Our main source: JSTOR fulltext database (X documents, Y pages, Z sentences).
 
-- Challenges: 
-  - What sources to use? 
-  - How to access them?
+::: {.callout-warning}
+### It is sometimes more challenging to build the data than to analyze it:
 
-. . . 
+- Access to the sources (JSTOR Data for Research). 
+- Filtering documents (book reviewrs). 
+- Cleanning texts (headers, acknowledgments, etc.).
+- Matching datasets (JSTOR + WoS).
+- Handling large datasets. 
 
-- Our choice: fulltexts of the JSTOR database. 
-  - Completed with Web of Science for citation data.
+:::
 
 ## 
 
@@ -106,37 +112,92 @@ Exploration of the corpus with simple text analysis tools
 
 ![Network and bibliometric analysis](images/example_network.jpg){width=70%}
 
-![Topic modeling](images/example_topic_model.png){width=60%}
+![Probablistic topic model](images/example_topic_model.png){width=60%}
 
 Illustrations of common computational methods in HET for large-scale analysis
 
 :::
 
-## Introducing LLMs to HET  
-
-![A simplified representation of words embeddings](images/fake_semantic_space_words_in_2D.png){#fig-vector_space width=80%}
+## Introducing LLMs to HET 
 
 
-## Sentence embeddings
+:::: {.columns}
+::: {.column width="60%"}
 
-. . . 
+![A simplified representation of words embeddings in 2D](images/fake_semantic_space_words_in_2D.png){#fig-vector_space width=80%}
+:::
+
+::: {.column width="40%"}
+::: {.callout-note appearance="simple"}
+LLMs: Each unique word are represented as vectors. 
+::: 
+
+::: {.callout-warning appearance="simple"}
+The distance between vectors reflects semantic similarity.
+::: 
+::: 
+::::
+
+## Sentence embeddings 
+
+::: {.callout-note appearance="simple"}
+We use sentence-BERT, a fast LLM model that reprensents **sentences** as vectors and is optimized for semantic similarity tasks.
+::: 
+
+:::: {.columns}
+::: {.column width="60%"}
 
 ```{r}
 #| echo: false
 #| message: false 
 #| warning: false
 #| label: tbl-top_sentences
-#| tbl-cap: "Closest sentences from our corpus to the fake sentence 'Economic agents are supposed to be rational.'"
-
+#| tbl-cap: "Closest to 'Economic agents are supposed to be rational.'"
 
 # load data OUTPUT_FILE = top_5_sentences_to_fake_sentence.feather
 
 data <- arrow::read_feather(here::here(data_path, "top_5_sentences_to_fake_sentence.feather"))
 
+# ;2 "Basically, for Professor Hicks, as for Jevons and Marshall, economic decisions are made by an abstract calculating machine";3 "I find myself continuing to believe ... that, whatever the origin of the want, when it rises to consciousness, it is subject to a process which we call rational, when the human agent decides 
+sentence_clean <- "Basically, for Professor Hicks, as for Jevons and Marshall, economic decisions are made by an abstract calculating machine."
+
 data |> 
-  filter(rank < 4, year %in% c(2000)) |>
+  filter(rank < 4, year %in% c(1950, 1975, 2000)) |>
+  mutate(sentence = ifelse(str_detect(sentence, "^;"), sentence_clean, sentence)) |>
   # kable the table
   select(year, sentence, similarity) |>
   knitr::kable() |> 
-  kableExtra::kable_styling(full_width = F)
+  kableExtra::kable_styling(full_width = F, font_size = 14) 
+
 ```
+::: 
+
+::: {.column width="40%" .fragment}
+::: {.callout-note}
+### Our empirical strategy:
+1. Compute a "representative vectors" for the concept of rationality.
+2. Retrieve the most similar sentences in the corpus from this vector.
+3. Group those sentences into clusters.
+::: 
+::: 
+:::: 
+
+## Clusters and dynamic clusters of meanings
+
+alluvial here 
+
+## If we had more time, bilbiometric networks
+
+## Conclusion
+
+- Blablabla 
+
+- LLMs offers a tool to quantify conceptual relationship betweens texts. 
+
+::: callout-caution
+### But important challenges: 
+- Existing model are trained for understanding general language, not economic discourses.
+- Model are present-centric.
+- Computational ressources.
+- Data access.
+::: 

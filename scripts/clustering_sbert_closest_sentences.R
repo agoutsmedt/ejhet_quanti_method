@@ -78,7 +78,7 @@ ggplot(counts_long, aes(publication_year, count, linetype = cutoff, color = cuto
   theme_minimal()
 
 # For now, we take a cutoff of 0.58 for similarity
-final_cutoff <- 0.5 # i.e. no cutoff
+final_cutoff <- 0.58
 bert_df <- bert_df[similarity > final_cutoff]
 
 # inputs
