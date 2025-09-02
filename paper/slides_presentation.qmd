@@ -1,6 +1,6 @@
 ---
 title: "A history of rationality in economics"
-subtitle: "a computational approach" 
+subtitle: "A computational approach" 
 author: 
   - name: "Thomas Delcey"
     affiliation: "Université de Bourgogne"
@@ -72,8 +72,7 @@ source(here::here("scripts", "paths_and_packages.R"))
 - Our main source: JSTOR fulltext database (X documents, Y pages, Z sentences).
 
 ::: {.callout-warning}
-### Data wrangling
-It is sometimes more challenging to build the data than to analyze it:
+### It is sometimes more challenging to build the data than to analyze it:
 
 - Access to the sources (JSTOR Data for Research). 
 - Filtering documents (book reviewrs). 
@@ -125,7 +124,7 @@ Illustrations of common computational methods in HET for large-scale analysis
 :::: {.columns}
 ::: {.column width="60%"}
 
-![A simplified representation of words embeddings](images/fake_semantic_space_words_in_2D.png){#fig-vector_space width=80%}
+![A simplified representation of words embeddings in 2D](images/fake_semantic_space_words_in_2D.png){#fig-vector_space width=80%}
 :::
 
 ::: {.column width="40%"}
@@ -174,15 +173,31 @@ data |>
 ::: 
 
 ::: {.column width="40%" .fragment}
-::: {.callout-warning}
+::: {.callout-note}
 ### Our empirical strategy:
-1. Determined "representative vectors" for the concept of rationality.
-2. Retrieved the most similar sentences in the corpus from this vector.
-3. Grouped those sentences into clusters.
+1. Compute a "representative vectors" for the concept of rationality.
+2. Retrieve the most similar sentences in the corpus from this vector.
+3. Group those sentences into clusters.
 ::: 
 ::: 
 :::: 
 
 ## Clusters and dynamic clusters of meanings
 
- 
+alluvial here 
+
+## If we had more time, bilbiometric networks
+
+## Conclusion
+
+- Blablabla 
+
+- LLMs offers a tool to quantify conceptual relationship betweens texts. 
+
+::: callout-caution
+### But important challenges: 
+- Existing model are trained for understanding general language, not economic discourses.
+- Model are present-centric.
+- Computational ressources.
+- Data access.
+::: 
