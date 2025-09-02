@@ -21,7 +21,10 @@ pattern = os.path.join(EMBEDDINGS_FOLDER, "sentence_embeddings_*.feather")
 all_files = glob.glob(pattern)
 
 # load representative vectors
-R_VECTORS_FILE = os.path.join(JSTOR_RAW_DATA_PATH, "representative_vectors_window_5.feather")
+
+WINDOW_SIZE = 5 
+
+R_VECTORS_FILE = os.path.join(JSTOR_RAW_DATA_PATH, f"representative_vectors_window_{WINDOW_SIZE}.feather")
 df_rep = feather.read_feather(R_VECTORS_FILE)
 
 
@@ -42,6 +45,7 @@ for file in tqdm(all_files):
     
     df_average_vectors_by_id.append(df)
 
+# --------------------------- ADD REPRESENTATIVE VECTORS --------------------------- #
 
 # Concatenate all dataframes
 df_average_vectors_by_id = pd.concat(df_average_vectors_by_id, ignore_index=True)
@@ -73,6 +77,8 @@ df_merged = df_merged.merge(
     on="year",
     how="left"
 )
+
+# --------------------------- COMPUTE COSINE SIMILARITY --------------------------- #
 
 # Calcul des similarités cosinus
 similarities_by_year = []
@@ -113,8 +119,9 @@ for i, row in tqdm(df_merged.iterrows(), total=len(df_merged), desc="Calcul des 
 df_merged["cosine_sim_year"] = similarities_by_year
 df_merged["cosine_sim_decade"] = similarities_by_decade
 df_merged["cosine_sim_centered"] = similarities_by_centered
-
+df_merged["data"] = "jstor_fulltexts"
 
 # Sauvegarde
-output_file = os.path.join(JSTOR_RAW_DATA_PATH, "similarities_fulltexts_window_5.feather")
+output_file = os.path.join(JSTOR_RAW_DATA_PATH, f"similarities_fulltexts_window_{WINDOW_SIZE}.feather")
 df_merged.to_feather(output_file)
+

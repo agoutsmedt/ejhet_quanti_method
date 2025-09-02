@@ -24,7 +24,7 @@ format:
     embed-resources: true
     view-distance: 100
     progress: true
-    width: 1000
+    width: 1200
     margin: 0.05
     lightbox: true
 ---
@@ -60,6 +60,9 @@ source(here::here("scripts", "paths_and_packages.R"))
 - A concrete methodological discussion following the workflow of our analysis: 
   - What is challenging, what worked well, what did not, what could be improved. 
 
+## Outline of the presentation
+
+
 ## Historiography on rationality  
 
 - On rationality: 
@@ -68,13 +71,17 @@ source(here::here("scripts", "paths_and_packages.R"))
 
 - Our main source: JSTOR fulltext database (X documents, Y pages, Z sentences).
 
-- It is sometimes more challenging to get the data than to analyze it: 
-  - Access to the sources (JSTOR Data for Research). 
-  - Filtering documents (book reviewrs). 
-  - Cleanning texts (headers, acknowledgments, etc.).
-  - Matching datasets (JSTOR + WoS).
-  - Handling large datasets. 
+::: {.callout-warning}
+### Data wrangling
+It is sometimes more challenging to build the data than to analyze it:
 
+- Access to the sources (JSTOR Data for Research). 
+- Filtering documents (book reviewrs). 
+- Cleanning texts (headers, acknowledgments, etc.).
+- Matching datasets (JSTOR + WoS).
+- Handling large datasets. 
+
+:::
 
 ## 
 
@@ -112,31 +119,70 @@ Illustrations of common computational methods in HET for large-scale analysis
 
 :::
 
-## Introducing LLMs to HET  
+## Introducing LLMs to HET 
+
+
+:::: {.columns}
+::: {.column width="60%"}
 
 ![A simplified representation of words embeddings](images/fake_semantic_space_words_in_2D.png){#fig-vector_space width=80%}
+:::
 
+::: {.column width="40%"}
+::: {.callout-note appearance="simple"}
+LLMs: Each unique word are represented as vectors. 
+::: 
 
-## Sentence embeddings
+::: {.callout-warning appearance="simple"}
+The distance between vectors reflects semantic similarity.
+::: 
+::: 
+::::
 
-. . . 
+## Sentence embeddings 
+
+::: {.callout-note appearance="simple"}
+We use sentence-BERT, a fast LLM model that reprensents **sentences** as vectors and is optimized for semantic similarity tasks.
+::: 
+
+:::: {.columns}
+::: {.column width="60%"}
 
 ```{r}
 #| echo: false
 #| message: false 
 #| warning: false
 #| label: tbl-top_sentences
-#| tbl-cap: "Closest sentences in 2000 to the fake sentence 'Economic agents are supposed to be rational.'"
-
+#| tbl-cap: "Closest to 'Economic agents are supposed to be rational.'"
 
 # load data OUTPUT_FILE = top_5_sentences_to_fake_sentence.feather
 
 data <- arrow::read_feather(here::here(data_path, "top_5_sentences_to_fake_sentence.feather"))
 
+# ;2 "Basically, for Professor Hicks, as for Jevons and Marshall, economic decisions are made by an abstract calculating machine";3 "I find myself continuing to believe ... that, whatever the origin of the want, when it rises to consciousness, it is subject to a process which we call rational, when the human agent decides 
+sentence_clean <- "Basically, for Professor Hicks, as for Jevons and Marshall, economic decisions are made by an abstract calculating machine."
+
 data |> 
-  filter(rank < 4, year %in% c(2000)) |>
+  filter(rank < 4, year %in% c(1950, 1975, 2000)) |>
+  mutate(sentence = ifelse(str_detect(sentence, "^;"), sentence_clean, sentence)) |>
   # kable the table
   select(year, sentence, similarity) |>
   knitr::kable() |> 
-  kableExtra::kable_styling(full_width = F)
+  kableExtra::kable_styling(full_width = F, font_size = 14) 
+
 ```
+::: 
+
+::: {.column width="40%" .fragment}
+::: {.callout-warning}
+### Our empirical strategy:
+1. Determined "representative vectors" for the concept of rationality.
+2. Retrieved the most similar sentences in the corpus from this vector.
+3. Grouped those sentences into clusters.
+::: 
+::: 
+:::: 
+
+## Clusters and dynamic clusters of meanings
+
+ 

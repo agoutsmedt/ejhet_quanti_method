@@ -100,7 +100,7 @@ ggplot(df, aes(x, y, color = group)) +
     color = NULL
   ) +
   xlim(-4, 4) +
-  theme_light(base_size = 12) +
+  theme_light(base_size = 20) +
   # legend at bottom
   theme(legend.position = "bottom") +
   theme(
@@ -114,7 +114,7 @@ ggplot(df, aes(x, y, color = group)) +
 
 
 ggsave(
-  file.path("pictures", "fake_semantic_space_words_in_2D.png"),
+  file.path(image_path, "fake_semantic_space_words_in_2D.png"),
   width = 9,
   dpi = 300
 )
