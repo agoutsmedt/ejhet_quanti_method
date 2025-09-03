@@ -59,7 +59,7 @@ knitr::opts_knit$set(root.dir = data_path)
 #### Parameters ####
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
-time_window_var <- 10
+time_window_var <- 8
 length_cl_var <- 2
 share_cl_max_var <- 0.05
 year_high <- 2014
@@ -75,7 +75,7 @@ rationality_prop_filter <- 0.10
 matching <- readRDS(here(data_path, "final_match.RDS"))
 
 # Similarity scores
-rationality_score_original <- arrow::read_feather(here(data_path, "similarities_by_document.feather")) %>% as.data.table()
+rationality_score_original <- arrow::read_feather(here(data_path, "similarities_fulltexts_window_5.feather")) %>% as.data.table()
 rationality_score_original[,id:=paste0("http://www.jstor.org/stable/", id)]
 rationality_score <- rationality_score_original %>% rename(jstor_id = id, similarity = cosine_sim_centered) %>% select(jstor_id, similarity) %>% unique()
 rationality_score <- merge(matching, rationality_score, all.x = TRUE, by.x = "id_jstor", by.y = "jstor_id")
@@ -85,7 +85,7 @@ rationality_score[,similarity:=mean(similarity), ID_Art]
 rationality_score <- unique(rationality_score)
 filter_mean_score_ids <- rationality_score %>% slice_max(similarity, prop = rationality_prop_filter) %>% .[[1]]
 
-rationality_score_abstract <- arrow::read_feather(here(data_path, "similarities_wos_abstracts.feather")) %>% as.data.table()
+rationality_score_abstract <- arrow::read_feather(here(data_path, "similarities_wos_abstracts_window_5.feather")) %>% as.data.table()
 ids_rationality_abstract <- rationality_score_abstract %>% slice_max(cosine_sim_centered, prop = rationality_prop_filter) %>% .[[1]]
 
 filter_mean_score_ids <- append(filter_mean_score_ids, ids_rationality_abstract)
