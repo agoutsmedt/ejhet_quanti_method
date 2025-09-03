@@ -8,7 +8,7 @@ RUN_DATA_PREPARATION <- TRUE
 if (RUN_DATA_PREPARATION) {
   # Preparing data for the app
   source(file.path("scripts", "prepare_data_for_app_bibliometrics.R"))
-  stop("Data preparation done, you can now run the app.")
+  message("Data preparation done, you can now run the app.")
 }
 
 # load data for the app
