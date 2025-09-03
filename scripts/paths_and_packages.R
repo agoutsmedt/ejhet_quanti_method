@@ -38,7 +38,8 @@ if(str_detect(getwd(), "goutsmed")){
     } else {
     data_path <- file.path(path.expand("~"), "data", "jstor")
     jstor_raw_data <- data_path
-  }
+    wos_data_path <- file.path(path.expand("~"), "data", "wos")
+    }
 } else if (str_detect(getwd(), "D:/Dropbox/8")){
   data_path <- "D:/Dropbox/8-Projets Quanti/1-R_Projects/Data/ejhet_quanti_method"
   general_data_path <- "D:/Dropbox/8-Projets Quanti/1-R_Projects/Data/1-General_data"

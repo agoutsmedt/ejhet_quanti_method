@@ -55,6 +55,15 @@ list_clusters <- documents_cluster %>%
   unique()
 
 results <- readRDS(file.path(data_path, "clustering_rational_sentences.rds"))
+
+match_jstor_wos <- readRDS(here::here(data_path, "final_match.RDS")) %>%
+  filter(!is.na(id_match_final)) %>%
+  distinct(url_jstor = id_jstor, ID_Art = id_match_final) %>%
+  mutate(
+    id_jstor = str_extract(url_jstor, "\\/[0-9]+$") %>% str_remove(., "/"),
+    ID_Art = as.character(ID_Art)
+  ) %>%
+  distinct(ID_Art, .keep_all = TRUE)
 ```
 
 ```{r preparing-cluster-similarity}
@@ -76,6 +85,70 @@ cluster_similarity <- as.data.frame(cosine_sim) %>%
   left_join(distinct(centroids, cluster_2 = .cluster, cluster_B = cluster_original_id, window_2 = window), by = "cluster_B") %>% 
   left_join(distinct(documents_cluster, new_cluster, window_1 = window, cluster_1 = cluster), by = c("cluster_1", "window_1")) %>%
   left_join(distinct(documents_cluster, new_cluster_2 = new_cluster, window_2 = window, cluster_2 = cluster), by = c("cluster_2", "window_2"))
+```
+
+```{r adding-references, eval=FALSE}
+# Adding references
+cli::cli_alert_info("Adding references...")
+nodes <- map(graphs, ~ . %N>% as_tibble()) %>%
+  bind_rows() %>%
+  mutate(
+    value_col = if_else(is.na(value_col), dynamic_cluster_leiden, value_col),
+    ID_Art = as.integer(ID_Art),
+    Titre = if_else(
+      !is.na(url_jstor),
+      glue("<a href='{url_jstor}' target='_blank'>{Titre}</a>"),
+      Titre
+    )
+  )
+
+sentences_art <- documents_cluster %>% 
+  count(id, window, new_cluster) %>% 
+  inner_join(distinct(match_jstor_wos, id = id_jstor, ID_Art), relationship = "many-to-many")
+
+refs <- open_dataset(
+  here::here(wos_data_path, "all_ref.parquet"),
+  format = "parquet"
+) %>%
+  filter(ID_Art %in% unique(sentences_art$ID_Art)) %>%
+  select(ID_Art, ItemID_Ref, Annee, Nom, Revue_Abbrege) %>%
+  collect()
+
+top_refs <- nodes %>%
+  distinct(ID_Art, value_col, time_window) %>%
+  left_join(refs, by = "ID_Art", relationship = "many-to-many") %>%
+  filter(ItemID_Ref != 0) %>%
+  group_by(value_col, time_window, ItemID_Ref) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  arrange(time_window, value_col, desc(n)) %>%
+  group_by(time_window, value_col) %>%
+  slice_head(n = 20) %>%
+  ungroup() %>%
+  filter(n > 1) %>%
+  left_join(
+    refs %>% distinct(ItemID_Ref, Nom, Annee, Revue_Abbrege),
+    by = "ItemID_Ref",
+    relationship = "many-to-many"
+  ) %>%
+  distinct(value_col, time_window, ItemID_Ref, nb_cit = n, .keep_all = TRUE)
+
+top_refs_without_id <- nodes %>%
+  distinct(ID_Art, value_col, time_window) %>%
+  left_join(refs, by = "ID_Art", relationship = "many-to-many") %>%
+  filter(ItemID_Ref == 0 & Annee != 0 & Nom != "") %>%
+  group_by(value_col, time_window, Nom, Annee) %>%
+  add_count() %>%
+  filter(n > 1) %>%
+  distinct(ID_Art, value_col, time_window, .keep_all = TRUE) %>%
+  arrange(time_window, value_col, desc(n)) %>%
+  group_by(time_window, value_col) %>%
+  slice_head(n = 10) %>%
+  ungroup() %>%
+  # left_join(refs %>% distinct(ItemID_Ref, Nom, Annee, Revue_Abbrege), by = "ItemID_Ref", relationship = "many-to-many") %>%
+  select(value_col, time_window, Nom, Annee, Revue_Abbrege, nb_cit = n) %>%
+  distinct(value_col, time_window, Nom, Annee, .keep_all = TRUE)
+
+rm(refs)
 ```
 
 ```{r preparing-tfidf}
@@ -132,15 +205,26 @@ labels_window[, label := paste0(str_extract(new_variable, "\\d+(?=--)"), ": ", l
 
 ```
 
-```{r top-sentences}
-# Top sentences----------------------------------
-# Build embedding matrix
 
-# Convert to data.table
+```{r top-sentences-rationality}
 bert_df <- merge(bert_df, 
                  select(documents_cluster, sentence_id, window, new_cluster), 
                  by = "sentence_id", 
                  all.x = TRUE)
+
+top_sentences_rationality <- bert_df %>% 
+  select(id, sentence_id, sentence, similarity, publication_year, window, new_cluster) %>% 
+  group_by(new_cluster, window) %>% 
+  slice_max(similarity, n = 20) %>% 
+  ungroup() %>% 
+  mutate(similarity = round(similarity, 3))
+```
+
+```{r top-sentences-centroid}
+# Top sentences----------------------------------
+# Build embedding matrix
+
+# Convert to data.table
 bert_dt <- as.data.table(bert_df)
 
 # Expand bert_embedding_concat list into separate columns
@@ -174,7 +258,7 @@ bert_dt$sentence_id <- bert_df$sentence_id
 top_n <- 50
 
 # Run similarity search per cluster and per window
-top_sentences_per_cluster_window <- map_dfr(clusters, function(cluster) {
+top_sentences_from_cluster_window <- map_dfr(clusters, function(cluster) {
   
   # Filter sentences for this cluster
   cluster_sentences <- bert_dt[new_cluster == cluster]
@@ -211,13 +295,15 @@ top_sentences_per_cluster_window <- map_dfr(clusters, function(cluster) {
   })
 })
 
-top_sentences_per_cluster_window <- top_sentences_per_cluster_window  %>% 
+top_sentences_from_cluster_window <- top_sentences_from_cluster_window  %>% 
   mutate(sentence_id = as.integer(sentence_id)) %>%
   left_join(select(bert_df, sentence_id, sentence, publication_year)) %>% 
-  mutate(mention_rationality = str_detect(sentence, regex("(^| )rational", ignore_case = TRUE)))
+  mutate(mention_rationality = str_detect(sentence, regex("(^| )rational", ignore_case = TRUE)),
+         similarity = round(similarity, 3))
 rm(bert_df,
    bert_dt)
 ```
+
 
 ```{r attributing-colors}
 set.seed(89)
@@ -274,14 +360,15 @@ alluvial <- documents_cluster %>%
 ggsave(here("pictures", "intertemporal_clusters_alluvial.png"),
        alluvial,
        units = "cm",
-       width = 55,
-       height = 40,
+       width = 60,
+       height = 45,
        dpi = 300)
 
 knitr::include_graphics(here("pictures", "intertemporal_clusters_alluvial.png"))
 ```
 
 ```{r alluvial-absolute}
+#| eval: false
 alluvial_absolute <- documents_cluster %>%
   filter(publication_year > 1949) %>% 
   mutate(rank = str_extract(new_cluster, "\\d+$") %>% as.integer) %>% 
@@ -340,7 +427,7 @@ knitr::include_graphics(here("pictures", "tf_idf_cluster_rationality.png"))
 ```{r geom-density-1}
 areas_cluster_1900 <- documents_cluster %>% 
   filter(publication_year < 1950) %>% 
-ggplot(aes(x = publication_year, y = after_stat(count), fill = label)) +
+  ggplot(aes(x = publication_year, y = after_stat(count), fill = label)) +
   geom_density(position = "fill", show.legend = TRUE, adjust = 9/10) +
   theme_minimal() +
   labs(title = "Proportion of Clusters Over Time",
@@ -352,15 +439,15 @@ ggplot(aes(x = publication_year, y = after_stat(count), fill = label)) +
   scale_fill_see() +
   scale_fill_manual(values = cluster_colors)
 plotly::ggplotly(areas_cluster_1900,
-         width = 900, 
-         height = 900) %>%
-      plotly::layout(legend=list(orientation='h'))
+                 width = 900, 
+                 height = 900) %>%
+  plotly::layout(legend=list(orientation='h'))
 ```
 
 ```{r geom-density-2}
 areas_cluster_1950 <- documents_cluster %>% 
   filter(publication_year >= 1950) %>% 
-ggplot(aes(x = publication_year, y = after_stat(count), fill = label)) +
+  ggplot(aes(x = publication_year, y = after_stat(count), fill = label)) +
   geom_density(position = "fill", show.legend = TRUE, adjust = 9/10) +
   theme_minimal() +
   labs(title = "Proportion of Clusters Over Time",
@@ -372,15 +459,15 @@ ggplot(aes(x = publication_year, y = after_stat(count), fill = label)) +
   scale_fill_see() +
   scale_fill_manual(values = cluster_colors)
 plotly::ggplotly(areas_cluster_1950,
-         width = 900, 
-         height = 900) %>%
-      plotly::layout(legend=list(orientation='h'))
+                 width = 900, 
+                 height = 900) %>%
+  plotly::layout(legend=list(orientation='h'))
 ```
 
 ```{r geom-density-3}
 areas_cluster_1970 <- documents_cluster %>% 
   filter(publication_year >= 1970) %>% 
-ggplot(aes(x = publication_year, y = after_stat(count), fill = label)) +
+  ggplot(aes(x = publication_year, y = after_stat(count), fill = label)) +
   geom_density(position = "fill", show.legend = TRUE, adjust = 9/10) +
   theme_minimal() +
   labs(title = "Proportion of Clusters Over Time",
@@ -392,9 +479,9 @@ ggplot(aes(x = publication_year, y = after_stat(count), fill = label)) +
   scale_fill_see() +
   scale_fill_manual(values = cluster_colors)
 plotly::ggplotly(areas_cluster_1970,
-         width = 900, 
-         height = 900) %>%
-      plotly::layout(legend=list(orientation='h'))
+                 width = 900, 
+                 height = 900) %>%
+  plotly::layout(legend=list(orientation='h'))
 ```
 
 ```{r networks}
@@ -405,7 +492,7 @@ nodes <- cluster_similarity %>%
   distinct(id) %>%
   left_join(count(documents_cluster, new_cluster, label),
             by = c("id" = "new_cluster"))
-  
+
 # 2) Edges = average similarity across windows (undirected)
 edges <- cluster_similarity %>%
   transmute(from = new_cluster, to = new_cluster_2, w = similarity) %>%
@@ -465,7 +552,7 @@ for(cluster in list_clusters){
   
   ############# General Info ##################
   cat(paste0("  \nThe cluster gathers ", length(unique(cluster_data$sentence_id))," sentences from our corpus. It represents ",round(length(unique(cluster_data$sentence_id))/length(unique(documents_cluster$sentence_id))*100,2),"% of all the sentences selected over the whole period.\n"))
-
+  
   cat(paste0("\nThe community exists from ", window[1]," to ", window[2],". \n\n"))
   
   recurring_authors <- cluster_data %>% 
@@ -524,50 +611,38 @@ for(cluster in list_clusters){
   ############# Distribution sentences ##################
   cat("\n### Distribution of sentences over time \n\n")
   
-    plot(cluster_data %>% 
-      count(publication_year) %>% 
-      ggplot(aes(x = publication_year, y = n)) +
-      geom_bar(stat = "identity") + 
-      scale_x_continuous(expand = c(0.01,0), n.breaks = 10) +
-      scale_y_continuous(expand = c(0.01, 0)) +
-      theme_light(base_size = 20) +
-      labs(y = "Number of sentences",
-           x = NULL,
-           title = NULL)) 
-      
+  plot(cluster_data %>% 
+         count(publication_year) %>% 
+         ggplot(aes(x = publication_year, y = n)) +
+         geom_bar(stat = "identity") + 
+         scale_x_continuous(expand = c(0.01,0), n.breaks = 10) +
+         scale_y_continuous(expand = c(0.01, 0)) +
+         theme_light(base_size = 20) +
+         labs(y = "Number of sentences",
+              x = NULL,
+              title = NULL)) 
   
-  top_sentences_filtered <- top_sentences_per_cluster_window %>% 
+  
+  top_sentences_rationality_filtered <- top_sentences_rationality %>% 
+    filter(new_cluster == !!cluster) %>% 
+    left_join(select(cluster_data, title, is_part_of, creator, jstor_url, sentence_id)) %>%
+    mutate(title = glue("<a href='{jstor_url}' target='_blank'>{title}</a>"))
+  
+  top_sentences_filtered <- top_sentences_from_cluster_window %>% 
     filter(new_cluster == !!cluster) %>% 
     left_join(select(cluster_data, title, publication_year, is_part_of, creator, sentence_id, jstor_url)) %>% 
     mutate(title = glue("<a href='{jstor_url}' target='_blank'>{title}</a>"))
-
-  ############# Top sentences ##################
+  
+  ############# Top sentences rationality ##################
   cat("\n\n")
   cat("\n### Top sentences with 'rational' or 'rationality' of the cluster\n\n")
   
-  percentage_rationality <- round(nrow(filter(top_sentences_filtered, mention_rationality)) / nrow(top_sentences_filtered) * 100, 2)
-  cat(glue("\nAmong the top {nrow(top_sentences_filtered)} sentences of the cluster, {percentage_rationality}% mention the terms 'rational' or 'rationality'\n\n"))
+  cat("\n### Top sentences (in general) of the cluster's centroid\n\n")
   
-  if(top_sentences_filtered %>% filter(mention_rationality) %>% nrow() > 0){
-    top_sentences_filtered %>% 
-      filter(mention_rationality == TRUE) %>% 
-      slice_max(similarity, n = 15) %>% 
-      select(sentence, title, publication_year, is_part_of, creator, similarity) %>% 
-      kbl(escape = FALSE, col.names = c("Sentence", "Title", "Year", "Journal", "Authors", "Similarity")) %>% 
-      kable_styling(bootstrap_options = c("striped","condensed"),
-                    font_size = 13) %>% 
-      column_spec(2, "3.5cm") %>% 
-      print()
-  }
-  
-  
-  cat("\n### Top sentences (in general) of the cluster\n\n")
-  
-  top_sentences_filtered %>% 
-    slice_max(similarity, n = 15) %>% 
-    mutate(similarity = round(similarity, 3)) %>% 
+  top_sentences_rationality_filtered %>% 
+    slice_max(similarity, n = 20, by = new_cluster) %>%
     select(sentence, title, publication_year, is_part_of, creator, similarity) %>% 
-    kbl(escape = FALSE, col.names = c("Sentence", "Title", "Year", "Journal", "Authors", "Similarity")) %>% 
+    kbl(escape = FALSE, col.names = c("Sentence", "Title", "Year", "Journal", "Authors", "Words Similarity")) %>% 
     kable_styling(bootstrap_options = c("striped","condensed"),
                   font_size = 13) %>% 
     column_spec(2, "3.5cm") %>% 
@@ -575,7 +650,56 @@ for(cluster in list_clusters){
   
   if(length(unique(cluster_data$window)) > 1){
     
-    cat("\n### Top sentence (in general) of the cluster for each time window{.panel-tabset}\n\n")
+    cat("\n### Top sentence (in general) of the cluster's centroid for each time window{.panel-tabset}\n\n")
+    
+    for(decade in unique(cluster_data$window)){
+      cat(glue("#### Top sentences {decade}\n\n"))
+      
+      top_sentences_rationality_filtered %>%
+        filter(window == !! decade) %>%
+        slice_max(similarity, n = 12) %>% 
+        select(sentence, title, publication_year, is_part_of, creator, similarity) %>% 
+        kbl(escape = FALSE, col.names = c("Sentence", "Title", "Year", "Journal", "Authors", "Centroid Similarity")) %>% 
+        kable_styling(bootstrap_options = c("striped","condensed"),
+                      font_size = 13) %>% 
+        column_spec(2, "3.5cm") %>% 
+        print()
+    }
+  }
+  
+  ############# Top sentences centroid ##################
+  cat("\n### Closest sentences from the cluster's centroid\n\n")
+  
+  percentage_rationality <- round(nrow(filter(top_sentences_filtered, mention_rationality)) / nrow(top_sentences_filtered) * 100, 2)
+  cat(glue("\nAmong the {nrow(top_sentences_filtered)} closest sentences to the cluster's centroid, {percentage_rationality}% mention the terms 'rational' or 'rationality'\n\n"))
+  
+  if(top_sentences_filtered %>% filter(mention_rationality) %>% nrow() > 0){
+    top_sentences_filtered %>% 
+      filter(mention_rationality == TRUE) %>% 
+      slice_max(similarity, n = 15) %>% 
+      select(sentence, title, publication_year, is_part_of, creator, similarity) %>% 
+      kbl(escape = FALSE, col.names = c("Sentence", "Title", "Year", "Journal", "Authors", "Centroid Similarity")) %>% 
+      kable_styling(bootstrap_options = c("striped","condensed"),
+                    font_size = 13) %>% 
+      column_spec(2, "3.5cm") %>% 
+      print()
+  }
+  
+  
+  cat("\n### Top sentences (in general) of the cluster's centroid\n\n")
+  
+  top_sentences_filtered %>% 
+    slice_max(similarity, n = 15) %>% 
+    select(sentence, title, publication_year, is_part_of, creator, similarity) %>% 
+    kbl(escape = FALSE, col.names = c("Sentence", "Title", "Year", "Journal", "Authors", "Centroid Similarity")) %>% 
+    kable_styling(bootstrap_options = c("striped","condensed"),
+                  font_size = 13) %>% 
+    column_spec(2, "3.5cm") %>% 
+    print()
+  
+  if(length(unique(cluster_data$window)) > 1){
+    
+    cat("\n### Top sentence (in general) of the cluster's centroid for each time window{.panel-tabset}\n\n")
     
     for(decade in unique(cluster_data$window)){
       cat(glue("#### Top sentences {decade}\n\n"))
@@ -583,9 +707,8 @@ for(cluster in list_clusters){
       top_sentences_filtered %>%
         filter(window == !! decade) %>%
         slice_max(similarity, n = 10) %>% 
-        mutate(similarity = round(similarity, 3)) %>% 
         select(sentence, title, publication_year, is_part_of, creator, similarity) %>% 
-        kbl(escape = FALSE, col.names = c("Sentence", "Title", "Year", "Journal", "Authors", "Similarity")) %>% 
+        kbl(escape = FALSE, col.names = c("Sentence", "Title", "Year", "Journal", "Authors", "Centroid Similarity")) %>% 
         kable_styling(bootstrap_options = c("striped","condensed"),
                       font_size = 13) %>% 
         column_spec(2, "3.5cm") %>% 
@@ -632,35 +755,35 @@ for(cluster in list_clusters){
   cat("\n### Closest clusters of the cluster per decade\n\n")
   
   for(decade in unique(cluster_data$window)){
-  cat(glue("\n #### Closest clusters within the {decade} decade\n\n"))
-  
-  cluster_similarity %>% 
-    filter(new_cluster == !!cluster,
-           window_1 == decade,
-           window_2 == decade) %>% 
-    select(window = window_2, new_cluster = new_cluster_2, similarity) %>% 
-    left_join(distinct(documents_cluster, new_cluster, label)) %>% 
-    select(label, similarity) %>% 
-    arrange(desc(similarity)) %>% 
-    kbl(col.names = c("Cluster Name", "Similarity")) %>% 
-        kable_styling(bootstrap_options = c("striped","condensed"),
-                      font_size = 13) %>% 
-        print()
+    cat(glue("\n #### Closest clusters within the {decade} decade\n\n"))
+    
+    cluster_similarity %>% 
+      filter(new_cluster == !!cluster,
+             window_1 == decade,
+             window_2 == decade) %>% 
+      select(window = window_2, new_cluster = new_cluster_2, similarity) %>% 
+      left_join(distinct(documents_cluster, new_cluster, label)) %>% 
+      select(label, similarity) %>% 
+      arrange(desc(similarity)) %>% 
+      kbl(col.names = c("Cluster Name", "Similarity")) %>% 
+      kable_styling(bootstrap_options = c("striped","condensed"),
+                    font_size = 13) %>% 
+      print()
   }
   
   for(decade in unique(cluster_data$window)){
-      cat(glue("\n #### {decade}\n\n"))
-  # Extracting top terms in general and for window
-  cluster_similarity %>% 
-    filter(new_cluster == !!cluster & window_1 == decade) %>% 
-    slice_max(similarity, n = 15) %>%
-    select(window = window_2, new_cluster = new_cluster_2, similarity) %>% 
-    left_join(distinct(documents_cluster, new_cluster, label)) %>% 
-    select(window, label, similarity) %>% 
-    kbl(col.names = c("Time Window", "Cluster Name", "Similarity")) %>% 
-        kable_styling(bootstrap_options = c("striped","condensed"),
-                      font_size = 13) %>% 
-        print()
+    cat(glue("\n #### Closest clusters with all decade, for {decade}\n\n"))
+    # Extracting top terms in general and for window
+    cluster_similarity %>% 
+      filter(new_cluster == !!cluster & window_1 == decade) %>% 
+      slice_max(similarity, n = 15) %>%
+      select(window = window_2, new_cluster = new_cluster_2, similarity) %>% 
+      left_join(distinct(documents_cluster, new_cluster, label)) %>% 
+      select(window, label, similarity) %>% 
+      kbl(col.names = c("Time Window", "Cluster Name", "Similarity")) %>% 
+      kable_styling(bootstrap_options = c("striped","condensed"),
+                    font_size = 13) %>% 
+      print()
   }
 }
 ```
