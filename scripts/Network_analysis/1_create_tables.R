@@ -40,7 +40,7 @@ layout_fa2_javaV3 <- function(tbl=tbl,niter=3000, barneshut="true", path = here(
 #### Parameters ####
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
-time_window_var <- 10
+time_window_var <- 8
 length_cl_var <- 2
 share_cl_max_var <- 0.05
 year_high <- 2014
@@ -59,7 +59,7 @@ matching <- readRDS(here(data_path, "final_match.RDS"))
 # rationality_score <- readRDS(here(data_path, "rationality_similarity_scores.RDS"))
 
 # rationality_score_original <- arrow::read_feather(here(data_path, "similarities_by_document.feather")) %>% as.data.table()
-rationality_score_original <- arrow::read_feather(here(data_path, "similarities_fulltexts.feather")) %>% as.data.table()
+rationality_score_original <- arrow::read_feather(here(data_path, "similarities_fulltexts_window_5.feather")) %>% as.data.table()
 rationality_score_original[,id:=paste0("http://www.jstor.org/stable/", id)]
 rationality_score <- rationality_score_original %>% rename(jstor_id = id, similarity = cosine_sim_centered) %>% select(jstor_id, similarity) %>% unique()
 
@@ -69,10 +69,10 @@ filter_mean_score_ids <- rationality_score %>% slice_max(similarity, prop = rati
 # mean_three_pages[,mean_3_p:=mean(similarity), jstor_id]
 # mean_three_pages <- mean_three_pages[,.N,.(jstor_id,mean_3_p)]
 
-before <- ggplot(rationality_score_original, aes(x=publication_year)) + 
-  geom_histogram(color="black")
-after <- ggplot(rationality_score_original %>% slice_max(cosine_similarity, prop = rationality_prop_filter), aes(x=publication_year)) + 
-  geom_histogram(color="black")
+# before <- ggplot(rationality_score_original, aes(x=publication_year)) + 
+#   geom_histogram(color="black")
+# after <- ggplot(rationality_score_original %>% slice_max(cosine_sim_centered, prop = rationality_prop_filter), aes(x=publication_year)) + 
+#   geom_histogram(color="black")
 
 # wos
 wos_art <- arrow::read_parquet(here(general_data_path,"all_art.parquet"), arrow.unsafe_metadata = TRUE)
@@ -91,7 +91,8 @@ wos_art[, c("name_short"):=NULL]
 # Filtering
 ids_rationality <- matching[id_jstor %in% filter_mean_score_ids]
 
-rationality_score_abstract <- arrow::read_feather(here(data_path, "similarities_wos_abstracts.feather")) %>% as.data.table()
+rationality_score_abstract <- arrow::read_feather(here(data_path, "similarities_wos_abstracts_window_5.feather")) %>% as.data.table()
+
 ids_rationality_abstract <- rationality_score_abstract %>% slice_max(cosine_sim_centered, prop = rationality_prop_filter) %>% .[[1]]
 
 ids_rationality <- append(ids_rationality$id_match_final, ids_rationality_abstract)
