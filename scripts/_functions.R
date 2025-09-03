@@ -415,8 +415,6 @@ launch_network_app <- function(
       tbl
     })
     
-    
-    
     output$cluster_docs <- DT::renderDT({
       df <- cluster_nodes_raw()
       
@@ -549,7 +547,7 @@ launch_network_app <- function(
         dplyr::select(dplyr::any_of(c(
           cluster_information, "sentence", "similarity"
         )))
-      DT::datatable(tab, escape = FALSE, options = list(pageLength = 10), rownames = FALSE)
+      DT::datatable(tab, escape = FALSE, options = list(pageLength = 15), rownames = FALSE)
     })
     
     output$cluster_refs <- DT::renderDT({

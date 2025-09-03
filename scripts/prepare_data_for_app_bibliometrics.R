@@ -75,29 +75,6 @@ graphs <- lapply(graphs, function(g) {
 #' The last thing to do is to choose a threshold which depends of the distribution of all our
 #' z and P values. The original paper used z = 2.5 and P = 0.62 and 0.80 for non-hubs, but
 #' it should be adapted to our data.
-# choose_role_thresholds <- function(z, P, hub_q = 0.975, k_nonhub = 4, k_hub = 3) {
-#   stopifnot(length(z) == length(P))
-#   z  <- z[is.finite(z)]; P <- P[is.finite(P)]
-#   if (!length(z)) stop("empty z")
-#   
-#   hub_thr <- unname(stats::quantile(z, hub_q, na.rm = TRUE))
-#   
-#   nonhub_P <- P[z <  hub_thr]
-#   hub_P    <- P[z >= hub_thr]
-#   
-#   get_breaks <- function(x, k, fallback) {
-#     if (length(x) >= k && length(unique(x)) >= k) {
-#       km <- stats::kmeans(x, centers = k, iter.max = 100)
-#       centers <- sort(as.numeric(km$centers))
-#       sort((centers[-k] + centers[-1]) / 2)         # midpoints between centers
-#     } else fallback
-#   }
-#   
-#   nonhub_brks <- get_breaks(nonhub_P, k_nonhub, c(0.05, 0.62, 0.80))
-#   hub_brks    <- get_breaks(hub_P,    k_hub,    c(0.30, 0.75))
-#   
-#   list(hub_z = hub_thr, nonhub_P = nonhub_brks, hub_P = hub_brks)
-# }
 
 # Extract data for all our graphs to choose thresholds
 all_graphs_data <- map(graphs, ~ . %N>% as_tibble()) %>% 
@@ -119,16 +96,6 @@ graph <- graph %N>%
       TRUE                                                                 ~ "kinless hub"
     )
   )
-})
-
-# rounding graph statistics:
-graphs <- lapply(graphs, function(graph) {
-  graph <- graph %N>%
-    mutate(
-      similarity = round(similarity, 3),
-      participation_coefficient = round(participation_coefficient, 3),
-      z_within = round(z_within, 3)
-    )
 })
 
 # Adding references
@@ -153,12 +120,15 @@ refs <- open_dataset(
   select(ID_Art, ItemID_Ref, Annee, Nom, Revue_Abbrege) %>%
   collect()
 
-top_refs <- nodes %>%
+references_cited <- nodes %>%
   distinct(ID_Art, value_col, time_window) %>%
   left_join(refs, by = "ID_Art", relationship = "many-to-many") %>%
   filter(ItemID_Ref != 0) %>%
   group_by(value_col, time_window, ItemID_Ref) %>%
-  summarise(n = n(), .groups = "drop") %>%
+  summarise(n = n(), .groups = "drop") %>% 
+  group_by(value_col, time_window)
+
+top_refs <- references_cited %>%
   arrange(time_window, value_col, desc(n)) %>%
   group_by(time_window, value_col) %>%
   slice_head(n = 20) %>%
@@ -188,6 +158,17 @@ top_refs_without_id <- nodes %>%
   distinct(value_col, time_window, Nom, Annee, .keep_all = TRUE)
 
 rm(refs)
+
+# Calculate nodes citations
+references_cited <- references_cited %>% 
+  mutate(share_ref_cluster = n/sum(n),
+         ItemID_Ref = as.character(ItemID_Ref)) %>%
+  distinct(value_col, time_window, ItemID_Ref, cluster_citation = n, share_ref_cluster)
+graphs <- lapply(graphs, function(g) g %N>% 
+                 left_join(references_cited) %>% 
+                 mutate(cluster_citation = if_else(is.na(cluster_citation), 0, cluster_citation),
+                        share_ref_cluster = if_else(is.na(share_ref_cluster), 0, share_ref_cluster),
+                        cit_from_cluster = cluster_citation/node_size))
 
 # Adding closest sentences to each cluster
 cli::cli_alert_info("Adding closest sentences...")
@@ -329,6 +310,18 @@ graphs <- lapply(graphs, function(graph) {
     )
 })
 
+# rounding graph statistics:
+graphs <- lapply(graphs, function(graph) {
+  graph <- graph %N>%
+    mutate(
+      similarity = round(similarity, 3),
+      participation_coefficient = round(participation_coefficient, 3),
+      z_within = round(z_within, 3),
+      cit_from_cluster = round(cit_from_cluster, 3),
+      share_ref_cluster = round(share_ref_cluster, 3)
+    )
+})
+
 # save all data required for the app
 saveRDS(
   list(
@@ -341,18 +334,4 @@ saveRDS(
     tf_idf = tf_idf
   ),
   here::here(data_path, "data_for_app_bibliometrics.RDS")
-)
-
-
-saveRDS(
-  list(
-    graphs = graphs,
-    closest_sentences = closest_sentences,
-    top_refs = top_refs,
-    top_refs_without_id = top_refs_without_id,
-    cluster_origins = cluster_origins,
-    cluster_destinies = cluster_destinies,
-    tf_idf = tf_idf
-  ),
-  here::here("app", "data_for_app_bibliometrics.RDS")
 )
