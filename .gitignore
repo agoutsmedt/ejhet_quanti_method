@@ -3,6 +3,8 @@
 .RData
 .Ruserdata
 .png
+.Rprofile
+
 
 app/data_for_app_bibliometrics.rds
 picture/
@@ -12,3 +14,5 @@ scripts/analysing_sbert_sentences_cluster_cache
 scripts/analysing_sbert_sentences_cluster_files
 scripts/analysing_sentences_cluster_cache
 scripts/analysing_sentences_cluster_files
+renv/
+rsconnect/
