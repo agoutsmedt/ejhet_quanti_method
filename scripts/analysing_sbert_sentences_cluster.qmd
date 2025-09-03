@@ -27,8 +27,9 @@ editor_options:
 ```{r loading-data}
 #| output: false
 source(here::here("scripts", "paths_and_packages.R"))
-p_load(see)
-p_load(kableExtra,
+p_load(see,
+       backbone,
+       kableExtra,
        DT)
 
 # Loading Data
@@ -70,7 +71,7 @@ cluster_similarity <- as.data.frame(cosine_sim) %>%
   mutate(cluster_A = centroids$cluster_original_id) %>%
   pivot_longer(-cluster_A, names_to = "cluster_B", values_to = "similarity") %>%
   mutate(cluster_B = as.integer(str_remove(cluster_B, "V"))) %>% 
-  filter(cluster_A != cluster_B & similarity > 0) %>% 
+  filter(cluster_A != cluster_B) %>% 
   left_join(distinct(centroids, cluster_1 = .cluster, cluster_A = cluster_original_id, window_1 = window), by = "cluster_A") %>% 
   left_join(distinct(centroids, cluster_2 = .cluster, cluster_B = cluster_original_id, window_2 = window), by = "cluster_B") %>% 
   left_join(distinct(documents_cluster, new_cluster, window_1 = window, cluster_1 = cluster), by = c("cluster_1", "window_1")) %>%
@@ -219,6 +220,7 @@ rm(bert_df,
 ```
 
 ```{r attributing-colors}
+set.seed(89)
 palette_colors <- c(see::see_colors(), 
                     see::oi_colors()[1:7], 
                     scico::scico(n = 8, palette = "roma"), 
@@ -291,7 +293,7 @@ alluvial_absolute <- documents_cluster %>%
              fill = label)) +
   geom_flow(alpha = 0.9) +
   geom_stratum() +
-  geom_text(aes(label = str_wrap(label_alluvial, 25)), stat = "stratum", size = 3) +
+  geom_text(aes(label = str_wrap(label_alluvial, 25)), stat = "stratum", size = 3.2) +
   labs(title = "Cluster Persistence Across Time Windows",
        x = "Time Period",
        y = "Percentage of Documents",
@@ -393,6 +395,54 @@ plotly::ggplotly(areas_cluster_1970,
          width = 900, 
          height = 900) %>%
       plotly::layout(legend=list(orientation='h'))
+```
+
+```{r networks}
+# 1) Nodes: gather node attributes
+nodes <- cluster_similarity %>%
+  transmute(id = new_cluster) %>%
+  bind_rows(cluster_similarity %>% transmute(id = new_cluster_2)) %>%
+  distinct(id) %>%
+  left_join(count(documents_cluster, new_cluster, label),
+            by = c("id" = "new_cluster"))
+  
+# 2) Edges = average similarity across windows (undirected)
+edges <- cluster_similarity %>%
+  transmute(from = new_cluster, to = new_cluster_2, w = similarity) %>%
+  mutate(a = pmin(from, to), b = pmax(from, to)) %>%
+  group_by(a, b) %>%
+  summarise(weight = mean(w, na.rm = TRUE), .groups = "drop") %>%
+  rename(from = a, to = b) %>%
+  filter(from != to, is.finite(weight)) %>%
+  filter(weight > 0)        # keep positive similarity; adjust threshold if needed
+
+# 3) Graph
+g <- tidygraph::tbl_graph(nodes = nodes, edges = edges, directed = FALSE) %>% 
+  disparity() %>% 
+  as_tbl_graph() %>% 
+  mutate(community = group_leiden(objective_function = "modularity") %>% as.factor())
+
+# 4) Plotsparsify()# 4) Plot (Fruchterman–Reingold)
+set.seed(42)
+graph_plot <- ggraph(g, layout = "fr") +
+  geom_edge_link(alpha = 0.2, show.legend = FALSE) +
+  geom_node_point(aes(color = community, size = n), show.legend = FALSE) +
+  geom_node_text(aes(label = label %>% str_wrap(25)), repel = TRUE, size = 3) +
+  scale_edge_width(range = c(0.2, 3)) +
+  scale_size_continuous(range = c(1, 25)) +
+  labs(edge_width = "Avg similarity") +
+  scale_color_see_d() +
+  theme_void()
+
+ggsave(here("pictures", "llm_cluster_graph.png"),
+       graph_plot,
+       width = 40,
+       height = 30,
+       units = "cm",
+       dpi = 300) 
+
+knitr::include_graphics(here("pictures", "llm_cluster_graph.png"))
+
 ```
 
 ```{r template}
@@ -579,10 +629,27 @@ for(cluster in list_clusters){
   }
   
   ############# Top articles ##################
-  cat("\n### Closest cluster of the cluster per decade\n\n")
+  cat("\n### Closest clusters of the cluster per decade\n\n")
   
   for(decade in unique(cluster_data$window)){
-      cat(glue("{decade}\n\n"))
+  cat(glue("\n #### Closest clusters within the {decade} decade\n\n"))
+  
+  cluster_similarity %>% 
+    filter(new_cluster == !!cluster,
+           window_1 == decade,
+           window_2 == decade) %>% 
+    select(window = window_2, new_cluster = new_cluster_2, similarity) %>% 
+    left_join(distinct(documents_cluster, new_cluster, label)) %>% 
+    select(label, similarity) %>% 
+    arrange(desc(similarity)) %>% 
+    kbl(col.names = c("Cluster Name", "Similarity")) %>% 
+        kable_styling(bootstrap_options = c("striped","condensed"),
+                      font_size = 13) %>% 
+        print()
+  }
+  
+  for(decade in unique(cluster_data$window)){
+      cat(glue("\n #### {decade}\n\n"))
   # Extracting top terms in general and for window
   cluster_similarity %>% 
     filter(new_cluster == !!cluster & window_1 == decade) %>% 
