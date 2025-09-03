@@ -171,8 +171,8 @@ launch_network_app <- function(
  #       shiny::sliderInput("min_edge_width", "Min Edge Width:", min = 0.1, max = 10, value = 1, step = 0.1),
   #      shiny::sliderInput("max_edge_width", "Max Edge Width:", min = 0.1, max = 10, value = 3, step = 0.1),
         shiny::sliderInput("min_node_size", "Min Node Size:", min = 0.1, max = 10, value = 1, step = 0.1),
-        shiny::sliderInput("max_node_size", "Max Node Size:", min = 0.1, max = 10, value = 5, step = 0.1),
-        shiny::sliderInput("label_size", "Label size", min = 0.5, max = 5, value = 2.5, step = 0.1),
+        shiny::sliderInput("max_node_size", "Max Node Size:", min = 0.1, max = 10, value = 10, step = 0.1),
+        shiny::sliderInput("label_size", "Label size", min = 0.5, max = 5, value = 2.2, step = 0.1),
         
         # shiny::hr(),
         # shiny::h5("Cluster composition"),
@@ -348,7 +348,7 @@ launch_network_app <- function(
           DT::DTOutput("node_info")
         )
       } else if (!is.null(selected_cluster())) {
-        cl <- if (is_list_graph) paste0(selected_cluster(), " — ", input$selected_graph)
+        cl <- if (is_list_graph) paste0(selected_cluster(), " — ", input$selected_graph, "-", as.integer(input$selected_graph) + 7)
               else as.character(selected_cluster())
         tagList(
           shiny::h4(paste0("Documents in ", cl)),
