@@ -342,3 +342,17 @@ saveRDS(
   ),
   here::here(data_path, "data_for_app_bibliometrics.RDS")
 )
+
+
+saveRDS(
+  list(
+    graphs = graphs,
+    closest_sentences = closest_sentences,
+    top_refs = top_refs,
+    top_refs_without_id = top_refs_without_id,
+    cluster_origins = cluster_origins,
+    cluster_destinies = cluster_destinies,
+    tf_idf = tf_idf
+  ),
+  here::here("app", "data_for_app_bibliometrics.RDS")
+)
