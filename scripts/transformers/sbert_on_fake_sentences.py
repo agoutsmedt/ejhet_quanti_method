@@ -9,13 +9,14 @@ import paths
 # ---------------- PARAMETERS ---------------- #
 JSTOR_RAW_DATA_PATH = paths.jstor_raw_data
 SENTENCE_BERT_MODEL = "all-mpnet-base-v2"
-YEARS = [1925, 1950, 1975, 2000]
+YEARS = [1925, 1950, 1975, 2000, 2010, 2015]
 TOP_K = 5
 
 # ---------------- LOAD MODEL ---------------- #
 model = SentenceTransformer(SENTENCE_BERT_MODEL)
 device = "cuda" if torch.cuda.is_available() else "cpu"
 model.to(device)
+OUTPUT_DIR = os.path.join(JSTOR_RAW_DATA_PATH, "sentences_embeddings") 
 
 # ---------------- SINGLE QUERY RATIONALITY ---------------- #
 
