@@ -59,7 +59,7 @@ This intermediate version of the paper is a work in progress. The section discus
 
 ::: callout-note 
 ### Interative application to explore the data 
-We develop an interactive application to explore the data and results presented in this paper. It is available at: [https://01991571-69e4-c794-6467-f1ca83d7c257.share.connect.posit.cloud/](https://01991571-69e4-c794-6467-f1ca83d7c257.share.connect.posit.cloud/). The first tab allows to explore the networks, while the second tab is a global summary of textual clusters.
+We develop an interactive application to explore the data and results presented in this paper. It is available at: [https://0199205a-7b17-ab11-595d-8f12aae160dd.share.connect.posit.cloud](https://0199205a-7b17-ab11-595d-8f12aae160dd.share.connect.posit.cloud). The first tab allows to explore the networks, while the second tab is a global summary of textual clusters.
 ::: 
 
 
@@ -237,7 +237,7 @@ kbl(out %>% select(-decade),
 ::: 
 
 
-![Relative citation of a selection of seminal papers on behavioral economics](images/citation_patterns.jpg){#fig-rationality-paper-citations}
+![Relative citation of a selection of seminal papers on behavioral economics](images/citation_patterns_square.jpg){#fig-rationality-paper-citations}
 
 ::: {.landscape}
 ![Alluvial plot of clusters of sentences about rationality](images/alluvial_network.jpg){#fig-biblio-alluvial}
