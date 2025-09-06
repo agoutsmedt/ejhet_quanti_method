@@ -5,7 +5,7 @@ source(file.path("scripts", "paths_and_packages.R"))
 
 # load paragraphs
 raw_paragraphs <- read_parquet(here::here(
-  jstor_raw_data,
+  data_path,
   "paragraphs_with_target_word.parquet"
 ))
 
@@ -72,7 +72,7 @@ tokens_unnest <- tokens_unnest[!str_detect(token, "^\\d+$")] # remove numeric to
 
 # create a decade variable
 tokens_unnest[, decade := floor(publication_year / 10) * 10]
-tokens_unnest <- tokens_unnest[decade >= 1900]
+tokens_unnest <- tokens_unnest[between(decade, 1900, 2010)]
 
 freq <- tokens_unnest[, N := .N, by = .(decade, token, target_word)]
 freq <- freq[, .(decade, token, target_word, N)]
@@ -105,14 +105,19 @@ freq <- freq |>
 for (name in names(targets)) {
   p <- freq |>
     filter(target_word %in% targets[[name]]) |>
-    group_by(decade) |>
-    slice_max(N, n = 5, with_ties = FALSE) |>
-    mutate(token = reorder_within(token, N, decade)) |>
+    mutate(N = sum(N), .by = c("decade", "token")) |> # necessary if both
+    select(-target_word) %>%
+    unique() %>%
+    slice_max(N, n = 6, with_ties = FALSE, by = decade) |>
+    mutate(
+      decade = str_c(decade, "s"),
+      token = reorder_within(token, N, decade)
+    ) |>
     ggplot(aes(x = token, y = N)) +
     geom_col() +
     facet_wrap(~decade, scales = "free") +
     labs(
-      x = "Words",
+      x = NULL,
       y = "Frequency"
     ) +
     coord_flip() +

@@ -65,6 +65,7 @@ label_pos <- df_filtered |>
     .groups = "drop"
   )
 
+
 p <- ggplot(
   df_filtered,
   aes(x = as.integer(year), y = relative_freq, color = token_lower)
@@ -89,7 +90,10 @@ p <- ggplot(
     min.segment.length = 0,
     segment.alpha = 0.5
   ) +
-  labs(x = "Year", y = "Relative Frequency") +
+  labs(
+    x = "Year",
+    y = "Relative Frequency"
+  ) +
   ggsci::scale_color_npg() +
   scale_x_continuous(
     breaks = seq(1880, max(df$year, na.rm = TRUE), by = 20),
@@ -105,6 +109,6 @@ print(p)
 
 ggsave(
   file.path(image_path, "relative_freq_rationality_and_rational.png"),
-  width = 10,
-  height = 6
+  width = 8,
+  height = 9
 )
