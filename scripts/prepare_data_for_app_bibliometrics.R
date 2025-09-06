@@ -8,7 +8,7 @@ graphs <- readRDS(here::here(
 labels <- readRDS(here::here(
   data_path,
   "label_ai_1960_2014_8_year_windows_0.1_rationality_score.RDS"
-  ))
+))
 
 match_jstor_wos <- readRDS(here::here(data_path, "final_match.RDS")) %>%
   filter(!is.na(id_match_final)) %>%
@@ -24,7 +24,7 @@ sentences <- read_rds(here::here(
   "closest_sentences_0.01_filtered_rationality_score_window_5.rds"
 )) %>%
   bind_rows() %>%
-  filter(publication_year > 1959) %>% 
+  filter(publication_year > 1959) %>%
   left_join(
     match_jstor_wos,
     by = c("id" = "id_jstor"),
@@ -40,20 +40,27 @@ article_sentences <- sentences %>%
 
 # add labels to the list of graphs
 graphs <- lapply(graphs, function(graph) {
-  
-  graph <- graph %>% 
-    activate(nodes) %>% 
+  graph <- graph %>%
+    activate(nodes) %>%
     left_join(labels, by = c("dynamic_cluster_leiden" = "id_col")) %>%
     left_join(match_jstor_wos, by = c("ID_Art" = "ID_Art")) %>%
     left_join(article_sentences, by = c("ID_Art" = "ID_Art")) %>%
-    arrange(desc(node_size)) %>% 
-    rename(color = main_colors) %>% 
-    mutate(nodes_tooltip = paste0(Nom, " \\(", Annee_Bibliographique, "\\) ", Titre) %>% 
-             str_replace_all(., "[:punct:]", " ") %>% 
-             str_squish(),
-           value_col = if_else(is.na(value_col), dynamic_cluster_leiden, value_col))
-  
-  graph <- graph %>% 
+    arrange(desc(node_size)) %>%
+    rename(color = main_colors) %>%
+    mutate(
+      nodes_tooltip = paste0(
+        Nom,
+        " \\(",
+        Annee_Bibliographique,
+        "\\) ",
+        Titre
+      ) %>%
+        str_replace_all(., "[:punct:]", " ") %>%
+        str_squish(),
+      value_col = if_else(is.na(value_col), dynamic_cluster_leiden, value_col)
+    )
+
+  graph <- graph %>%
     activate(edges) %>%
     rename(color = color_edges)
 })
@@ -64,12 +71,17 @@ graphs <- lapply(graphs, function(graph) {
 #' - Together they classify each paper’s role: insider, bridge, local hub, or global connector.
 # Apply to all graphs (optionally parallelize with future.apply)
 graphs <- lapply(graphs, function(g) {
-  m <- compute_role_fast(g, comm_attr = "cluster_leiden", weight_attr = "weight")
-  g %N>% mutate(
-    total_strength = m$total_strength,
-    participation_coefficient = m$participation_coefficient,
-    z_within = m$z_within
+  m <- compute_role_fast(
+    g,
+    comm_attr = "cluster_leiden",
+    weight_attr = "weight"
   )
+  g %N>%
+    mutate(
+      total_strength = m$total_strength,
+      participation_coefficient = m$participation_coefficient,
+      z_within = m$z_within
+    )
 })
 
 #' The last thing to do is to choose a threshold which depends of the distribution of all our
@@ -77,25 +89,32 @@ graphs <- lapply(graphs, function(g) {
 #' it should be adapted to our data.
 
 # Extract data for all our graphs to choose thresholds
-all_graphs_data <- map(graphs, ~ . %N>% as_tibble()) %>% 
+all_graphs_data <- map(graphs, ~ . %N>% as_tibble()) %>%
   bind_rows() %>%
   select(ID_Art, z_within, participation_coefficient)
-thr <- choose_role_thresholds(z = all_graphs_data$z_within,
-                              P = all_graphs_data$participation_coefficient)
+thr <- choose_role_thresholds(
+  z = all_graphs_data$z_within,
+  P = all_graphs_data$participation_coefficient
+)
 
 graphs <- lapply(graphs, function(graph) {
-graph <- graph %N>%
-  dplyr::mutate(
-    role = dplyr::case_when(
-      z_within <  thr$hub_z & participation_coefficient <= thr$nonhub_P[1] ~ "ultra-peripheral",
-      z_within <  thr$hub_z & participation_coefficient <= thr$nonhub_P[2] ~ "peripheral",
-      z_within <  thr$hub_z & participation_coefficient <= thr$nonhub_P[3] ~ "connector",
-      z_within <  thr$hub_z                                                ~ "kinless",
-      z_within >= thr$hub_z & participation_coefficient <= thr$hub_P[1]    ~ "provincial hub",
-      z_within >= thr$hub_z & participation_coefficient <= thr$hub_P[2]    ~ "connector hub",
-      TRUE                                                                 ~ "kinless hub"
+  graph <- graph %N>%
+    dplyr::mutate(
+      role = dplyr::case_when(
+        z_within < thr$hub_z & participation_coefficient <= thr$nonhub_P[1] ~
+          "ultra-peripheral",
+        z_within < thr$hub_z & participation_coefficient <= thr$nonhub_P[2] ~
+          "peripheral",
+        z_within < thr$hub_z & participation_coefficient <= thr$nonhub_P[3] ~
+          "connector",
+        z_within < thr$hub_z ~ "kinless",
+        z_within >= thr$hub_z & participation_coefficient <= thr$hub_P[1] ~
+          "provincial hub",
+        z_within >= thr$hub_z & participation_coefficient <= thr$hub_P[2] ~
+          "connector hub",
+        TRUE ~ "kinless hub"
+      )
     )
-  )
 })
 
 # Adding references
@@ -125,7 +144,7 @@ references_cited <- nodes %>%
   left_join(refs, by = "ID_Art", relationship = "many-to-many") %>%
   filter(ItemID_Ref != 0) %>%
   group_by(value_col, time_window, ItemID_Ref) %>%
-  summarise(n = n(), .groups = "drop") %>% 
+  summarise(n = n(), .groups = "drop") %>%
   group_by(value_col, time_window)
 
 top_refs <- references_cited %>%
@@ -160,15 +179,31 @@ top_refs_without_id <- nodes %>%
 rm(refs)
 
 # Calculate nodes citations
-references_cited <- references_cited %>% 
-  mutate(share_ref_cluster = n/sum(n),
-         ItemID_Ref = as.character(ItemID_Ref)) %>%
-  distinct(value_col, time_window, ItemID_Ref, cluster_citation = n, share_ref_cluster)
-graphs <- lapply(graphs, function(g) g %N>% 
-                 left_join(references_cited) %>% 
-                 mutate(cluster_citation = if_else(is.na(cluster_citation), 0, cluster_citation),
-                        share_ref_cluster = if_else(is.na(share_ref_cluster), 0, share_ref_cluster),
-                        cit_from_cluster = cluster_citation/node_size))
+references_cited <- references_cited %>%
+  mutate(
+    share_ref_cluster = n / sum(n),
+    ItemID_Ref = as.character(ItemID_Ref)
+  ) %>%
+  distinct(
+    value_col,
+    time_window,
+    ItemID_Ref,
+    cluster_citation = n,
+    share_ref_cluster
+  )
+graphs <- lapply(graphs, function(g) {
+  g %N>%
+    left_join(references_cited) %>%
+    mutate(
+      cluster_citation = if_else(is.na(cluster_citation), 0, cluster_citation),
+      share_ref_cluster = if_else(
+        is.na(share_ref_cluster),
+        0,
+        share_ref_cluster
+      ),
+      cit_from_cluster = cluster_citation / node_size
+    )
+})
 
 # Adding closest sentences to each cluster
 cli::cli_alert_info("Adding closest sentences...")
@@ -203,7 +238,9 @@ closest_sentences <- sentences %>%
 
 
 # Calculating circulation of nodes between clusters over time
-cli::cli_alert_info("Calculating circulation of nodes between clusters over time...")
+cli::cli_alert_info(
+  "Calculating circulation of nodes between clusters over time..."
+)
 alluvial_data <- networkflow::networks_to_alluv(
   graphs,
   intertemporal_cluster_column = "dynamic_cluster_leiden",
@@ -334,4 +371,19 @@ saveRDS(
     tf_idf = tf_idf
   ),
   here::here(data_path, "data_for_app_bibliometrics.RDS")
+)
+
+
+# save all data required for the app
+saveRDS(
+  list(
+    graphs = graphs,
+    closest_sentences = closest_sentences,
+    top_refs = top_refs,
+    # top_refs_without_id = top_refs_without_id,
+    cluster_origins = cluster_origins,
+    cluster_destinies = cluster_destinies
+    # tf_idf = tf_idf
+  ),
+  here::here("app", "data", "data_for_app_bibliometrics.RDS")
 )

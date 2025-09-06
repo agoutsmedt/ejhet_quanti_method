@@ -16,7 +16,7 @@ gg <- metadata |>
     x = "Year",
     y = "Number of documents"
   ) +
-  theme_light(base_size = 20)
+  theme_light(base_size = 25)
 
 ggsave(
   plot = gg,
@@ -54,7 +54,7 @@ gg <- metadata |>
     x = "Languages",
     y = ""
   ) +
-  theme_light(base_size = 20)
+  theme_light(base_size = 25)
 
 # save the plot
 ggsave(

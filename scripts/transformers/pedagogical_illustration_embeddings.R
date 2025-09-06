@@ -91,7 +91,7 @@ ggplot(df, aes(x, y, color = group)) +
     inherit.aes = FALSE
   ) +
   geom_point(size = 1, alpha = 0.5) +
-  geom_text(aes(label = word), nudge_y = 0.12, size = 3, show.legend = FALSE) +
+  geom_text(aes(label = word), nudge_y = 0.12, size = 5, show.legend = FALSE) +
   ggsci::scale_color_npg("nrc", alpha = 0.8) +
   # increase x and y limits to avoid cutting text
   labs(

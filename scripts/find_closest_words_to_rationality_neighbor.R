@@ -64,27 +64,26 @@ tokens_unnest <- merge(
 # filter non-NA side
 tokens_unnest <- tokens_unnest[!is.na(side)]
 
-# estimate the total frequency of neighbor words by side
-neighbor_words_freq <- tokens_unnest[, .N, by = .(token, side, target_word)]
-
-# filter stopwords
-neighbor_words_freq <- neighbor_words_freq[
-  !token %in% stopwords::stopwords("en")
-]
-
-# save results in rds
-saveRDS(
-  neighbor_words_freq,
-  file = here::here(data_path, "neighbor_target_words_freq.rds")
-)
-
-
-# Now plot each most frequent words by decade
-
-# first delete stopwords and target words
-
+# filter out target words
 tokens_unnest <- tokens_unnest[!token %in% stopwords::stopwords("en")]
 tokens_unnest <- tokens_unnest[!str_detect(token, "^\\d+$")] # remove numeric tokens
+
+# estimate token frequency by decade
+
+# create a decade variable
+tokens_unnest[, decade := floor(publication_year / 10) * 10]
+tokens_unnest <- tokens_unnest[decade >= 1900]
+
+freq <- tokens_unnest[, N := .N, by = .(decade, token, target_word)]
+freq <- freq[, .(decade, token, target_word, N)]
+freq <- unique(freq)
+
+# keep 5 most frequent tokens by decade and target word
+
+saveRDS(
+  freq,
+  here::here(data_path, "neighbor_words_to_rationality.rds")
+)
 
 # Plot the most frequent words by decade
 
@@ -97,15 +96,12 @@ targets <- list(
 
 # Boucle
 for (name in names(targets)) {
-  p <- tokens_unnest |>
+  p <- freq |>
     filter(target_word %in% targets[[name]]) |>
-    mutate(decade = floor(publication_year / 10) * 10) |>
-    count(token, decade) |>
-    filter(decade >= 1900) |>
     group_by(decade) |>
-    slice_max(n, n = 5, with_ties = FALSE) |>
-    mutate(token = reorder_within(token, n, decade)) |>
-    ggplot(aes(x = token, y = n)) +
+    slice_max(N, n = 5, with_ties = FALSE) |>
+    mutate(token = reorder_within(token, N, decade)) |>
+    ggplot(aes(x = token, y = N)) +
     geom_col() +
     facet_wrap(~decade, scales = "free") +
     labs(
@@ -114,14 +110,14 @@ for (name in names(targets)) {
     ) +
     coord_flip() +
     scale_x_reordered() +
-    theme_light(base_size = 20)
+    theme_light(base_size = 30)
 
   # sauvegarde
   ggsave(
-    here::here(image_path_temp, paste0("Top_neighbor_words_", name, ".png")),
+    here::here(image_path, paste0("top_neighbor_words_", name, ".png")),
     plot = p,
     width = 60,
-    height = 40,
+    height = 60,
     units = "cm",
     dpi = 300
   )
