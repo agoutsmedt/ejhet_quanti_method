@@ -3,7 +3,7 @@ source(file.path("scripts", "_functions.R"))
 source(file.path("scripts", "paths_and_packages.R"))
 pacman::p_load(shiny, shinycssloaders)
 
-RUN_DATA_PREPARATION <- TRUE
+RUN_DATA_PREPARATION <- FALSE
 
 if (RUN_DATA_PREPARATION) {
   # Preparing data for the app
