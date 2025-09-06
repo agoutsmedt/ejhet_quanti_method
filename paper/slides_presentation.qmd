@@ -25,8 +25,12 @@ format:
     view-distance: 100
     progress: true
     width: 1200
-    margin: 0.05
-    lightbox: true
+    margin: 0.03
+    incremental: true
+    lightbox: auto
+    fig-align: center
+    cap-location: top
+    center: true
 ---
 
 ```{r}
@@ -43,64 +47,72 @@ source(here::here("scripts", "paths_and_packages.R"))
 
 ## Context 
 
-- Special issue: methods in the history of economic thought (HET).
+:::{.highlight-last}
+- **Special issue**: methods in the history of economic thought (HET)
 
-- Aim: contribute a methodological essay showing how quantitative tools can enrich HET.
+- **Goal**: contribute a methodological essay showing how quantitative tools can enrich history of economic thought
 
-- A concrete case study, not a review of methods.
+- **Neither a proof of concept paper, nor a review of methods**
+:::
 
 ## Our contribution
 
+:::{.highlight-last}
+:::{.fragment .nonincremental}
 - The meanings of rationality in economics in the 20<sup>th</sup> century: 
   - Of interest for many historians.  
   - Focus on how computational methods help to draw large picture. 
+:::
 
-. . . 
-
+:::{.fragment .nonincremental}
 - A concrete methodological discussion following the workflow of our analysis: 
   - What is challenging, what worked well, what did not, what could be improved. 
+:::
+:::
 
-## Outline of the presentation
 
+<!-- ## Historiography on rationality   -->
 
-## Historiography on rationality  
-
-- On rationality: 
+<!-- - On rationality:  -->
 
 ## From sources to corpus 
 
+:::{.highlight-last}
 - Our main source: JSTOR fulltext database (X documents, Y pages, Z sentences).
 
-::: {.callout-warning}
+
+::: {.callout-warning .fragment .nonincremental}
 ### It is sometimes more challenging to build the data than to analyze it:
 
 - Access to the sources (JSTOR Data for Research). 
-- Filtering documents (book reviewrs). 
+- Filtering documents (book reviews). 
 - Cleanning texts (headers, acknowledgments, etc.).
 - Matching datasets (JSTOR + WoS).
 - Handling large datasets. 
-
+:::
 :::
 
 ## 
 
 ::: {#fig-distribution layout-ncol=2}
-![Overtime](images/documents_distribution_fulltext_database.png){width=90%}
+![](images/documents_distribution_fulltext_database.png){width=90%}
 
-![Languages](images/language_distribution_fulltext_database.png){width=90%}
-
+:::{.fragment}
+![](images/language_distribution_fulltext_database.png){width=90%}
+:::
 Distribution of documents in the JSTOR fulltext database
 ::: 
 
 
-## Simple exploration of the corpus
+##
 
 ::: {#fig-exploration layout-ncol=2}
 
-![Frequency](images/relative_freq_rationality_and_rational.png)
+![](images/relative_freq_rationality_and_rational.png)
 
-![Neighbor words of terms of “rational” and “rationality”](images/Top_neighbor_words_both.png)
-
+:::{.fragment}
+![Neighbor words of “rational” and “rationality”](images/top_neighbor_words_both.png)
+:::
 Exploration of the corpus with simple text analysis tools
 
 ::: 
@@ -110,11 +122,11 @@ Exploration of the corpus with simple text analysis tools
 
 ::: {#fig-computation_methods layout-ncol=2}
 
-![Network and bibliometric analysis](images/example_network.jpg){width=70%}
+![Network and bibliometric analysis](images/example_network.jpg){width=100%}
 
-![Probablistic topic model](images/example_topic_model.png){width=60%}
+![Probablistic topic model](images/example_topic_model.png){width=100%}
 
-Illustrations of common computational methods in HET for large-scale analysis
+Illustrations of common unsupervised methods in HET for large-scale analysis
 
 :::
 
@@ -145,7 +157,7 @@ We use sentence-BERT, a fast LLM model that reprensents **sentences** as vectors
 ::: 
 
 :::: {.columns}
-::: {.column width="60%"}
+::: {.column width="69%"}
 
 ```{r}
 #| echo: false
@@ -166,13 +178,14 @@ data |>
   mutate(sentence = ifelse(str_detect(sentence, "^;"), sentence_clean, sentence)) |>
   # kable the table
   select(year, sentence, similarity) |>
+  mutate(similarity = round(similarity, 3)) |>
   knitr::kable() |> 
-  kableExtra::kable_styling(full_width = F, font_size = 14) 
+  kableExtra::kable_styling(full_width = F, font_size = 18) 
 
 ```
 ::: 
 
-::: {.column width="40%" .fragment}
+::: {.column width="31%" .fragment}
 ::: {.callout-note}
 ### Our empirical strategy:
 1. Compute a "representative vectors" for the concept of rationality.

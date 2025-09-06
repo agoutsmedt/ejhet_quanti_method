@@ -58,18 +58,20 @@ df_filtered |>
   geom_point() +
   geom_smooth(method = "loess", se = FALSE, size = 1) +
   labs(
-    x = "Year",
+    x = NULL,
     y = "Relative Frequency",
-    color = "Words",
+    color = NULL,
   ) +
   ggsci::scale_color_npg() +
+  scale_y_continuous(labels = scales::percent_format()) +
   scale_x_continuous(breaks = seq(1880, max(df$year), by = 20)) +
-  theme_light(base_size = 20)
+  theme_light(base_size = 20) +
+  theme(legend.position = "bottom")
 
 # Save the plot
 
 ggsave(
   file.path(image_path, "relative_freq_rationality_and_rational.png"),
-  width = 10,
-  height = 6
+  width = 8,
+  height = 9
 )
