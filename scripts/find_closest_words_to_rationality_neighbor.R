@@ -94,6 +94,13 @@ targets <- list(
   both = c("rationality", "rational")
 )
 
+# merge 1900 and 1910 into 1900-1910 decade
+
+freq <- freq |>
+  mutate(decade = ifelse(decade == 1910, "1900-1910", as.character(decade))) |>
+  filter(!decade %in% c("1900", "1910"))
+
+
 # Boucle
 for (name in names(targets)) {
   p <- freq |>
@@ -110,6 +117,11 @@ for (name in names(targets)) {
     ) +
     coord_flip() +
     scale_x_reordered() +
+    scale_y_continuous(
+      # <- clé
+      breaks = scales::breaks_pretty(n = 3),
+      labels = scales::label_number()
+    ) +
     theme_light(base_size = 30)
 
   # sauvegarde

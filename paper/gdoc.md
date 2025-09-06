@@ -1,0 +1,1067 @@
+# Introduction
+
+In the last decade, the number of history of economics papers employing
+quantitative methods has increased [see e.g.,
+@goutsmedtQuantitative2023 special issue]. Several essays have adopted
+a reflexive stance, examining the implications of using quantitative
+methods in the history of economics [@cherrierQuantitative2018;
+@edwardsQuantitative2018]. These contributions have aimed to provide
+broad discussions on the use of such methods. However, given the
+virtually unlimited variety of quantitative approaches potentially
+relevant to historians of economics---and the wide array of research
+questions they can address---these reflections often remain abstract and
+offer little practical guidance. As a result, they tend to provide
+useful broad overviews, but without clearly articulating what
+quantification entails in practice, and how it can be both meaningful
+and challenging to integrate into historical research.
+
+Our contribution sits between a historical study that uses quantitative
+methods to answer a specific question and a general methodological
+discussion of those methods. From the collection of data to the
+interpretation of results, we illustrate concretely how these methods
+are useful and examine, in practice, the methodological choices they
+entail. We present a step-by-step application of specific quantitative
+methods to a broad topic: the history of rationality in the 20th
+century.
+
+Our article uses two types of data: textual and bibliometric. Beyond
+basic statistics (such as counting words or citations), we rely on
+unsupervised models to classify our corpus into categories---what we
+call "textual clusters" and "bibliometric communities."[^1] These
+methods depart from standard econometric regressions. Their goal is not
+necessarily to provide a "measure" [@grimmerText2022]---though they
+can be adapted to do so---but to organise in categories large corpora
+and enable accelerated and "distant reading" [@morettiDistant2013;
+@guldiDangerous2023]. They are well suited to historical inquiry: when
+incorporating time explicitly, they allow researchers to map the
+discipline at different points of time, to identify the emergence and
+decline of subjects and concepts, and to assess the influence of
+specific economists.
+
+Above all, our discussion aims to illustrate a core principle for
+historical inquiry with such unsupervised quantitative methods. They
+require continuous back-and-forth between aggregate quantitative
+results, complementary indicators used for interpretation, and close
+reading of primary sources. These methods function as "discovery
+methods" [@grimmerText2022]: they facilitate the exploration of large
+datasets to reveal historical patterns. They often confirm, and
+sometimes complement, established findings. They also reveal pitfalls
+and blind spots in existing research.
+
+The idea of "rationality" is an effective focus for a concrete
+demonstration. First, many historians of economics engage with it in one
+way or another, which makes the exercise relevant for a broad audience.
+Second, because the concept is broad and pervasive in economics,
+applying quantitative methods to a very large corpus is particularly
+informative.[^2] We use a corpus of around 300 000 articles extending
+back to 1900 to show how these methods can handle long time horizons.
+Third, the multiple meanings attached to "rationality" show how textual
+methods can help capture this semantic plurality.
+
+# **Some milestones in the history of rationality in economics**
+
+Rationality is one of the most central and encompassing concepts in
+economics, alongside "market" and "competition." Several works trace its
+evolution across decades or within subfields, and a substantial
+literature examines specific components such as expected utility theory,
+rational expectations, and bounded rationality [e.g.,
+@moscatiRetrospectives2016; @duarteRise2025; @sentRationality2008].
+Our aim here is not to offer an exhaustive survey but to pinpoint key
+developments and debates in this long and complex history.
+
+The idea that agents behave rationally is implicit in classical
+arguments, for example in Ricardian rent theory, where farmers allocate
+land by marginal fertility and profitability. While a single origin is
+unlikely, the concept likely gained prominence with the rise of
+scientific and abstract reasoning in the late nineteenth century. The
+scope of rational behavior was closely tied to debates on the proper
+domain of economic analysis [@giocoliModeling2003]. A well-known
+illustration is John Stuart Mill's *Essays on Some Unsettled Questions
+of Political Economy*:
+
+> What is now commonly understood by the term \"Political Economy\" is
+not the science of speculative politics, but a branch of that science.
+It does not treat of the whole of man\'s nature as modified by the
+social state, nor of the whole conduct of man in society. It is
+concerned with him solely as a being who desires to possess wealth, and
+who is capable of judging of the comparative efficacy of means for
+obtaining that end. [@millEssays1844]
+
+With the marginalists, the economic agent was increasingly defined by
+calculative capacity. Jevons portrayed the agent as a "calculating
+machine" balancing pleasures and pains, a view later formalized as
+utility maximization [@maasMechanical1999]. From marginalist theory
+emerged a first meaning of rationality: utility maximization under
+constraints, with rational behavior understood as the consistent
+selection of means that maximize utility. This conception became
+integral to the development of neoclassical demand theory, culminating
+in John R. Hicks's *Value and Capital* -@hicksValue1939.
+
+The Second World War and the Cold War marked a turning point. Key sites
+included RAND and the Cowles Commission, where operations research and
+linear programming took shape; figures such as Jacob Marschak, Tjalling
+Koopmans, and George Dantzig were central [@mirowskiMachine2002;
+@ericksonHow2013; @herfeldMathematical2017]. These developments fed
+into Arrow and Debreu's existence proof of general equilibrium for an
+economy populated by rational agents [@arrowExistence1954; see
+@duppeFinding2014; @kirtchikRise2024]. In this setting, "rationality"
+was distinguished from "reason" or "intelligence" and recast as a
+formal, axiomatic notion---"rigid rules that determine unique solutions"
+[@ericksonHow2013; see also @klaesConceptual2005]. From this
+axiomatic tradition arose a second meaning of rationality centered on
+consistent choice: agents are rational insofar as their preferences
+satisfy formal coherence conditions [@giocoliModeling2003].
+
+At the level of individuals, the 1940s marked also a decisive turn
+toward formal and axiomatic models of behavior. In *Theory of Games and
+Economic Behavior*, John Von Neumann and Oskar Morgenstern
+[-@vonneumannTheory1944] set out axioms on preferences (transitivity,
+completeness, independence) that support a representation of choices by
+a value function. This framework underpins expected utility theory and
+its many variants [@moscatiExpected2023]. Leonard Savage extended it
+to subjective expected utility, addressing decisions under uncertainty
+when objective probabilities are unknown [@savageFoundations1954].
+
+This modeling invited two readings of "rationality." A positive reading
+seeks to describe how agents actually behave; a normative reading
+prescribes coherent decision procedures. As rationality was recast in
+terms of consistent choice rather than as a psychological portrait of
+*homo oeconomicus*, the normative strand broadened---from individual
+behavior to questions of social choice and the design of "rationalizing"
+policies [@herfeldTheories2018; @handsNormative2015].
+
+Another key institution in the history of rationality was the Graduate
+School of Industrial Administration at Carnegie Institute of Technology.
+With Office of Naval Research funding in the 1950s, a GSIA
+team---including Charles Holt, Franco Modigliani, John Muth, and Herbert
+Simon---was tasked to advance theory of the firm and
+production--inventory planning [@duarteFeasible2009; @kleinCold2015].
+This project was pivotal for both Simon's "bounded rationality" and
+Muth's "rational expectations" [@simonBehavioral1955;
+@muthRational1961; see @youngEarly2001; @sentHow2002]. Initially
+designed for micro analysis of firm behavior, the rational expectations
+hypothesis was adopted in the very late 1960s and early 1970s by Robert
+Lucas, Edward Prescott, and Thomas Sargent [@sentEvolving1998;
+@dasilvaLucass2017]. The hypothesis quickly started to raise intense
+methodological and empirical debates---notably in macroeconomics, where
+it eventually became a foundational component DSGE modeling
+[@goutsmedtReacting2019; @sergiStandard2020]---and in finance
+[@delceyEfficient2023].
+
+Over the same period, expected-utility theory faced mounting challenges
+from paradoxes associated with Maurice Allais and Daniel Ellsberg,
+prompting historical and analytical reassessments
+[@moscatiEllsberg2024; @zappiaRationality2018; @zappiaLeonard2021].
+These critiques fed into Daniel Kahneman and Amos Tversky's Prospect
+Theory [@kahnemanProspect1979] and the rise of behavioral economics
+[@heukelomBehavioral2014], while "bounded rationality" attracted
+renewed attention after the 1980s [@sentRationality2018].
+
+This history of the meanings and uses of "rationality" is also a history
+of changing methods. It reflects shifts in both mathematical techniques
+and in what counted as rationality: from a
+"system-of-forces"---"economic processes generated by market and
+non-market forces"---to a "system-of-relations," where the aim is to
+establish the existence and properties of equilibria via the "validation
+and mutual consistency of given formal conditions"
+[@giocoliModeling2003, 4-5]. In this transformation, axiomatization
+and fixed-point theorem became central [@weintraubHow2002;
+@herfeldMathematical2017]. Game theory also gradually gained a place
+in economics, though it remained marginal in the years immediately after
+Von Neumann and Morgenstern's publication of *Theory of Games and
+Economic Behavior* [@giocoliModeling2003; @ericssonWorld2015].
+
+The history of rationality is also one of new alliances with
+engineering. Work by Holt, Modigliani, Simon, and Muth helped import
+control theory into economics [@kleinCold2015], while new classical
+macroeconomics---Lucas, Prescott, and Sargent---introduced elements of
+"information engineering" inspired by information theory
+[@boumansEngineering2020]. Finally, this history intersects with the
+"applied turn" in economics: challenges to expected-utility theory
+coincided with rising experimental methods that became central to
+behavioral economics [@backhouseAge2017; @heukelomBehavioral2014].
+
+What can quantitative methods add to this rich historiography? Prior
+work has emphasized pioneering figures such as von Neumann, Koopmans, or
+Arrow. Yet, as @giocoliModeling2003 [9] notes, the fact that
+foundational contributions were made in the 1940s--1950s does not mean
+that new conceptions of rationality were immediately adopted. Timing and
+diffusion remain open problems that we address. The publication surge
+after the 1970s likely multiplied meanings and applications of
+"rationality," complicating any synoptic account. Our approach offers a
+broader view of uses and interpretations beyond canonical texts that
+explicitly thematize rationality. The challenge is heightened by the
+concept's spread across general equilibrium theory, game theory,
+macroeconomics, behavioral economics, finance, firm behavior, public
+economics, social choice and welfare, political economy, and
+institutional economics. Distinct methods, formalisms, and mathematical
+tools further complicate mapping its evolution.
+
+This article does not seek a definitive history. It offers snapshots
+showing how quantitative methods can confirm established findings,
+refine or challenge others, and widen the scope of historical inquiry.
+
+# **Which methods and which challenges ?**
+
+Historians of economics now have a growing repertoire of quantitative
+tools, including statistical inference, machine learning, textual
+analysis, network analysis, and bibliometrics. Recent discussions of the
+"quantitative turn" in the history and philosophy of economics have
+weighed the merits and limits of these methods, emphasized their
+complementarity with qualitative approaches, and speculated about their
+future relationship. Yet much of this debate remains abstract, offering
+useful overviews but which provide few clues on what quantitative
+analysis requires in practice. We take a different path by highlighting
+what kinds of questions and challenges arise at each stage of the
+research process, grounding our discussion in the study of rationality
+in economics. This focus lets us highlight (a) the crucial issue of
+selecting sources and building data; (b) how even simple quantitative
+assessments can be informative; (c) the challenges and subjective
+choices involved in building and adapting tools; and (d) why
+interpreting results demands careful attention to indicators and close
+knowledge of both the corpus and its historical context. By tracing,
+step by step, how we assemble and analyze our corpus, we aim to provide
+a practical example and a reflection on broader methodological issues
+faced by quantitative historians of economics.
+
+## From raw source to data 
+
+Discussions on quantitative methods often focus on the varieties of
+methods existing. In practice, however, analysis and interpretation come
+last. Most effort goes into collecting, cleaning, and structuring data,
+much of which remains invisible in published work. Sources rarely arrive
+as ready-to-use datasets; they must be transformed from raw materials
+into usable corpora. In short, the quantitative historian must be as
+much a data wrangler as a data analyst.
+
+The first step is to locate sources. In our case, we seek a
+comprehensive collection of economic academic documents that may discuss
+the concept of rationality and we want to know how the concept is
+actually used in these discussions. Bibliometric databases are a
+well-structured option: they record relatively well-structured data,
+systematically categorizing key features of scientific output---such as
+authors, journals and affiliations, *etc*.. Some of these databases
+record citation data, which enables the study of intellectual influence,
+diffusion patterns, and the structure of scholarly communication. A
+crucial limitation is the absence of full text. Beyond titles---and, for
+recent periods, abstracts---the actual text where debates occur is
+usually missing or costly to access. An important exception is JSTOR,
+which provides freely full texts for roughly 130 economics journals from
+1900 to today.
+
+Before going further, we pause on a methodological point: how data
+availability shapes what we can ask---and answer---about rationality.
+The scarcity and structure of available data affect every stage of
+inquiry, from the choice of research questions to the interpretations of
+quantitative results. In practice, our research may be shaped as much by
+the availability of our data as by our own research preferences. In our
+case, @fig-distribution shows that our full-text database, like most
+available databases, disproportionately represents Anglo-Saxon economic
+journals, which are also those most systematically digitized and
+preserved. Not only do we tend to overlook other traditions of economic
+research, but this also raises a serious issue of presentism: the fact
+that retrospective data on these journals are easily accessible today
+does not imply that they were equally central in earlier ones, nor that
+articles were the dominant vehicle for the diffusion of ideas. Rather,
+it reflects the fact that they had the resources and opportunities to
+digitize and maintain comprehensive digital archives of their
+publications. Moreover, several key economics journals are absent from
+JSTOR (e.g. *Ecological Economics, Energy Policy*, *Applied Economics*),
+while other bibliometric databases such as Web of Science or Scopus
+present their own limitations in coverage and accessibility.[^3]
+
+Once access to JSTOR full text is secured, another crucial step is to
+transform them into a usable database. In most cases, data are not
+readily available in a structured format; rather, they result from a
+process that involves cleaning, categorizing, and selectively removing
+or reformatting information from raw sources in order to produce a
+dataset suitable for computational analysis. This challenge is
+particularly true in the history of economics, where the primary sources
+are the texts themselves---often unstructured and interspersed with
+various layers of metadata, such as section headings, footnotes,
+bibliographic references, or editorial annotations.
+
+Data wrangling is not a tedious prelude to "real" historical analysis.
+Manipulating, cleaning, and structuring raw sources is a fundamental and
+often generative stage of research. As @lemercierQuantitative2019[62]
+reminds us, collecting and categorizing sources is also "a moment to
+reflect on the sources and the purpose of the research." Direct
+engagement with raw data can prompt the reevaluation of initial
+hypotheses and the emergence of new questions. In our case, preparing
+full‐text documents raises basic design choices about inputs and, by
+extension, what counts as a relevant economic text. Should we include
+book reviews, editorials, working papers, or conference proceedings? How
+should we define an "economics journal"---restrict it to core outlets or
+extend it to interdisciplinary venues where economics appears regularly?
+Even within a single article, boundaries are ambiguous: should headings,
+abstracts, footnotes, appendices, or acknowledgments be analyzed or
+excluded? Each decision carries historiographical implications. It
+shapes the corpus and, ultimately, the history of rationality our
+methods can reveal. There is rarely a single definitive choice, but
+rather a series of trade-offs that should be made explicit.
+
+Our first choice was to restrict the analysis to English-language
+articles, since cross-language comparisons involve additional
+challenges. Indeed, most textual methods are designed to identify
+commonalities within texts that share a specific linguistic structure.
+Hence, the same topic discussed by two documents in two different
+languages will likely not be identified as related because linguistic
+differences mask underlying semantic similarity**.** We also restrain
+our analysis to research articles and filter out book reviews, comments,
+editorial reports or obituaries.[^4] While such materials can illuminate
+how rationality was debated, they are not primary sites for articulating
+new ideas within the discipline. Moreover, textual data are by nature
+voluminous, and filtering improves tractability for large-scale
+computation. At the document level, we focused on the body text and
+removed (as far as possible) peripheral elements such as
+acknowledgements, references, or appendices.
+
+## Studying Rationality through Texts
+
+Once the corpus has been assembled, the next challenge is to identify
+how the concept of rationality is actually used in the texts. A
+straightforward first step is simply to measure the frequency of
+occurrence of the terms themselves. @fig-relative-frequency shows the
+relative frequency (with respect to the total number of words published
+each year) of "rational" and "rationality." The figure reveals a clear
+surge in the 1980s and 1990s, suggesting that discussions explicitly
+framed in terms of rationality became particularly prominent during this
+period.
+
+However, the key question is not whether a document contains the word
+"rationality," but rather what the term means in specific context. In
+other words, our aim is to move beyond keyword retrieval and recover the
+different meanings and intellectual settings in which "rationality" is
+invoked. A direct way to begin is co-occurrence analysis: examining the
+words that most often appear immediately before or after "rational" or
+"rationality." Such co-occurrences indicate the conceptual frames and
+debates in which the term is embedded. Figure @fig-co-occurence
+reports, by decade, the five words most frequently adjacent to
+"rational" and "rationality," showing how associations shift over time.
+Before the 1940s, the picture was heterogeneous, with links to
+philosophy, psychology, and general notions of reasoning. From the 1940s
+onward, the rise of choice theory places rationality at the center of
+economic modeling as a device for describing and formalizing behavior.
+By the 1970s---and especially the 1980s---the framework was both
+extended and contested, with the advent of rational expectations on one
+side and bounded rationality on the other.
+
+Co-occurrence analysis offers a first view of how talk about rationality
+changes, but it is limited to the immediate lexical neighborhood of a
+word and thus to proximity in vocabulary, not meaning. Two sentences may
+share no terms---"rational behavior" and "profit maximization"---yet
+point to closely related conceptions of agency and choice. To move from
+this broad picture to how each document actually mobilizes the
+concept---and to map semantic relationships not visible through shared
+keywords---we turn to recent advances in natural language processing:
+large language models (LLMs). These models encode context and meaning,
+allowing us to compare sentences that are semantically similar even when
+their vocabularies diverge, and to see how the same word takes on
+different meanings across contexts. Quantitative text analysis is not
+new, but its scope has expanded with these methods. Before introducing
+our LLM-based approach, we briefly present core principles of text
+representation, which remain relatively unfamiliar in the history of
+economics.
+
+One of the central ideas in text analysis is *text representation*: how
+units of text (words, sentences, documents) are encoded as numbers for
+computation. The most basic and historically dominant option is the
+*bag-of-words* representation. Suppose the unit is the document and you
+want to group similar documents. How can you compare them numerically if
+texts are words but computers process numbers? Bag-of-words solves this
+by turning each document into a vector of word counts. Each dimension
+corresponds to a vocabulary term, and the value is its frequency in the
+document. Documents that use many of the same words have similar
+vectors. This is the representation used by many probabilistic topic
+models increasingly applied in our field [e.g., @ambrosinoWhat2018;
+@goutsmedtIndependent2023].
+
+Any text representation transforms a rich source of natural language
+into a simplified numerical format and, inevitably, loses complexity and
+nuance. The key question is what it preserves and what it discards.
+Because bag-of-words keeps only frequencies, it throws away context and
+word order. A document is represented as a bag in which words are
+blindly tossed. For example, "Hayek is right and Keynes is wrong" and
+"Hayek is wrong and Keynes is right" receive identical representations,
+though their meanings are opposite.
+
+A major advance that mitigates these limits is *word embeddings*
+[@mikolovDistributed2013]. Instead of frequency vectors for documents,
+embeddings learn a vector for *each* word that captures semantic
+relations from patterns of co-occurrence in large corpora.[^5]
+Embeddings represent each word as a point in a vector space; words that
+are closer in the vector space tend to be semantically similar even if
+they rarely co-occur. @fig-embedding-example illustrates the idea with
+a two-dimensional toy example: we created artificial word vectors in a
+two-dimensional space. In practice, embedding spaces are
+high-dimensional, but the principle is the same: absolute positions are
+arbitrary, while relative distances encode semantic relationships.
+
+The first generation of embedding models, such as Word2Vec or GloVe,
+learned static word vectors: each word had a single position in the
+vector space, regardless of the sentences or documents in which it
+appears. This makes it difficult to grasp differences in meanings of a
+same word. The more recent generation of embedding models, known as
+LLMs, builds on a different principle: rather than assigning a fixed
+vector to each word, they produce contextualized embeddings---that is,
+vectors that depend on surrounding words (the context). In LLMs, the
+meaning of the word "rationality," captured by a word embedding vector,
+may vary significantly depending on the contexts in which it is used in
+the studied corpus. In this way, ideas and conceptual transformations
+become measurable and quantifiable objects, opening new possibilities
+for the study of economic ideas.
+
+We use Sentence-BERT [@reimersSentenceBERT2019], a variant of the LLM
+BERT, designed to produce sentence embeddings rather than word
+embeddings. This model yields a single vector representation per
+sentence, which allows straightforward semantic comparison by measuring
+the similarity between sentence vectors. To illustrate how embedding
+vectors capture semantic information, we compare the real sentences from
+the database with a synthetic sentence: *"Economic agents are supposed
+to be rational."* @tbl-example-comparison reports the most similar
+sentences retrieved for various years.[^6]
+
+We vectorized more than 31 millions of sentences from the JSTOR database
+using Sentence-BERT. Our objective is to identify sentences that discuss
+rationality and related concepts. Rather than relying solely on the
+keyword "rationality," we use cosine similarity between sentence
+embeddings to detect semantic proximity. For example, if sentence A
+explicitly mentions rationality and its vector is close to that of
+sentence B---which does not use the term---then B likely addresses a
+related idea.
+
+A straightforward approach would have been to compute a single average
+embedding vector for all sentences containing the words "rationality" or
+"rational", and to use this as a *representative* embedding for the
+concept. However, such an average would be present-biased: since the
+number of documents in the corpus grows sharply over time, the average
+would be disproportionately influenced by recent decades, thereby
+over-emphasizing contemporary meanings of *rationality* at the expense
+of older ones. To account for potential semantic drifts over time, we
+compute a moving average vector for each year, using a sliding window of
+five years (i.e., the year in question plus five years before and
+after). From 1900 to 2020, this yields 120 yearly representative vectors
+that reflect the evolving contextual meaning of *rationality* in the
+economic literature. For each year, we then computed the similarity
+between sentences from the corpus and the respective representative
+vector and we retain the top 1% most similar sentences (X sentences).
+
+We interpret these sentences as reflecting how economists mobilize the
+concept of rationality, in different historical contexts. Because of the
+huge number of sentences we have identified, we would like a method to
+group together sentences using a similar meaning of rationality. We
+clustered the sentences using the K-means algorithm---one of the most
+widely used and straightforward methods for grouping LLM embeddings.
+Because the distribution of our identified sentences is present-biased
+(@fig-distribution), clustering the full set would risk over-weighting
+recent periods. We therefore run clustering separately for each decade
+from 1900 onward (merging the first four decades two by two due to small
+counts). @tbl-example-cluster reports two clusters---one from the 1980s
+and one from the 1990s---showing the three sentences nearest each
+cluster's representative vector. Note that these textual clusters group
+sentences rather than documents; hence, a single document can belong to
+several clusters. Despite being arbitrarily separated by decade, it is
+clear that sentences in both clusters convey a very similar meaning of
+rationality centered on the concept of rational expectations. To capture
+this stability of meanings across time, we merge clusters between
+decades when these clusters are sufficiently close (i.e., in our case,
+with a cosine similarity superior to 0.7). Following this procedure, the
+two clusters presented in @tbl-example-cluster are ultimately merged
+into a single, temporally continuous cluster. @fig-llm-alluvial
+displays the complete set of results in the form of an alluvial plot.
+
+To ensure the stability of our results, we compare them with a
+bibliometric analysis of the corpus. Such a comparison is not costless,
+but it is highly recommended for at least two reasons. First, crossing
+the results of advanced computational methods such as LLM embeddings
+serves as a form of robustness check.[^7] Second, the systematic
+comparison of sources and methods is a fundamental principle of
+historical analysis, needed to triangulate information. For instance, we
+saw that our JSTOR full-text database, though large, does not index
+several crucial recent journals in economics---a gap that can be partly
+compensated by crossing it with citation databases. Moreover, while full
+texts provide invaluable insights into the meanings and contexts of
+concepts, citation data highlight patterns of direct intellectual
+influence and diffusion. On the one hand, we focus on the semantic uses
+of rationality and related discussions in the text themselves,
+independently of authors\' institutional proximity or of their citation
+practices. On the other hand, with bibliometric analysis, we look rather
+at how these ideas circulated and have been diffused across fields.
+
+## Studying rationality through citations
+
+Beyond textual analysis, another important source of information is
+documents metadata (e.g., authors, journals, institutions, citations).
+We focus here on citations to study how articles on rationality cite and
+are cited. Citations trace ideas' lineage and diffusion. The evolution
+of an idea often depends as much on how it is circulated and
+appropriated by readers as on how it was formulated by its authors.
+
+However, one major issue for quantitative analysts using this method is
+temporal: systematic citation practices are relatively recent, so
+citations present poor quality and reliability before the 1960s. In
+contrast to textual analysis, thus, bibliometric analysis in economics
+is largely confined to the postwar period. A second constraint is data
+scarcity and quality: extracting and standardizing references at scale
+is complex and imperfect. For this reason we rely on Web of Science for
+structured citation data, despite its proprietary cost and access
+limits. We then augment our JSTOR full-text corpus with Web of Science
+citations and with citation and abstract data for key journals missing
+from JSTOR.
+
+Citation data does not require sophisticated analysis to be relevant,
+and can be easily incorporated into the everyday toolset of historians
+of economics. Simply counting citations can be used to proxy engagement
+and better understand the impact of a particular author or publication.
+There are clear reasons to incorporate citation studies into historical
+research. Beyond tracking diffusion, highly cited papers are more
+visible and attract more engagement (Matthew effect). Recent work also
+suggests that citations shape reading behavior and perceived quality:
+highly cited papers are more likely to be read closely and to be seen as
+substantial intellectual influences [@teplitskiyHow2022].
+
+Historians routinely discuss scientific influence, and recognition using
+proxies such as major grants, prizes, and honors. For example, Sent's
+narrative of the transition from the dominance of rational choice,
+through the limited success of "old" behavioral economics (e.g., Simon,
+George Katona), to the rise of "new" behavioral economics is organized
+around such milestones. In this sense, citations serve as a
+complementary proxy alongside traditional markers. In a large
+qualitative--quantitative study of the Nobel Prize, @offerNobel2016
+distinguished several profiles: laureates who peak at the prize then
+decline, "innovators with staying power," "still rising" winners honored
+before their citation peak, and late winners recognized long after their
+peak. Relating institutional rewards to citation and publication
+patterns clarifies how recognition interacts with diffusion, reception,
+and appropriation.
+
+Figure @fig-rationality-paper-citations plots citation patterns for
+four seminal references on bounded rationality across all economics
+journals and the top five. The selection is partly arbitrary but
+standard in the literature: @simonBehavioral1955 and Allais (1953) are
+early critiques of neoclassical rational choice with both empirical and
+normative implications, while @akerlofMarket1970 and
+@kahnemanProspect1979 are early "new" behavioral landmarks that mark
+the field's emergence and growth.
+
+The patterns align with several claims in the literature. First, the
+influence of "new" behavioral economics overwhelms that of "old"
+behavioral economics, in both the top five and the full set indexed in
+Web of Science. Whereas @simonBehavioral1955 and Allais (1953) never
+exceed about 0.20% of all economics-article citations over the period,
+@kahnemanProspect1979 reached at least 1% by the late 2010s and
+continues to rise. The contrast reflects both the scale of influence and
+the speed of acceptance: citations to the two "new" behavioral papers
+grow rapidly and steadily after publication, whereas Simon and Allais
+peak around the time of their Nobels or only much later in the 2010s. As
+argued by Offer and Söderberg, many laureates receive a "Nobel premium,"
+a modest post-prize citation bump. Simon and Allais fit this pattern,
+but for Kahneman and Tversky the effect is extreme: after the Nobel,
+their declining trend reverses and climbs throughout the sample.
+[@offerNobel2016]
+
+Citation counts are a blunt tool and can be extended in several ways.
+One can examine *who* cites a work---by discipline, journal, or
+subfield---and assess the *qualities* of citations, distinguishing
+positive from negative uses or functional roles in the text. Beyond
+simple counts, networked uses of citations help map relations among
+authors and publications. A prominent example is bibliographic coupling,
+widely used in the history of economics. It maps a corpus by the
+proximity of reference lists: texts are nodes, and the more references
+they share, the closer they appear in a two-dimensional layout. The
+premise is that shared references proxy intellectual proximity. Such
+maps delineate fields and disciplines and can reveal their internal
+structure, including possible core--periphery patterns.
+
+Running bibliographic coupling begins with delimiting the corpus: which
+articles count as "about rationality"? Keyword searches are brittle,
+since papers on revealed preference or prospect theory may not use the
+words "rational" or "rationality." Instead, we use our LLM sentence
+embeddings from JSTOR. For each article in the coupled JSTOR--Web of
+Science database, we compute the cosine similarity between its article
+embedding (the average of its sentence embeddings)---or, for missing
+journals in JSTOR, on the abstract embedding---and the year-specific
+representative vector. We retain the closest 10% of documents in this
+space, selecting those most engaged with uses of rationality in that
+year. Because embeddings encode meaning rather than only shared
+vocabulary, this procedure captures papers that participate in
+rationality debates even when the term is absent. It yields a
+bibliometric corpus that goes beyond keyword search and traces the wider
+intellectual conversation around rationality.
+
+We apply a dynamic network analysis [@goutsmedtIndependent2023], which
+parallels our sentence-clustering method. Rather than a single network
+for the entire period, we build overlapping networks for shorter windows
+to preserve historical resolution. A clustering algorithm is run on each
+window, then communities are merged across windows when they share
+enough nodes (documents). In bibliographic coupling, a community is a
+set of documents that share a substantial fraction of references,
+indicating intellectual proximity. Our bibliometric communities thus
+group documents that are likely to engage with rationality in similar
+ways. By contrast, our textual clusters capture semantic similarity at
+the sentence level.
+
+After these steps, a central question remains: how do close readings and
+qualitative analysis of primary texts shape interpretation?
+
+## Do you still need to read ?
+
+A common criticism is that quantitative analysis distances researchers
+from economic ideas. This view is misleading for several reasons. First,
+as discussed above, data wrangling requires close engagement with texts.
+Turning raw sources into structured data involves consequential choices
+about cleaning, categorizing, and exclusion, which demand contextual
+knowledge of the corpus and its production.
+
+Second, quantitative methods do not yield objective, ready-made outputs.
+In our case, they produce statistical groupings---bibliometric
+communities and textual clusters---that require qualitative
+interpretation. This is a classic strategy to reduce a large and complex
+set of texts to a manageable number of simple categories. But these
+clusters are constructed on the basis of statistical commonalities,
+whose actual conceptual meaning can only be characterized through
+qualitative assessment. More importantly, a good qualitative knowledge
+of the corpus and of intellectual debates at stake are indispensable to
+make sense of raw results. Thus, whether in the collection of data or
+their analysis, quantitative methods require a constant back-and-forth
+with qualitative reasoning.
+
+This is especially important because our methods are "unsupervised."
+With no prior labels to guide classification, human interpretation is
+central to assessing validity and usefulness. Careful validation---via
+quantitative indicators and qualitative checks---is essential. The
+practical question is whether our categories form a helpful
+classification. A key issue here concerns the construction of indicators
+that help analysts decide which documents should be read as a priority.
+Indicators will depend on the corpus and the research context, but a
+sound strategy is to rely on a combination of indicators rather than on
+a single measure. It is also crucial to design indicators using
+information available from the historical period under investigation in
+order to avoid presentism. For example, using total citation counts to
+understand a past community can mislead the scholar, since such counts
+reflect current popularity rather than contemporaneous influence.
+Equally important, such indicators should be openly shared with other
+scholars to ensure transparency and replicability of the analysis. To
+put these principles into practice, we built an open-source
+dashboard---available here:
+[https://01991571-69e4-c794-6467-f1ca83d7c257.share.connect.posit.cloud/](https://01991571-69e4-c794-6467-f1ca83d7c257.share.connect.posit.cloud/)---which
+compiles the indicators we relied on to interpret clusters and
+communities.
+
+In the case of a large-scale study such as this one, most results are
+not surprising---and there is nothing wrong with that. On the contrary,
+given the large body of works that have contributed to the
+historiography of rationality, one should expect our method to confirm
+existing findings rather than to produce entirely new discoveries.
+Precisely because much of what can be uncovered through quantitative
+analysis has already, in some way, been identified by other means, these
+methods can be trusted. This confirmation provides the basis for using
+them to explore where the historiography is less developed.
+
+# **Discussion**
+
+How can these complex quantitative methods and their careful
+interpretation contribute to our understanding of the history of
+rationality? How can they help enrich, complete, and refine our
+understanding of the various and evolving meanings of rationality in
+economics? This paper does not propose an alternative history of the
+concept, nor a comprehensive account of its evolution. Its aim is to
+show, concretely, the benefits, limits, and uses of quantitative methods
+in the history of economics.
+
+We highlight selected findings that confirm and strengthen strands of
+the existing literature, broaden its scope, and open paths for further
+research. We combine multiple indicators with qualitative analysis,
+reading articles the models pointed out. Our goal is to show how we
+navigate results and triangulate indicators to produce clear insights
+and coherent narratives.
+
+## Retrieving known patterns from the history of rationality
+
+Several patterns in our results confirm established consensus in the
+historiography. First, as rationality theory developed, economics moved
+away from psychology [@giocoliModeling2003]. Analyzing figures such as
+Vilfredo Pareto, Irving Fisher, Lionel Robbins, and Paul Samuelson,
+Giocoli reconstructs the long-standing debate over the relation between
+economics and psychology. This debate about the role of hedonism in
+explaining behavior appears clearly in Cluster 2 (@fig-llm-alluvial),
+which extends from 1900 to the 1940s. The cluster brings together
+advocates of hedonistic foundations and their critics, notably
+institutionalists who questioned psychological grounding. Wesley C.
+@mitchellRole1916 [160] illustrates this opposition in one of the
+closest sentences to our representative vector: "to find the basis of
+economic rationality in the development of a social institution directs
+our attention away from that dark subjective realm, where so many
+economists have groped, to an objective realm, where behavior can be
+studied in the light of the common day" .
+
+The 1940s and 1950s reveal two textual clusters---highly correlated but
+below our merge threshold---centered on debates over economic freedom
+and free enterprise versus economic planning. These clusters include
+roundtables and special issues on planning, such as a discussion sparked
+by Oskar Lange's 1949 article [see @perrouxPractice1949], with
+contributions by François Perroux, Jan Tinbergen, Evsey Domar, and
+Michał Kalecki. They also include debates on "the proper spheres of
+individual freedom and collective control in the 'good' economy"
+[@taylorEconomics1948], in a collection that included, among others,
+Henry Simons. Across both clusters, Frank Knight appears as a recurrent
+reference.[^8] Somewhat linked to this is the textual cluster 53, which
+from the 1950s on discussed social choice and welfare, with rationality
+framed as a guide for decision makers.[^9]
+
+The postwar period also hosts intense debate on utility theory---cluster
+31 in the 1940s, notably Friedman and Savage [@friedmanUtility1948],
+and especially after 1950 in cluster 46. This work revisits demand
+theory, questions the use of cardinal utility, and scrutinizes the
+possibility of interpersonal comparisons. Chicago economists such as
+Friedman and Savage [@friedmanExpectedUtility1952], Stigler
+[@stiglerDevelopment1950], and later Becker [@beckerIrrational1962]
+are prominent. In parallel, Nicholas Georgescu-Roegen offered a sharp
+critique of "utility" and its measurability
+[@georgescu-roegenChoice1954].
+
+For the most recent period, a broad overview of our results shows two
+expected patterns. In both bibliometric and textual analyses, from the
+1970s rational expectations became central and occupied substantial
+discussion, appearing across multiple textual clusters and bibliometric
+communities (@fig-llm-alluvial; @fig-biblio-alluvial). From the 1980s
+onward, challenges to the standard rationality approach embodied by
+expected utility theory emerged in several textual clusters (e.g.,
+clusters 83 and 93) and persisted until the end of our period. A
+distinct behavioral economics cluster (106) appeared in the 2000s. In
+the twenty-first century, these themes became more prevalent than
+rational expectations. Similarly, bibliometric analysis shows a first
+community labeled "Behavioral Economics and Choice Theory" in
+1977--1984, followed by many communities after 2000 that form a dense
+network around the issue of how to model rationality
+(@fig-biblio-alluvial).[^10]
+
+## A rational expectations revolution ?
+
+One focused read of our results centers on "rational expectations." The
+concept has an early history: developed by @muthRational1961 for price
+movements in agriculture; popularized when Carnegie colleagues---Robert
+E. Lucas, Edward C. Prescott, and Thomas J. Sargent---applied it to
+macroeconomics [@lucasExpectations1972; @sargentRational1973]. It
+became central in the early 1970s and quickly controversial for monetary
+and fiscal policy [see e.g., @sargentwallace1975]. By the late 1970s
+it circulated in policy and the press and was often described as a
+"rational expectations revolution" [@duarteRise2025].
+
+Our methods help account for the rapid diffusion beyond controversial
+policy debates during the stagflation era. First, the results show no
+significant trace of rational expectations in the 1960s in either
+bibliometric or textual outputs.[^11] From the 1970s it has taken a
+central place in the literature on rationality.
+
+The controversial character of rational expectations appears first in
+the text analysis. Two clusters on rational expectations emerged in the
+1970s (textual clusters 67 and 72). The first gathers articles that
+debate the hypothesis itself, including many critiques of its
+theoretical and empirical relevance in the 1970s--1980s. Others examine
+the implications of adopting the hypothesis across domains. The second
+focuses on models that use rational expectations rather than the
+hypothesis per se.[^12] Here, alongside promotion of such
+models---Sargent is a major contributor---there are early critiques
+targeting both the rational-expectations assumption and additional
+auxiliary assumptions. A clear example is Ray Fair's complaint about
+"one class of macroeconomic models that have recently been developed"
+which rely on "(1) the assumption that expectations are rational, given
+the available information; (2) the assumption that information is
+imperfect regarding the current state of the economy; and (3) the
+postulation of an aggregate supply equation in which aggregate supply is
+a function of exogenous terms plus the difference between the actual and
+expected price level" [@fairCriticism1978, p. 411].[^13] Diffusion is
+also visible in clusters that predate the use of rational expectations
+but incorporate it from the 1980s onward, notably cluster 76 on monetary
+economics and cluster 28 on price theory.[^14]
+
+Our bibliometric analysis complements the text analysis. By tracking
+references and using overlapping windows, it detects the emergence of
+new communities and the split of others with fine temporal resolution.
+The main rational‐expectations community, "Rational Expectations and
+Business Cycles", first appeared in 1966--1973. It focuses less on the
+hypothesis itself and more on its macroeconomic policy implications. The
+controversy centers on modelling the inflation--unemployment trade-off
+and the implied (in-)effectiveness of monetary policy. This aligns with
+the early divide between "old" and (future) "new" Keynesians
+[@goutsmedtReacting2019].
+
+The controversial status of rational expectations in the 1970s--1980s
+likely helps explain the prominence of this community in our results.
+These controversies are well documented [@hooverNew1988;
+@goutsmedtReacting2019]. At the same time, our evidence suggests
+diffusion by application across domains. The bibliometric analysis
+indicates two broad pathways. First, communities initially outside the
+"Rational Expectations and Business Cycles" community began to
+incorporate the assumption. Second, new communities gradually branched
+off from the core community: articles that first co-located with the
+main group increasingly coalesced into autonomous clusters.
+
+Focusing on the first pathway, one community engaged with rational
+expectations slightly earlier than the "Rational Expectations and
+Business Cycles". This community addressed topics in trade, demand, and
+investment within a general‐equilibrium framework. @muthRational1961
+belongs to this community and remains a key reference, even though the
+rational‐expectations hypothesis is not central. In 1971--1978, the
+label shifts to "Investment and Economic Growth," where Lucas's early
+work on investment is influential, albeit without using rational
+expectations. Several important references in this window do employ the
+assumption, including @cyertRational1974 and @townsendMarket1978. In
+1975--1982, the community transformed into a new community, "Investment
+and Uncertainty," now featuring @kydlandRules1977, @kydlandTime1982,
+and @lucasAsset1978.[^15] Thus, beyond the well-known debates on
+business cycles and inflation, parallel communities---only partly
+focused on macroeconomic issues---were active in the early 1970s.
+
+After the mid-1970s, several independent communities began to adopt
+rational expectations. A first trajectory appears in 1976--1983: two
+finance-oriented communities ("Asset Pricing and Consumption" and
+"cl_319") partially merged into "Rational Expectations and Market
+Information." At its core was imperfect information, with
+@rothschildEquilibrium1976 as a key node. Another central contribution
+was @grossmanImpossibility1980, which drew on Lucas's
+imperfect-information framework [@lucasExpectations1972] and combined
+rational expectations with noisy signals to question market efficiency
+[see @delceyEfficient2023]. A second community emerged in 1979--1986
+with "Game Theory and Information," where rational expectations became
+more prominent. Here @kydlandRules1977 and @barroPositive1983 on time
+inconsistency sit alongside @krepsSequential1982 on sequential
+equilibria and @seltenReexamination1975 on equilibrium refinements. In
+the early 1980s this community split, yielding "Monetary Policy and
+Inflation," which leverages game-theoretic models to deal with
+credibility and reputation in policy design.
+
+Thus, beyond the well-known debates on business cycles and inflation,
+there was a community, not totally focused on macroeconomics issues,
+that existed in parallel in the 1970s. After the mid-1970s, we also find
+several trajectories of independent communities that start to employ
+more and more rational expectations. A first example appears in
+1976-1983: two communities on finance topics ("Asset Pricing and
+Consumption" and "cl_319) partially merged to form "Rational
+Expectations and Market Information". At the heart of the community was
+the concept of imperfect information (Rothschild and Stiglitz, 1976,
+being an important node). A central paper was Grossman and Stigliz
+(1980), taking inspiration from Lucas (1973) and the combination of
+rational expectations and noisy signals to criticize Fama and the
+possibility of efficient markets (see Delcey and Sergi, 2023).
+Similarly, a new cluster emerged in 1979-1986, "Game Theory and
+Information", aggregating papers in game theory, now recurring more
+significantly to the concept of rational expectations. In this cluster,
+Kydland and Prescott (1977) or Barro and Gordon (1983) on rational
+expectations and time-inconcistency problems were major references, in
+parallel to Kreps and Wilson (1980) sequential equilibria model, or
+Selten's (1975) refinement of Nash equilibrium. In the early 1980s, this
+community would split, with a new community emerging, "Monetary Policy
+and Inflation", leveraging game theory to discuss how monetary policy
+can manage inflation, making concepts like credibility or reputation
+central.
+
+A second diffusion process involves the emergence of new communities
+organized around rational expectations that gradually separate from the
+initial core. In the early 1970s, an international macroeconomics
+community branched off from "Rational Expectations and Business Cycles."
+Although it addressed a range of international macroeconomic topics, the
+determination of exchange rate dynamics---and the role of the
+rational-expectations hypothesis in that determination---quickly became
+central, notably with Dornbusch's overshooting model
+[@dornbuschExpectations1976]. From 1974--1981, another community grew
+out of the core---"Inflation, Expectations and Interest Rates"---which
+concentrated on the term structure and the use of interest rates to
+forecast inflation. This community became a meeting ground for
+macroeconomics and finance, where rational expectations and efficient
+markets were closely linked [@delceyEfficient2023].
+
+This issue of the diffusion of rational expectations merits a dedicated
+study. Here, the goal is to illustrate the diversity of trajectories and
+the fine-grained mapping our analyses produce, enabling productive
+interaction between quantitative evidence and qualitative
+interpretation.
+
+By the early 1980s, roughly half of the network consisted of communities
+engaging, to varying degrees, with rational expectations. At the same
+time, a behavioral economics community had emerged, though it still
+formed a small share of the network, a situation that changed after the
+1990s.
+
+## The Trajectory of Simon's contributions and the birth of behavioural economics
+
+It is well known that Herbert A. Simon's "bounded rationality" is one of
+the most influential concepts related to rationality and underpins a
+significant critique of the standard treatment of rationality in
+economics. Its broad uptake, however, was delayed well beyond Simon's
+initial articles [@simonBehavioral1955; @simonTheories1959]. Our
+bibliometric and textual analyses trace this trajectory in detail.
+
+Simon is a prominent presence in the 1950s debates on rationality. His
+two seminal articles and his Nobel lecture [@simonRational1979] appear
+across numerous textual clusters (including social choice, the theory of
+the firm, and price setting), indicating how his analysis of economic
+rationality resonated across a wide spectrum of discussions. Yet despite
+this visibility---and despite the Nobel recognition by the late
+1970s---his concepts of "bounded rationality," "procedural rationality,"
+and "satisficing" remained marginal at the time.
+@fig-rationality-paper-citations shows the delayed reception: citations
+rose after the 1970s and reached a substantial share only from the 1980s
+onward.
+
+Textual analysis provides further evidence. Textual cluster 40, one of
+the largest in our study, spans roughly seventy years from 1950 onward
+and aggregates general discussions on rationality in economics. In the
+1950s, while @simonBehavioral1955 recurs within the cluster, debate
+centers on rationality in game theory---for example,
+@schellingAbandonment1959 and @ellsbergTheory1956---and on
+expected‐utility theory, with contributions by @marschakRational1950
+and @chernoffRational1954. By the 1970s, "bounded rationality" becomes
+the cluster's most prevalent expression alongside terms such as
+"behavioral theory". In the 1990s, articles discussed "boundedly
+rational" agents, "unbounded rationality," and "procedural
+rationality."[^16] Simon's concepts are clearly central to this cluster
+by then.
+
+The bibliometric analysis, using successive time windows, complements
+this picture by tracing the destiny of small communities. In the first
+window (1960--1967), @simonTheories1959 is cited within a community
+centered on operations research (cl_5). This community, which
+persists---though smaller---until 1969--1976, is gradually populated by
+organizational‐theory work critical of the profit-maximization
+hypothesis in neoclassical models. Key examples include
+@winterSatisficing1971, which applies satisficing to firm behavior, and
+@cyertCompetition1969. A related strand is @leibensteinAllocative1966
+on "X-efficiency," which challenges economics' focus on allocative
+efficiency. Together, Simon, Winter, Cyert (with George), and
+Leibenstein form a diverse critique of how rationality---especially
+through profit maximization---is employed in economics, from an
+organizational theory perspective.
+
+After 1969--1976, this stream landed in a smaller, short-lived community
+(cl_175). References to Simon and critiques of profit maximization then
+remain scattered, moving through several small communities (cl_182,
+cl_251, cl_300, cl_328). This instability underscores the marginal
+position of this literature and its brief association with other lines
+of work. In the final community of this trajectory (cl_328),
+organizational critiques intersect with the theory of the firm in
+transaction costs and property rights: @williamsonTransactionCost1979
+figures here, and @coaseProblem1960 is an important reference. These
+strands then coalesce into a large 1977--1984 community, "Behavioral
+Economics and Choice Theory," where Simon appears alongside
+[@kahnemanProspect1979], bringing together multiple critiques of
+rationality in economics.
+
+From 1979--1986, a more specific "Behavioral Decision Theory" community
+forms around Kahneman and Tversky's contributions. It persists through
+the end of our period and, as with rational expectations, spins off
+several autonomous communities; after the 2000s, behavioral economics
+becomes a dominant venue for research on rationality. By contrast,
+Simon's articles fades as a bibliometric anchor: "bounded" and
+"procedural" rationality are regularly invoked, as the textual analysis
+highlighted, but no later community clearly bears his heritage.
+
+While it is often argued that the rise of "new" behavioral economics
+overshadowed earlier "old" behavioral work, citations to
+@simonBehavioral1955 have been higher since the ascent of the new
+program. This resurgence admits at least three interpretations. A more
+positive reading is that the "new" program helped revive abandoned
+research directions and moved toward reconciliation with earlier
+strands. A more critical view sees intellectual appropriation, in which
+classic references are reframed to fit the new agenda, renewing interest
+through a presentist lens. A third interpretation is that the citation
+increase reflects a growing backlash against the "new" program from the
+standpoint of "old" behavioral economics.
+
+Citation counts cannot adjudicate between these readings, but they can
+guide qualitative inquiry and motivate further quantitative work. As
+shown above for Simon's trajectory in the 1960s--1970s, this can involve
+tracking the authors and communities citing these works, and combining
+text with citation data to test whether references to Simon function as
+surface signals within the "new" program or as anchors for critique from
+"old" behavioral economists.
+
+# **Conclusion**
+
+# 
+
+# 
+
+[^1]: The bibliometric communities, identified through network analysis,
+    could also be called clusters. But we opted for "communities" in
+    order to distinguish them from the "textual clusters".
+
+[^2]: To be clear, we don't think that quantitative methods are only
+    helpful for very large corpora. However, it is where their surplus
+    value may appear as the more obvious.
+
+[^3]: One of the main challenges for a quantitative history of economics
+    is to move beyond reliance on proprietary digital libraries and to
+    actively develop open, historically inclusive corpora. This includes
+    incorporating materials produced in non-Anglophone countries and
+    expanding the range of textual formats considered---such as books,
+    book reviews, working papers, and conference proceedings.
+
+[^4]: This filtering draws on JSTOR's own classifications, supplemented
+    by our manual checks. Despite these safeguards, a perfectly clean
+    restriction to research articles was not feasible, and some residual
+    non-article items likely remain.
+
+[^5]: The intuition behind word embedding is the distributional
+    hypothesis, famously stated by the linguist [-@firthStudies1957:
+    11]: "You shall know a word by the company it keeps".
+
+[^6]: One issue with using LLMs is that they are pre-trained on recent
+    data, which raises the methodological problem of *presentism*.
+    Contextualized embeddings partially mitigate this issue, as the
+    vectorization of texts depends on the immediate linguistic context.
+    As illustrated in Table 1, each historical period is associated with
+    its own specific set of questions and, therefore, with particular
+    contextual usages of the term *rationality*. However, the way these
+    surrounding words influence the vector representation of
+    *rationality* remains shaped by a bias toward present-day language
+    and meanings. This limitation is discussed further in the
+    conclusion.
+
+[^7]: Sophisticated techniques used in the history of
+    economics---whether topic modeling, network analysis, or contextual
+    embeddings---often depend on modeling choices (for example, the
+    number of topics in a topic model) that can substantially affect the
+    output. Since these outputs are never self-interpreting and always
+    require human qualitative assessment, it is time consuming to
+    conduct robustness checks.
+
+[^8]: See also textual cluster 31 on planning issues.
+
+[^9]: Kenneth Arrow, Herbert Simon or James Buchanan are central in
+    these debates.
+
+[^10]: See for instance the communities "Behavioral Economics and
+    Experiments", "Ambiguity and Uncertainty", "Intertemporal Choice and
+    Control" or "State Preference Valuation".
+
+[^11]: This highlights a key caveat. Because these methods foreground
+    statistically "significant" patterns and indicators' prevalence,
+    they are not always well suited to tracing and interpreting the
+    origins of a concept or theory with the care that close historical
+    study and archival research provide.
+
+[^12]: The second textual cluster is less centered on rational
+    expectations than the first. It aggregates model-focused
+    debates---some on rational behavior in general, others on
+    demand---within which rational-expectations models remain prominent.
+
+[^13]: The mix of defense and opposition continues into the
+    2000s--2010s: we see discussions of DSGE models , alongside macro
+    models with bounded rationality or learning and arguments for
+    behavioral macroeconomics and rational inattention.
+
+[^14]: Other clusters linked to rational expectations cover inflation
+    expectations and the term structure in the 1970s (cluster 78),
+    forecasting (81), wages and unemployment (82), finance (87),
+    information (89), econometric issues (92), and a more theoretical
+    intersection of rational expectations and game theory from the 1980s
+    (88).
+
+[^15]: These articles received a good number of citations from the paper
+    of this community, but they appear as "connector" in the sense that
+    they were highly connected to nodes in other communities.
+
+[^16]: Simon himself became one of the most prevalent words of the
+    cluster.
