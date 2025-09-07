@@ -2,10 +2,6 @@
 title: "A history of rationality in economics: a computational approach"
 # Interact needs the special \name{} and \affil{} inside \author{...}.
 # We inject raw LaTeX as the author field so the class formats names/affils correctly.
-author: |
-  \name{First Author\textsuperscript{a}\thanks{CONTACT First Author. Email: first.author@uni.edu} and Second Author\textsuperscript{b}}
-  \affil{\textsuperscript{a}Affiliation A, City, Country; \textsuperscript{b}Affiliation B, City, Country}
-
 date: "2025-09-05"
 lang: en
 # Chicago author–date via natbib + tfcad.bst (Taylor & Francis)
@@ -24,6 +20,14 @@ execute:
   message: false
 freeze: auto
 ---
+
+\name{Thomas Delcey\textsuperscript{a}\thanks{CONTACT Thomas Delcey. Email: thomas.delcey@ube.fr} 
+  and Aurelien Goutsmedt\textsuperscript{b}\thanks{Email: aurelien.goutsmedt@uclouvain.be}
+  and Alexandre Truc\textsuperscript{c}\thanks{Email: alexandre.truc@cnrs.fr}}
+\affil{\textsuperscript{a}Université de Bourgogne; 
+       \textsuperscript{b}UC Louvain; ICHEC; 
+       \textsuperscript{c}Université du CNRS}
+
 
 \begin{abstract}
 This paper offers a concrete, method-driven account of how quantitative techniques can illuminate the history of a capacious concept in economics—rationality. We assemble a large full-text corpus (~300,000 economics articles, 1900–2020) and pair it with structured citation data. On the textual side, we use large language models (LLMs) to trace semantic shifts over more than a century and to identify a corpus of texts centered on rationality, which we then analyze with bibliometrics and network methods. Our objectives are twofold: first, to provide a concrete methodological account that foregrounds the practical choices—from data collection to interpretation—that shape corpus construction and the reading of results; second, to show that unsupervised models, when combined with robustness checks and close reading, can serve as powerful tools for both confirmation and discovery in the history of economics. To ensure transparency and reuse, we release a Shiny application that exposes the indicators we rely on for qualitative interpretation and makes the workflow auditable and replicable.
@@ -243,7 +247,8 @@ kbl(out %>% select(-decade),
 ![Alluvial plot of clusters of sentences about rationality](images/alluvial_network.jpg){#fig-biblio-alluvial}
 :::
 
-![Example of one bibliographic network representing one horizontal bar of Alluvial (@fig-biblio-alluvial)](images/network_example.png)
-
+::: {.landscape}
+![Example of one bibliographic network representing one horizontal bar of Alluvial (@fig-biblio-alluvial)](images/network_example.jpg){#fig-biblio-network-example width="100%"}
+:::
 
 # References 

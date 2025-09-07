@@ -335,16 +335,16 @@ different meanings and intellectual settings in which "rationality" is
 invoked. A direct way to begin is co-occurrence analysis: examining the
 words that most often appear immediately before or after "rational" or
 "rationality." Such co-occurrences indicate the conceptual frames and
-debates in which the term is embedded. Figure @fig-co-occurence
-reports, by decade, the five words most frequently adjacent to
-"rational" and "rationality," showing how associations shift over time.
-Before the 1940s, the picture was heterogeneous, with links to
-philosophy, psychology, and general notions of reasoning. From the 1940s
-onward, the rise of choice theory places rationality at the center of
-economic modeling as a device for describing and formalizing behavior.
-By the 1970s---and especially the 1980s---the framework was both
-extended and contested, with the advent of rational expectations on one
-side and bounded rationality on the other.
+debates in which the term is embedded. @fig-co-occurence reports, by
+decade, the five words most frequently adjacent to "rational" and
+"rationality," showing how associations shift over time. Before the
+1940s, the picture was heterogeneous, with links to philosophy,
+psychology, and general notions of reasoning. From the 1940s onward, the
+rise of choice theory places rationality at the center of economic
+modeling as a device for describing and formalizing behavior. By the
+1970s---and especially the 1980s---the framework was both extended and
+contested, with the advent of rational expectations on one side and
+bounded rationality on the other.
 
 Co-occurrence analysis offers a first view of how talk about rationality
 changes, but it is limited to the immediate lexical neighborhood of a
@@ -535,14 +535,14 @@ peak. Relating institutional rewards to citation and publication
 patterns clarifies how recognition interacts with diffusion, reception,
 and appropriation.
 
-Figure @fig-rationality-paper-citations plots citation patterns for
-four seminal references on bounded rationality across all economics
-journals and the top five. The selection is partly arbitrary but
-standard in the literature: @simonBehavioral1955 and Allais (1953) are
-early critiques of neoclassical rational choice with both empirical and
-normative implications, while @akerlofMarket1970 and
-@kahnemanProspect1979 are early "new" behavioral landmarks that mark
-the field's emergence and growth.
+@fig-rationality-paper-citations plots citation patterns for four
+seminal references on bounded rationality across all economics journals
+and the top five. The selection is partly arbitrary but standard in the
+literature: @simonBehavioral1955 and Allais (1953) are early critiques
+of neoclassical rational choice with both empirical and normative
+implications, while @akerlofMarket1970 and @kahnemanProspect1979 are
+early "new" behavioral landmarks that mark the field's emergence and
+growth.
 
 The patterns align with several claims in the literature. First, the
 influence of "new" behavioral economics overwhelms that of "old"
@@ -644,7 +644,7 @@ Equally important, such indicators should be openly shared with other
 scholars to ensure transparency and replicability of the analysis. To
 put these principles into practice, we built an open-source
 dashboard---available here:
-[https://01991571-69e4-c794-6467-f1ca83d7c257.share.connect.posit.cloud/](https://01991571-69e4-c794-6467-f1ca83d7c257.share.connect.posit.cloud/)---which
+[https://0199205a-7b17-ab11-595d-8f12aae160dd.share.connect.posit.cloud)---which
 compiles the indicators we relied on to interpret clusters and
 communities.
 
