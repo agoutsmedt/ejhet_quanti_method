@@ -182,7 +182,7 @@ tokens_count_cluster <- compute_tf_idf(tokens[, -"window"],
 top_terms_cluster <- tokens_count_cluster[order(-tf_idf)][absolute_tf > 30, head(.SD, 20), by = new_cluster]
 
 # Get top 4 tf-idf tokens per cluster
-labels_cluster <- tokens_count_cluster[order(-tf_idf)][absolute_tf > 40, head(.SD, 5), by = new_cluster][, .(new_cluster, token)]
+labels_cluster <- tokens_count_cluster[order(-tf_idf)][absolute_tf > 40, head(.SD, 4), by = new_cluster][, .(new_cluster, token)]
 labels_cluster <- labels_cluster[, .(label = paste0(token, collapse = ", ")), by = new_cluster]
 labels_cluster[, label := paste0(str_extract(new_cluster, "\\d+$"), ": ", label)]
 
@@ -345,26 +345,25 @@ alluvial <- documents_cluster %>%
   #  mutate(new_cluster = factor(new_cluster, levels= all_clusters)) %>% 
   ggplot(aes(x = window, y = percent, stratum = label, alluvium = label,
              fill = label)) +
-  geom_flow(alpha = 0.9) +
-  geom_stratum(alpha = 0.9) +
-  geom_text(aes(label = str_wrap(label_alluvial, 30)), stat = "stratum", size = 4) +
-  labs(title = "Cluster Persistence Across Time Windows",
-       x = "Time Period",
-       y = "Percentage of Documents",
-       fill = "Intertemporal Cluster") +
-  theme_bw(base_size = 20) +
+  geom_flow(alpha = 0.7) +
+  geom_stratum(alpha = 0.8) +
+  geom_text(aes(label = str_wrap(label_alluvial, 38)), stat = "stratum", size = 4.5, fontface = "bold") +
+  labs(title = NULL,
+       x = NULL,
+       y = "Percentage of Documents") +
+  theme_minimal(base_size = 25) +
   theme(legend.position = "none") +
-  scale_y_continuous(expand = c(0.01, 0)) +
+  scale_y_continuous(expand = c(0, 0), label = scales::percent_format()) +
   scale_fill_manual(values = cluster_colors)  # HARD color lock
 
-ggsave(here("pictures", "intertemporal_clusters_alluvial.png"),
+ggsave(here("paper", "images", "intertemporal_clusters_alluvial.png"),
        alluvial,
        units = "cm",
-       width = 60,
-       height = 45,
+       width = 80,
+       height = 46,
        dpi = 300)
 
-knitr::include_graphics(here("pictures", "intertemporal_clusters_alluvial.png"))
+cknitr::include_graphics(here("pictures", "intertemporal_clusters_alluvial.png"))
 ```
 
 ```{r alluvial-absolute}

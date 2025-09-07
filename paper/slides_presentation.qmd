@@ -59,34 +59,33 @@ source(here::here("scripts", "paths_and_packages.R"))
 
 :::{.highlight-last}
 :::{.fragment .nonincremental}
-- The meanings of rationality in economics in the 20<sup>th</sup> century: 
-  - Of interest for many historians.  
-  - Focus on how computational methods help to draw large picture. 
+- The meanings of rationality in 20<sup>th</sup>-century economics:  
+  - A long-standing concern for historians  
+  - Using computational methods to capture the broader picture  
 :::
 
 :::{.fragment .nonincremental}
-- A concrete methodological discussion following the workflow of our analysis: 
-  - What is challenging, what worked well, what did not, what could be improved. 
+- A concrete methodological reflection based on our workflow:  
+  - Challenges, successes, limits, and possible improvements  
 :::
 :::
 
-
-<!-- ## Historiography on rationality   -->
-
-<!-- - On rationality:  -->
+:::{.notes}
+- Pour des raisons de temps notamment, on ne va pas parler vraiment de rationalité aujourd'hui, même si quelques résultats à la fin.
+:::
 
 ## From sources to corpus 
 
 :::{.highlight-last}
-- Our main source: JSTOR fulltext database (X documents, Y pages, Z sentences).
+- Our main source: JSTOR fulltext database (around 300 000 documents, 31 millions sentences).
 
 
 ::: {.callout-warning .fragment .nonincremental}
 ### It is sometimes more challenging to build the data than to analyze it:
 
-- Access to the sources (JSTOR Data for Research). 
+- Access to the source (JSTOR Data for Research). 
 - Filtering documents (book reviews). 
-- Cleanning texts (headers, acknowledgments, etc.).
+- Cleaning texts (headers, acknowledgments, etc.).
 - Matching datasets (JSTOR + WoS).
 - Handling large datasets. 
 :::
@@ -103,6 +102,10 @@ source(here::here("scripts", "paths_and_packages.R"))
 Distribution of documents in the JSTOR fulltext database
 ::: 
 
+:::{.notes}
+- A noter: trajectoire pas si exponentielle (par rapport à la bibliométrie par exemple). On a tout de même un corpus assez conséquent pour les premières années.
+- Pas si mal non plus pour les langues, au vu de l'internationalisation post-1970. Mais comment traiter le multi-langue?
+:::
 
 ##
 
@@ -120,6 +123,7 @@ Exploration of the corpus with simple text analysis tools
 
 ## Which computational methods?
 
+:::{.fragment}
 ::: {#fig-computation_methods layout-ncol=2}
 
 ![Network and bibliometric analysis](images/example_network.jpg){width=100%}
@@ -128,6 +132,7 @@ Exploration of the corpus with simple text analysis tools
 
 Illustrations of common unsupervised methods in HET for large-scale analysis
 
+:::
 :::
 
 ## Introducing LLMs to HET 
@@ -157,7 +162,16 @@ We use sentence-BERT, a fast LLM model that reprensents **sentences** as vectors
 ::: 
 
 :::: {.columns}
-::: {.column width="69%"}
+::: {.column width="31%" .fragment}
+::: {.callout-note}
+### Our empirical strategy:
+1. Compute a "representative vectors" for the concept of rationality.
+2. Retrieve the most similar sentences in the corpus from this vector.
+3. Group those sentences into clusters.
+::: 
+:::
+
+::: {.column .fragment width="69%"}
 
 ```{r}
 #| echo: false
@@ -184,35 +198,34 @@ data |>
 
 ```
 ::: 
+::::
 
-::: {.column width="31%" .fragment}
-::: {.callout-note}
-### Our empirical strategy:
-1. Compute a "representative vectors" for the concept of rationality.
-2. Retrieve the most similar sentences in the corpus from this vector.
-3. Group those sentences into clusters.
-::: 
-::: 
-:::: 
+:::{.notes}
+- Not the word "rational" or "rationality" in the first sentence
+:::
 
-## Clusters and dynamic clusters of meanings
+## 
 
-alluvial here 
+![](images/intertemporal_clusters_alluvial.png){width=100%}
 
-## Studying lineages and diffusion through citations 
+## Navigating our own results with an app 
 
-
+[https://0199205a-7b17-ab11-595d-8f12aae160dd.share.connect.posit.cloud/](https://0199205a-7b17-ab11-595d-8f12aae160dd.share.connect.posit.cloud/)
 
 ## Conclusion
 
-- Blablabla 
-
+:::{.highlight-last}
 - LLMs offers a tool to quantify conceptual relationship betweens texts. 
 
-::: callout-caution
+:::{.fragment} 
+:::{.callout-caution}
+
 ### But important challenges: 
-- Existing model are trained for understanding general language, not economic discourses.
+- Existing models are trained for understanding general language, not economic discourses.
 - Model are present-centric.
 - Computational ressources.
-- Data access.
+- Data access (Elsevier, Taylor and Francis, Books, *etc*.).
+
 ::: 
+:::
+:::
