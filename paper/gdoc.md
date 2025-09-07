@@ -644,7 +644,7 @@ Equally important, such indicators should be openly shared with other
 scholars to ensure transparency and replicability of the analysis. To
 put these principles into practice, we built an open-source
 dashboard---available here:
-[https://0199205a-7b17-ab11-595d-8f12aae160dd.share.connect.posit.cloud)---which
+[https://0199205a-7b17-ab11-595d-8f12aae160dd.share.connect.posit.cloud](https://0199205a-7b17-ab11-595d-8f12aae160dd.share.connect.posit.cloud)---which
 compiles the indicators we relied on to interpret clusters and
 communities.
 
