@@ -21,11 +21,11 @@ execute:
 freeze: auto
 ---
 
-\name{Thomas Delcey\textsuperscript{a}\thanks{CONTACT Thomas Delcey. Email: thomas.delcey@ube.fr} 
-  and Aurelien Goutsmedt\textsuperscript{b}\thanks{Email: aurelien.goutsmedt@uclouvain.be}
+\name{Thomas Delcey\textsuperscript{a}\thanks{CONTACT Thomas Delcey. Email: thomas.delcey@ube.fr},
+  Aurelien Goutsmedt\textsuperscript{b}\thanks{Email: aurelien.goutsmedt@uclouvain.be},
   and Alexandre Truc\textsuperscript{c}\thanks{Email: alexandre.truc@cnrs.fr}}
-\affil{\textsuperscript{a}Université de Bourgogne; 
-       \textsuperscript{b}UC Louvain; ICHEC; 
+\affil{\textsuperscript{a}Université de Bourgogne
+       \textsuperscript{b}UC Louvain, ISPOLE; ICHEC
        \textsuperscript{c}Université du CNRS}
 
 
@@ -52,18 +52,19 @@ source(here::here(".", "scripts", "paths_and_packages.R"))
 
 # load kable 
 
-pacman::p_load(knitr, kableExtra)
+pacman::p_load(knitr, 
+               kableExtra)
 
 ```
 
 ::: callout-warning
 ### Warning
-This intermediate version of the paper is a work in progress. The section discussion in particular will be expanded in future versions.
+This is a work in progress. The discussion Section in particular will be expanded in future versions.
 :::
 
 ::: callout-note 
 ### Interative application to explore the data 
-We develop an interactive application to explore the data and results presented in this paper. It is available at: [https://0199205a-7b17-ab11-595d-8f12aae160dd.share.connect.posit.cloud](https://0199205a-7b17-ab11-595d-8f12aae160dd.share.connect.posit.cloud). The first tab allows to explore the networks, while the second tab is a global summary of textual clusters.
+We have developed an interactive application to explore the data and results presented in this paper. It is available at: [https://0199205a-7b17-ab11-595d-8f12aae160dd.share.connect.posit.cloud](https://0199205a-7b17-ab11-595d-8f12aae160dd.share.connect.posit.cloud). The first tab allows to explore the bibliometric networks; the second tab is a global summary of textual clusters.
 ::: 
 
 
@@ -77,6 +78,7 @@ We develop an interactive application to explore the data and results presented 
 library(googledrive)
 library(rmarkdown)
 
+drive_auth()
 # Réutiliser le cache OAuth déjà créé
 options(
   gargle_oauth_cache = ".secrets",
@@ -184,11 +186,6 @@ kbl(data,
 #| echo: false
 #| warning: false
 #| message: false
-
-library(dplyr)
-library(stringr)
-library(knitr)
-library(kableExtra)
 
 # helper to keep LaTeX happy (quotes/dashes) and squash whitespace
 clean_tex <- function(x){

@@ -979,10 +979,6 @@ surface signals within the "new" program or as anchors for critique from
 
 # **Conclusion**
 
-# 
-
-# 
-
 [^1]: The bibliometric communities, identified through network analysis,
     could also be called clusters. But we opted for "communities" in
     order to distinguish them from the "textual clusters".
