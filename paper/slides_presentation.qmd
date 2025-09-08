@@ -5,11 +5,11 @@ author:
   - name: "Thomas Delcey"
     affiliation: "Université de Bourgogne"
     email: "Thomas.delcey@ube.fr"
-  - name: "Aurelien Goutsmedt"
+  - name: "Aurélien Goutsmedt"
     affiliation: "UC Louvain; ICHEC"
     email: "aurelien.goutsmedt@uclouvain.be" 
   - name: "Alexandre Truc"
-    affiliation: "Université du CNRS"
+    affiliation: "Université Côte d'Azur"
     email: "Alexandre.truc[at]auCNRSpointFr"
 format: 
   revealjs: 

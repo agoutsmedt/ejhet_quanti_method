@@ -524,7 +524,7 @@ substantial intellectual influences [@teplitskiyHow2022].
 
 Historians routinely discuss scientific influence, and recognition using
 proxies such as major grants, prizes, and honors. For example,
-@sentBehavioral2004's narrative of the transition from the dominance of
+@sent_behavioral_2004 narrative of the transition from the dominance of
 rational choice, through the limited success of "old" behavioral
 economics (e.g., Simon, George Katona), to the rise of "new" behavioral
 economics is organized around such milestones. In this sense, citations
@@ -540,26 +540,27 @@ and appropriation.
 @fig-rationality-paper-citations plots citation patterns for four
 seminal references on bounded rationality across all economics journals
 and the top five. The selection is partly arbitrary but standard in the
-literature: @simonBehavioral1955 and @allaisComportement1953 are early
-critiques of neoclassical rational choice with both empirical and
-normative implications, while @akerlofMarket1970 and
-@kahnemanProspect1979 are early "new" behavioral landmarks that mark
-the field's emergence and growth.
+literature: @simonBehavioral1955 and
+@allaisComportementHommeRationnel1953 are early critiques of
+neoclassical rational choice with both empirical and normative
+implications, while @akerlofMarket1970 and @kahnemanProspect1979 are
+early "new" behavioral landmarks that mark the field's emergence and
+growth.
 
 The influence of "new" behavioral economics overwhelms that of "old"
 behavioral economics, in both the top five and the full set of economics
 publications indexed in Web of Science. Whereas @simonBehavioral1955
-and Allais (1953) are never cited by more than 0.20% of all
-economics-article, @kahnemanProspect1979 reached at least 1% by the
-late 2010s and continues to rise. The contrast is both in scale of
-influence and speed of acceptance: citations to the two "new" behavioral
-papers grow rapidly and steadily right after publication, whereas Simon
-and Allais peak around the time of their Nobels or only much later in
-the 2010s wit the emergence of "new" behavioral economics. As argued by
-@offerNobel2016, many laureates receive a "Nobel premium," a modest
-post-prize citation bump. Simon and Allais fit this pattern, but for
-Kahneman and Tversky the effect is extreme: after the Nobel, their
-declining trend reverses and climbs throughout the sample.
+and @allaisComportementHommeRationnel1953 are never cited by more than
+0.20% of all economics-article, @kahnemanProspect1979 reached at least
+1% by the late 2010s and continues to rise. The contrast is both in
+scale of influence and speed of acceptance: citations to the two "new"
+behavioral papers grow rapidly and steadily right after publication,
+whereas Simon and Allais peak around the time of their Nobels or only
+much later in the 2010s wit the emergence of "new" behavioral economics.
+As argued by @offerNobel2016, many laureates receive a "Nobel premium,"
+a modest post-prize citation bump. Simon and Allais fit this pattern,
+but for Kahneman and Tversky the effect is extreme: after the Nobel,
+their declining trend reverses and climbs throughout the sample.
 [@offerNobel2016]
 
 Citation counts are a blunt tool and can be extended in several ways.
