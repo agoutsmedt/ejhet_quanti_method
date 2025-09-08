@@ -139,12 +139,15 @@ Illustrations of common unsupervised methods in HET for large-scale analysis
 
 
 :::: {.columns}
-::: {.column width="60%"}
+::: {.column width="65%"}
 
-![A simplified representation of words embeddings in 2D](images/fake_semantic_space_words_in_2D.png){#fig-vector_space width=80%}
+![A simplified representation of words embeddings in 2D](images/fake_semantic_space_words_in_2D.png){#fig-vector_space width=100%}
 :::
 
-::: {.column width="40%"}
+::: {.column width="35%"}
+
+<br>
+
 ::: {.callout-note appearance="simple"}
 LLMs: Each unique word are represented as vectors. 
 ::: 
@@ -162,15 +165,6 @@ We use sentence-BERT, a fast LLM model that reprensents **sentences** as vectors
 ::: 
 
 :::: {.columns}
-::: {.column width="31%" .fragment}
-::: {.callout-note}
-### Our empirical strategy:
-1. Compute a "representative vectors" for the concept of rationality.
-2. Retrieve the most similar sentences in the corpus from this vector.
-3. Group those sentences into clusters.
-::: 
-:::
-
 ::: {.column .fragment width="69%"}
 
 ```{r}
@@ -198,6 +192,15 @@ data |>
 
 ```
 ::: 
+
+::: {.column width="31%" .fragment}
+::: {.callout-note}
+### Our empirical strategy:
+1. Compute a "representative vectors" for the concept of rationality.
+2. Retrieve the most similar sentences in the corpus from this vector.
+3. Group those sentences into clusters.
+::: 
+:::
 ::::
 
 :::{.notes}

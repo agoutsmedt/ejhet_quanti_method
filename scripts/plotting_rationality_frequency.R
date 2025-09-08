@@ -33,7 +33,7 @@ plot_unigram <- function(df, token_query) {
     geom_point() +
     labs(
       title = sprintf("Relative Frequency of '%s' over Time", query),
-      x = "Year",
+      x = NULL,
       y = "Relative Frequency"
     ) +
     scale_x_continuous(breaks = seq(yr_min, yr_max, by = 5)) +
@@ -91,7 +91,7 @@ p <- ggplot(
     segment.alpha = 0.5
   ) +
   labs(
-    x = "Year",
+    x = NULL,
     y = "Relative Frequency"
   ) +
   ggsci::scale_color_npg() +
