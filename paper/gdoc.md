@@ -154,8 +154,9 @@ prompting historical and analytical reassessments
 [@moscatiEllsberg2024; @zappiaRationality2018; @zappiaLeonard2021].
 These critiques fed into Daniel Kahneman and Amos Tversky's Prospect
 Theory [@kahnemanProspect1979] and the rise of behavioral economics
-[@heukelomBehavioral2014], while "bounded rationality" attracted
-renewed attention after the 1980s [@sentRationality2018].
+[@heukelomBehavioral2014; @trucForty2022], while "bounded
+rationality" attracted renewed attention after the 1980s
+[@sentRationality2018].
 
 This history of the meanings and uses of "rationality" is also a history
 of changing methods. It reflects shifts in both mathematical techniques
@@ -179,7 +180,8 @@ macroeconomics---Lucas, Prescott, and Sargent---introduced elements of
 [@boumansEngineering2020]. Finally, this history intersects with the
 "applied turn" in economics: challenges to expected-utility theory
 coincided with rising experimental methods that became central to
-behavioral economics [@backhouseAge2017; @heukelomBehavioral2014].
+behavioral economics [@backhouseAge2017; @heukelomBehavioral2014;
+@trucForty2022].
 
 What can quantitative methods add to this rich historiography? Prior
 work has emphasized pioneering figures such as von Neumann, Koopmans, or
@@ -521,12 +523,12 @@ highly cited papers are more likely to be read closely and to be seen as
 substantial intellectual influences [@teplitskiyHow2022].
 
 Historians routinely discuss scientific influence, and recognition using
-proxies such as major grants, prizes, and honors. For example, Sent's
-narrative of the transition from the dominance of rational choice,
-through the limited success of "old" behavioral economics (e.g., Simon,
-George Katona), to the rise of "new" behavioral economics is organized
-around such milestones. In this sense, citations serve as a
-complementary proxy alongside traditional markers. In a large
+proxies such as major grants, prizes, and honors. For example,
+@sent_behavioral_2004 narrative of the transition from the dominance of
+rational choice, through the limited success of "old" behavioral
+economics (e.g., Simon, George Katona), to the rise of "new" behavioral
+economics is organized around such milestones. In this sense, citations
+serve as a complementary proxy alongside traditional markers. In a large
 qualitative--quantitative study of the Nobel Prize, @offerNobel2016
 distinguished several profiles: laureates who peak at the prize then
 decline, "innovators with staying power," "still rising" winners honored
@@ -538,23 +540,24 @@ and appropriation.
 @fig-rationality-paper-citations plots citation patterns for four
 seminal references on bounded rationality across all economics journals
 and the top five. The selection is partly arbitrary but standard in the
-literature: @simonBehavioral1955 and Allais (1953) are early critiques
-of neoclassical rational choice with both empirical and normative
+literature: @simonBehavioral1955 and
+@allaisComportementHommeRationnel1953 are early critiques of
+neoclassical rational choice with both empirical and normative
 implications, while @akerlofMarket1970 and @kahnemanProspect1979 are
 early "new" behavioral landmarks that mark the field's emergence and
 growth.
 
-The patterns align with several claims in the literature. First, the
-influence of "new" behavioral economics overwhelms that of "old"
-behavioral economics, in both the top five and the full set indexed in
-Web of Science. Whereas @simonBehavioral1955 and Allais (1953) never
-exceed about 0.20% of all economics-article citations over the period,
-@kahnemanProspect1979 reached at least 1% by the late 2010s and
-continues to rise. The contrast reflects both the scale of influence and
-the speed of acceptance: citations to the two "new" behavioral papers
-grow rapidly and steadily after publication, whereas Simon and Allais
-peak around the time of their Nobels or only much later in the 2010s. As
-argued by Offer and Söderberg, many laureates receive a "Nobel premium,"
+The influence of "new" behavioral economics overwhelms that of "old"
+behavioral economics, in both the top five and the full set of economics
+publications indexed in Web of Science. Whereas @simonBehavioral1955
+and @allaisComportementHommeRationnel1953 are never cited by more than
+0.20% of all economics-article, @kahnemanProspect1979 reached at least
+1% by the late 2010s and continues to rise. The contrast is both in
+scale of influence and speed of acceptance: citations to the two "new"
+behavioral papers grow rapidly and steadily right after publication,
+whereas Simon and Allais peak around the time of their Nobels or only
+much later in the 2010s wit the emergence of "new" behavioral economics.
+As argued by @offerNobel2016, many laureates receive a "Nobel premium,"
 a modest post-prize citation bump. Simon and Allais fit this pattern,
 but for Kahneman and Tversky the effect is extreme: after the Nobel,
 their declining trend reverses and climbs throughout the sample.
@@ -563,15 +566,17 @@ their declining trend reverses and climbs throughout the sample.
 Citation counts are a blunt tool and can be extended in several ways.
 One can examine *who* cites a work---by discipline, journal, or
 subfield---and assess the *qualities* of citations, distinguishing
-positive from negative uses or functional roles in the text. Beyond
-simple counts, networked uses of citations help map relations among
-authors and publications. A prominent example is bibliographic coupling,
-widely used in the history of economics. It maps a corpus by the
-proximity of reference lists: texts are nodes, and the more references
-they share, the closer they appear in a two-dimensional layout. The
-premise is that shared references proxy intellectual proximity. Such
-maps delineate fields and disciplines and can reveal their internal
-structure, including possible core--periphery patterns.
+positive from negative uses or functional roles in the text
+[@budiUnderstanding2023]. Another way to use citations is to transform
+citation data into relational data. A prominent example is bibliographic
+coupling, widely used in the history of economics. It maps relationship
+between articles by using the similarity of reference lists: articles
+are nodes, and the more references two article share, the closer they
+appear in a two-dimensional layout. The premise is that shared
+references proxy intellectual proximity. These maps help delineate the
+frontiers of disciplines, fields or sub-specialities and expose their
+internal organization, including hierarchical and/or core-periphery
+structures.
 
 Running bibliographic coupling begins with delimiting the corpus: which
 articles count as "about rationality"? Keyword searches are brittle,
@@ -832,31 +837,6 @@ the early 1980s this community split, yielding "Monetary Policy and
 Inflation," which leverages game-theoretic models to deal with
 credibility and reputation in policy design.
 
-Thus, beyond the well-known debates on business cycles and inflation,
-there was a community, not totally focused on macroeconomics issues,
-that existed in parallel in the 1970s. After the mid-1970s, we also find
-several trajectories of independent communities that start to employ
-more and more rational expectations. A first example appears in
-1976-1983: two communities on finance topics ("Asset Pricing and
-Consumption" and "cl_319) partially merged to form "Rational
-Expectations and Market Information". At the heart of the community was
-the concept of imperfect information (Rothschild and Stiglitz, 1976,
-being an important node). A central paper was Grossman and Stigliz
-(1980), taking inspiration from Lucas (1973) and the combination of
-rational expectations and noisy signals to criticize Fama and the
-possibility of efficient markets (see Delcey and Sergi, 2023).
-Similarly, a new cluster emerged in 1979-1986, "Game Theory and
-Information", aggregating papers in game theory, now recurring more
-significantly to the concept of rational expectations. In this cluster,
-Kydland and Prescott (1977) or Barro and Gordon (1983) on rational
-expectations and time-inconcistency problems were major references, in
-parallel to Kreps and Wilson (1980) sequential equilibria model, or
-Selten's (1975) refinement of Nash equilibrium. In the early 1980s, this
-community would split, with a new community emerging, "Monetary Policy
-and Inflation", leveraging game theory to discuss how monetary policy
-can manage inflation, making concepts like credibility or reputation
-central.
-
 A second diffusion process involves the emergence of new communities
 organized around rational expectations that gradually separate from the
 initial core. In the early 1970s, an international macroeconomics
@@ -951,31 +931,42 @@ rationality in economics.
 From 1979--1986, a more specific "Behavioral Decision Theory" community
 forms around Kahneman and Tversky's contributions. It persists through
 the end of our period and, as with rational expectations, spins off
-several autonomous communities; after the 2000s, behavioral economics
-becomes a dominant venue for research on rationality. By contrast,
-Simon's articles fades as a bibliometric anchor: "bounded" and
+several autonomous communities. In addition to the main Kahneman and
+Tversky's cluster, we find four other clusters about pro-social
+behavior, behavioral intertemporal decision, behavioral game theory, and
+behavioral finance. After the 2000s, behavioral economics becomes a
+dominant venue for research on rationality with five behavioral
+economics clusters culminating to around 30% of the network. By
+contrast, Simon's articles fades as a bibliometric anchor: "bounded" and
 "procedural" rationality are regularly invoked, as the textual analysis
 highlighted, but no later community clearly bears his heritage.
 
-While it is often argued that the rise of "new" behavioral economics
-overshadowed earlier "old" behavioral work, citations to
-@simonBehavioral1955 have been higher since the ascent of the new
-program. This resurgence admits at least three interpretations. A more
-positive reading is that the "new" program helped revive abandoned
-research directions and moved toward reconciliation with earlier
-strands. A more critical view sees intellectual appropriation, in which
-classic references are reframed to fit the new agenda, renewing interest
-through a presentist lens. A third interpretation is that the citation
-increase reflects a growing backlash against the "new" program from the
-standpoint of "old" behavioral economics.
-
-Citation counts cannot adjudicate between these readings, but they can
-guide qualitative inquiry and motivate further quantitative work. As
-shown above for Simon's trajectory in the 1960s--1970s, this can involve
-tracking the authors and communities citing these works, and combining
-text with citation data to test whether references to Simon function as
-surface signals within the "new" program or as anchors for critique from
-"old" behavioral economists.
+Tt is often argued that the rise of "new" behavioral economics
+overshadowed earlier "old" behavioral works, and our quantitative
+studies delineates the specific chronology and magnitude of the
+different attempts at stirring a behavioral shift in economics. However,
+as made clear by @fig-rationality-paper-citations, it is not just a
+linear story of a shift from one program to the other. Citations to
+@simonBehavioral1955 have never been higher than since the ascent of
+the new behavioral economics. This resurgence admits at least three
+interpretations. A more favorable reading is that the "new" program
+helped revive abandoned research directions and moved toward
+reconciliation with earlier strands (something promoted by
+@sentRationality2008 or more recently by @earlPrinciples2022). A more
+unfavorable view sees intellectual appropriation, in which classic
+references are reframed to fit the new agenda, renewing interest but
+with a biased and presentist lens [@monginAllais2019]. A third more
+critical interpretation is that the citation increase reflects a growing
+backlash against the "new" program from the standpoint of "old"
+behavioral economics. Preliminary evidence supports the second
+interpretation. This is suggested by the sparse and unstructured
+citations patterns to "old" behavioral economics and the fact that
+discussions of rationality are increasingly framed by "new" behavioral
+and experimental concepts. While a definitive conclusion is beyond the
+scope of this paper, our study provides a roadmap for future
+quantitative and qualitative research needed to further the
+understanding of the relationship between "old" and "new" behavioral
+economics.
 
 # **Conclusion**
 

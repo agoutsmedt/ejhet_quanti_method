@@ -1,8 +1,8 @@
 ---
-title: "A history of rationality in economics: a computational approach"
+title: "A History of Rationality in Economics: a Computational Approach"
 # Interact needs the special \name{} and \affil{} inside \author{...}.
 # We inject raw LaTeX as the author field so the class formats names/affils correctly.
-date: "2025-09-05"
+date: today
 lang: en
 # Chicago author–date via natbib + tfcad.bst (Taylor & Francis)
 bibliography: references.bib
@@ -22,7 +22,7 @@ freeze: auto
 ---
 
 \name{Thomas Delcey\textsuperscript{a}\thanks{CONTACT Thomas Delcey. Email: thomas.delcey@ube.fr},
-  Aurelien Goutsmedt\textsuperscript{b}\thanks{Email: aurelien.goutsmedt@uclouvain.be},
+  Aurélien Goutsmedt\textsuperscript{b}\thanks{Email: aurelien.goutsmedt@uclouvain.be},
   and Alexandre Truc\textsuperscript{c}\thanks{Email: alexandre.truc@cnrs.fr}}
 \affil{\textsuperscript{a}Université de Bourgogne
        \textsuperscript{b}UC Louvain, ISPOLE; ICHEC
@@ -63,7 +63,7 @@ This is a work in progress. The discussion Section in particular will be expande
 :::
 
 ::: callout-note 
-### Interative application to explore the data 
+### Interactive application to explore the data 
 We have developed an interactive application to explore the data and results presented in this paper. It is available at: [https://0199205a-7b17-ab11-595d-8f12aae160dd.share.connect.posit.cloud](https://0199205a-7b17-ab11-595d-8f12aae160dd.share.connect.posit.cloud). The first tab allows to explore the bibliometric networks; the second tab is a global summary of textual clusters.
 ::: 
 
@@ -175,7 +175,7 @@ kbl(data,
 
 
 ::: {.landscape}
-![Alluvial plot of clusters of sentences about rationality](images/alluvial_llm.png){#fig-llm-alluvial}
+![Alluvial plot of clusters of sentences about rationality](images/intertemporal_clusters_alluvial.png){#fig-llm-alluvial}
 ::: 
 
 
