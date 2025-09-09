@@ -112,3 +112,10 @@ ggsave(
   width = 8,
   height = 9
 )
+
+ggsave(
+  file.path(image_path, "relative_freq_rationality_and_rational_2.png"),
+  width = 8,
+  height = 5
+)
+

@@ -67,7 +67,7 @@ if (str_detect(getwd(), "goutsmed")) {
     wos_data_path <- "C:/Users/Admin/MEGA/data/wos"
     general_data_path <- "C:/Users/Admin/MEGA/data/wos"
   } else {
-    if (str_detect(getwd(), "thomd")) {
+    if (str_detect(getwd(), "github_w")) {
       data_path <- "C:/Users/thomd/MEGA/data/jstor"
       jstor_raw_data <- data_path
       wos_data_path <- "C:/Users/thomd/MEGA/data/wos"
