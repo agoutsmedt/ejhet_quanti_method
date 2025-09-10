@@ -126,7 +126,7 @@ for (year in years_to_do) {
 # load the results
 closest_sentences <- readRDS(here::here(
   data_path,
-  "closest_sentences_0.01_filtered_rationality_score.rds"
+  "closest_sentences_0.01_filtered_rationality_score_window_5.rds"
 ))
 
 df_closed_sentences <- bind_rows(closest_sentences)
@@ -142,16 +142,16 @@ df_closed_sentences %>%
     x = "Year",
     y = "Number of sentences"
   ) +
-  theme_light(base_size = 12)
+  theme_light(base_size = 20)
 
 # save the results
 ggsave(
   filename = here::here(
-    image_path_temp,
+    image_path,
     "distribution_closest_sentences_by_year.png"
   ),
-  width = 10,
-  height = 6,
+  width = 9,
+  height = 5,
   units = "in",
   dpi = 300
 )

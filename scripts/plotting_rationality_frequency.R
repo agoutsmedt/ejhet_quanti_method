@@ -33,7 +33,7 @@ plot_unigram <- function(df, token_query) {
     geom_point() +
     labs(
       title = sprintf("Relative Frequency of '%s' over Time", query),
-      x = "Year",
+      x = NULL,
       y = "Relative Frequency"
     ) +
     scale_x_continuous(breaks = seq(yr_min, yr_max, by = 5)) +
@@ -50,26 +50,72 @@ plot_unigram(df = df, token_query = "rationality")
 
 df_filtered <- df |>
   mutate(token_lower = str_to_lower(token)) |>
-  filter(token_lower == "rational" | token_lower == "rationality")
+  filter(token_lower %in% c("rationality", "rational"))
+
+# positions de labels = fin de série, alignées sur la courbe loess (pas les points bruyants)
+label_pos <- df_filtered |>
+  group_by(token_lower) |>
+  summarise(
+    x = max(year, na.rm = TRUE),
+    y = {
+      d <- cur_data_all()
+      fit <- loess(relative_freq ~ year, data = d, span = 0.75)
+      as.numeric(predict(fit, newdata = data.frame(year = x)))
+    },
+    .groups = "drop"
+  )
 
 
-df_filtered |>
-  ggplot(aes(x = as.integer(year), y = relative_freq, color = token_lower)) +
-  geom_point() +
-  geom_smooth(method = "loess", se = FALSE, size = 1) +
+p <- ggplot(
+  df_filtered,
+  aes(x = as.integer(year), y = relative_freq, color = token_lower)
+) +
+  geom_point(alpha = 0.35) +
+  geom_smooth(method = "loess", se = FALSE, linewidth = 1) +
+  ggrepel::geom_label_repel(
+    data = label_pos,
+    aes(
+      x = x,
+      y = y,
+      label = stringr::str_to_title(token_lower),
+      color = token_lower
+    ),
+    size = 5,
+    inherit.aes = FALSE,
+    direction = "y",
+    nudge_x = 5, # pousse les labels vers la droite
+    hjust = 0,
+    box.padding = 0.2,
+    point.padding = 0.1,
+    min.segment.length = 0,
+    segment.alpha = 0.5
+  ) +
   labs(
-    x = "Year",
-    y = "Relative Frequency",
-    color = "Words",
+    x = NULL,
+    y = "Relative Frequency"
   ) +
   ggsci::scale_color_npg() +
-  scale_x_continuous(breaks = seq(1880, max(df$year), by = 20)) +
-  theme_light(base_size = 20)
+  scale_x_continuous(
+    breaks = seq(1880, max(df$year, na.rm = TRUE), by = 20),
+    limits = c(1880, max(df$year, na.rm = TRUE) + 10) # marge pour les labels
+  ) +
+  theme_light(base_size = 20) +
+  theme(legend.position = "none", plot.margin = margin(5.5, 30, 5.5, 5.5)) +
+  coord_cartesian(clip = "off") # autorise le débordement des labels à droite
+
+print(p)
 
 # Save the plot
 
 ggsave(
   file.path(image_path, "relative_freq_rationality_and_rational.png"),
-  width = 10,
-  height = 6
+  width = 8,
+  height = 9
 )
+
+ggsave(
+  file.path(image_path, "relative_freq_rationality_and_rational_2.png"),
+  width = 8,
+  height = 5
+)
+

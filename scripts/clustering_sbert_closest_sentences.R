@@ -234,7 +234,7 @@ process_window <- function(years, df) {
 }
 # Process all time windows
 results <- map(time_windows, ~process_window(.x, bert_df))
-saveRDS(results, file.path(data_path, "clustering_rational_sentences_more.rds"))
+saveRDS(results, file.path(data_path, "clustering_rational_sentences.rds"))
 
 #' If necessary: `results <- readRDS(file.path(data_path, "clustering_rational_sentences.rds"))`
 

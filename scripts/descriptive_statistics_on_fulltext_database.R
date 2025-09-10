@@ -13,10 +13,10 @@ gg <- metadata |>
   ggplot(aes(x = year)) +
   geom_point(aes(y = n)) +
   labs(
-    x = "Year",
+    x = NULL,
     y = "Number of documents"
   ) +
-  theme_light(base_size = 20)
+  theme_light(base_size = 25)
 
 ggsave(
   plot = gg,
@@ -51,10 +51,10 @@ gg <- metadata |>
   # y axis in percentage
   scale_y_continuous(labels = scales::percent_format(scale = 1)) +
   labs(
-    x = "Languages",
-    y = ""
+    x = NULL,
+    y = "Percentage of documents"
   ) +
-  theme_light(base_size = 20)
+  theme_light(base_size = 25)
 
 # save the plot
 ggsave(
