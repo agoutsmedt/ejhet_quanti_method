@@ -140,7 +140,7 @@ plot_citations <- ggplot(citations_selected_articles, aes(x=Annee_Bibliographiqu
   theme_minimal() +
   theme(panel.background = element_rect(fill = "white", color = NA),
         plot.background = element_rect(fill = "white", color = NA))
-ggsave(plot=plot_citations, here(data_path,"Pictures", paste0("plot_citations.png")), width=32, height=18, units = "cm")
+ggsave(plot=plot_citations, here(data_path,"Pictures", paste0("plot_citations.png")), width=32, height=18, units = "cm", scale = 0.7)
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 # Citation analysis (only bounded) ####
@@ -164,20 +164,20 @@ plot_citations_bounded <- ggplot(citations_selected_articles,
                                  aes(x=Annee_Bibliographique, y=share_citations, group=ItemID_Ref, color=ItemID_Ref)) +
   geom_text(x = 2002+4, 
             y = max(citations_selected_articles$share_citations)*0.97, 
-            label = "Kahneman Nobel", color = "black", size = 4, fontface = "bold", inherit.aes = FALSE) +
-  geom_vline(xintercept = 2002, linetype="dotted", color = "black", size=1) +
+            label = "Kahneman Nobel", color = "black", size = 3, fontface = "bold", inherit.aes = FALSE) +
+  geom_vline(xintercept = 2002, linetype="dotted", color = "black", size=0.5) +
   geom_text(x = 2001-3.5, 
             y = max(citations_selected_articles$share_citations)*0.97, 
-            label = "Akerlof Nobel", color = "black", size = 4, fontface = "bold", inherit.aes = FALSE) +
-  geom_vline(xintercept = 2001, linetype="dotted", color = "black", size=1) +
+            label = "Akerlof Nobel", color = "black", size = 3, fontface = "bold", inherit.aes = FALSE) +
+  geom_vline(xintercept = 2001, linetype="dotted", color = "black", size=0.5) +
   geom_text(x = 1988, 
             y = max(citations_selected_articles$share_citations)*0.97, 
-            label = "Allais Nobel", color = "black", size = 4, fontface = "bold", inherit.aes = FALSE) +
-  geom_vline(xintercept = 1988, linetype="dotted", color = "black", size=1) +
+            label = "Allais Nobel", color = "black", size = 3, fontface = "bold", inherit.aes = FALSE) +
+  geom_vline(xintercept = 1988, linetype="dotted", color = "black", size=0.5) +
   geom_text(x = 1978, 
             y = max(citations_selected_articles$share_citations)*0.97, 
-            label = "Simon Nobel", color = "black", size = 4, fontface = "bold", inherit.aes = FALSE) +
-  geom_vline(xintercept = 1978, linetype="dotted", color = "black", size=1) +
+            label = "Simon Nobel", color = "black", size = 3, fontface = "bold", inherit.aes = FALSE) +
+  geom_vline(xintercept = 1978, linetype="dotted", color = "black", size=0.5) +
   geom_smooth(method="auto", se=FALSE, fullrange=FALSE, level=0.95, span = 0.3) +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.75)) +
   scale_x_continuous("Years", limit=c(1955,2015)) +
@@ -189,7 +189,7 @@ plot_citations_bounded <- ggplot(citations_selected_articles,
         plot.background = element_rect(fill = "white", color = NA),
         plot.title = element_text(hjust = 0.5)) +
   ggtitle("All economics")
-ggsave(plot=plot_citations_bounded, here(data_path,"Pictures", paste0("plot_citations_bounded.png")), width=32, height=18, units = "cm")
+ggsave(plot=plot_citations_bounded, here(data_path,"Pictures", paste0("plot_citations_bounded.png")), width=32, height=18, units = "cm", scale = 0.7)
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 # Citation analysis (only rational) ####
@@ -222,7 +222,7 @@ plot_citations_rational <- ggplot(citations_selected_articles,
         plot.background = element_rect(fill = "white", color = NA),
         plot.title = element_text(hjust = 0.5)) +
   ggtitle("All economics")
-ggsave(plot=plot_citations_rational, here(data_path,"Pictures", paste0("plot_citations_rational.png")), width=32, height=18, units = "cm")
+ggsave(plot=plot_citations_rational, here(data_path,"Pictures", paste0("plot_citations_rational.png")), width=32, height=18, units = "cm", scale = 0.7)
 
 
 
@@ -262,7 +262,7 @@ plot_citations <- ggplot(citations_selected_articles, aes(x=Annee_Bibliographiqu
   theme_minimal() +
   theme(panel.background = element_rect(fill = "white", color = NA),
         plot.background = element_rect(fill = "white", color = NA))
-ggsave(plot=plot_citations, here(data_path,"Pictures", paste0("plot_citations_top_5.png")), width=32, height=18, units = "cm")
+ggsave(plot=plot_citations, here(data_path,"Pictures", paste0("plot_citations_top_5.png")), width=32, height=18, units = "cm", scale = 0.7)
 
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
@@ -287,19 +287,19 @@ plot_citations_bounded_top5 <- ggplot(citations_selected_articles,
   # geom_text(x = 2002+4, 
   #           y = max(citations_selected_articles[$share_citations)*0.6, 
   #           label = "Kahneman Nobel", color = "black", size = 4, fontface = "bold", inherit.aes = FALSE) +
-  geom_vline(xintercept = 2002, linetype="dotted", color = "black", size=1) +
+  geom_vline(xintercept = 2002, linetype="dotted", color = "black", size=0.5) +
   # geom_text(x = 2001-3.5, 
   #           y = max(citations_selected_articles$share_citations)*0.6, 
   #           label = "Akerlof Nobel", color = "black", size = 4, fontface = "bold", inherit.aes = FALSE) +
-  geom_vline(xintercept = 2001, linetype="dotted", color = "black", size=1) +
+  geom_vline(xintercept = 2001, linetype="dotted", color = "black", size=0.5) +
   # geom_text(x = 1988, 
   #           y = max(citations_selected_articles$share_citations)*0.6, 
   #           label = "Allais Nobel", color = "black", size = 4, fontface = "bold", inherit.aes = FALSE) +
-  geom_vline(xintercept = 1988, linetype="dotted", color = "black", size=1) +
+  geom_vline(xintercept = 1988, linetype="dotted", color = "black", size=0.5) +
   # geom_text(x = 1978, 
   #           y = max(citations_selected_articles$share_citations)*0.6, 
   #           label = "Simon Nobel", color = "black", size = 4, fontface = "bold", inherit.aes = FALSE) +
-  geom_vline(xintercept = 1978, linetype="dotted", color = "black", size=1) +
+  geom_vline(xintercept = 1978, linetype="dotted", color = "black", size=0.5) +
   geom_smooth(method="auto", se=FALSE, fullrange=FALSE, level=0.95, span = 0.3) +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.75)) +
   scale_x_continuous("Years", limit=c(1955,2015)) +
@@ -314,7 +314,8 @@ plot_citations_bounded_top5 <- ggplot(citations_selected_articles,
 ggsave(plot=plot_citations_bounded_top5, here(data_path,"Pictures", paste0("plot_citations_bounded_top_5.png")), width=32, height=18, units = "cm")
 
 combined <- patchwork::wrap_plots(plot_citations_bounded/plot_citations_bounded_top5 + patchwork::plot_layout(axes = "collect_x"))
-ggsave(plot=combined, here(data_path,"Pictures", paste0("plot_citations_bounded_combined.png")), width=32, height=18, units = "cm")
+ggsave(plot=combined, here(data_path,"Pictures", paste0("plot_citations_bounded_combined.png")), width=32, height=18, units = "cm", scale = 0.8)
+ggsave(plot=combined, here(data_path,"Pictures", paste0("plot_citations_bounded_combined_high.png")), width=25, height=18, units = "cm", scale = 0.8)
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 # Citation analysis ####
