@@ -1,0 +1,331 @@
+---
+title: "A history of rationality in economics"
+subtitle: "A computational approach" 
+author: 
+  - name: "Thomas Delcey"
+    affiliation: "Université de Bourgogne"
+    email: "Thomas.delcey@ube.fr"
+  - name: "Aurélien Goutsmedt"
+    affiliation: "UC Louvain; ICHEC"
+    email: "aurelien.goutsmedt@uclouvain.be" 
+  - name: "Alexandre Truc"
+    affiliation: "Université Côte d'Azur"
+    email: "Alexandre.truc[at]cnrs.fr"
+format: 
+  revealjs: 
+    theme: 
+      - custom_clean.scss
+    css: custom.css
+    transition: fade
+    slide-number: true
+    toc: false 
+    toc-depth: 1
+    slide-level: 2
+    embed-resources: true
+    view-distance: 100
+    progress: true
+    width: 1200
+    margin: 0.03
+    incremental: true
+    lightbox: auto
+    fig-align: center
+    cap-location: top
+    center: true
+---
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| include: false
+
+
+# move to the root directory of the project with "here::here()"
+source(here::here("scripts", "paths_and_packages.R"))
+
+```
+
+## Context 
+
+:::{.highlight-last}
+- **Special issue**: methods in the history of economic thought (HET)
+
+- **Goal**: contribute a methodological essay showing how quantitative tools can enrich history of economic thought with a concrete methodological blueprint
+
+- **Neither a proof of concept paper, nor a conceptual paper, nor a review of methods**
+:::
+
+## Our contribution
+
+:::{.highlight-last}
+:::{.fragment .nonincremental}
+- The meanings of rationality in 20<sup>th</sup>-century economics:  
+  - A long-standing concern for historians  
+  - Using computational methods to capture the broader picture but also deep dive on specific issues
+:::
+
+:::{.fragment .nonincremental}
+- A concrete methodological reflection based on our workflow:  
+  - Challenges, successes, limits, and possible improvements
+:::
+
+:::
+:::{.notes}
+- Explain the difficulty of discussing methodology: you need a subject to illustrate, we wanted something general that many researcher could understand, but also quite difficult to articulate within the same paper the methodological/epistemological discussoin, with the concrete results about the history of rationality. We are obviously not done, but we want to discuss some issues.
+:::
+
+## From sources to corpus 
+
+- Issue 1: you need sources
+  - JSTOR fulltext database (around 300 000 documents, 31 millions sentences)
+  - Web of Science structured citation data for the 1970s onwards
+  
+::: {.callout-warning .fragment .nonincremental}
+
+### It is sometimes more challenging to build the data than to analyze it:
+
+- Access to the source (JSTOR Data for Research)
+- Filtering documents (book reviews)
+- Cleaning texts (headers, acknowledgments, etc.)
+- Matching datasets (JSTOR + WoS)
+- Handling large datasets
+
+:::
+
+:::{.notes}
+- A first important point is that data rarely come ready to be analyzed. A lot of work and choices go into structuring data just as with any kind of qualitative or quantitaive analysis
+:::
+
+## Data availability shapes research
+
+::: {#fig-distribution}
+::: {.columns}
+::: {.column width="50%"}
+![](images/documents_distribution_fulltext_database.png){width="80%"}
+:::
+::: {.column width="50%"}
+:::{.fragment}
+![](images/language_distribution_fulltext_database.png){width="80%"}
+:::
+:::
+:::
+Distribution of documents in the JSTOR fulltext database
+:::
+
+:::{.notes}
+- Is data available for my research question, is the quality enough ? And if not what kind of work would it require to make it work ?
+- Pas si mal non plus pour les langues, au vu de l'internationalisation post-1970. Mais comment traiter le multi-langue?
+- JSTOR goes back far but misses some journals, WoS is more complete but start in the 1970s
+- How to address the exponential rise of journal creation. Should we study "all economics" by taking all journals post 2000 ? the top 50 ? top 100 ?
+:::
+
+
+## From sources to corpus
+:::{.highlight-last}
+- Quantitative work forces the researcher to settle on a narrow and precise definition of its object
+- Issue 2: Building a corpus is an iterative process that depends on a deep understanding of the material.
+  - History of proxies used: history of JEL codes, concepts and related keywords, journals...
+  - History of object studied: quality check, relation to existing literature...
+:::
+
+:::{.notes}
+- Forming the corpus is the first task and one of the most difficult conceptually, a quantitative study on a biased
+- My own experience working with non-quantitativist is that they often underestimate the difficulty of this first step
+- history of proxies used: example JEL codes neuroeconomics vs behavioral economics
+- history of object: you need to understand precisly how the corpus you create relate or not to existing discussion in the literature: if the history of behavioral economics is often written with Kahneman and Tversky as a focus point, but your corpus includes hundreds of practitionners, you have a structural gap between the histories you produce
+- Finally, when you analyze you obviously need a deep understading of your subject or your don't understand anything. One could think that we look at a graph and we interpret from the vizualization, but in reality most of the analytical analysis is done from thousands of tables that requrie reading and understanding and that are hidden from the reader. Vizualizations are heuristics for the reader.
+:::
+
+## Method 1: Through text (simple)
+
+::: {#fig-exploration }
+::: {.columns}
+::: {.column width="50%"}
+![](images/relative_freq_rationality_and_rational.png){width="80%"}
+:::
+::: {.column width="50%"}
+:::{.fragment}
+![Neighbor words of “rational” and “rationality”](images/top_neighbor_words_both.png){width="87%"}
+:::
+:::
+:::
+Exploration of the corpus with simple text analysis tools
+:::
+
+:::{.notes}
+- Quantitative methods are very diverse and many tools or indicator are built for one specific question 
+- Quantitative methods comes in different degrees of complexity: some can be incorporated in the everyday toolkit of the historians while others require a more in-depth analysis. An important point we want to make is that 
+- We want to argue that simple tools are very useful and could become standard complementary tool for historians
+:::
+
+## Method 1: Through text (advanced)
+
+:::{.highlight-last}
+```{r}
+df <- data.frame(
+  `/` = c("Cat", "Dog"),
+  D1 = c(0.8, 0.7),
+  D2 = c(0.4, 0.6),
+  `Has hair` = c(0.8, 0.7),
+  `Wash itself` = c(-0.9, 0.9),
+  D5 = c("...","..."),
+  `...` = c("...","..."),
+  check.names = FALSE
+)
+
+df |> 
+  knitr::kable(align = "c") |> 
+  kableExtra::kable_styling(bootstrap_options = "condensed", full_width = F, font_size = 22) 
+```
+- Keywords and standard topic models/embedding methods do not understand the difference between a "keen **interest** in fishing" and an "**interest** rate"
+- Here we use a more advanced techniques based on LLMs models.  The model understands that 'agents maximize utility' is close to 'people behave rationally' despite sharing no common words
+- Moving from "does this text contain 'rationality'?" to "what does 'rationality' mean in this context?"
+:::
+
+:::{.notes}
+  - Analytical: by clustering sentences with similar meanings, they can identify the dominant ways 'rationality' was discussed in different decades
+  - Corpus creation: Moving Beyond keyword search finding articles about rationality that do not necessarily explicitly use the term
+:::
+
+
+## Method 1: Through text (advanced)
+
+::: {.callout-note appearance="simple"}
+We use sentence-BERT, a fast LLM model that represents **sentences** as vectors and is optimized for semantic similarity tasks.
+::: 
+
+:::: {.columns}
+::: {.column width="65%"}
+
+```{r}
+#| echo: false
+#| message: false 
+#| warning: false
+#| label: tbl-top_sentences
+#| tbl-cap: "Closest to 'Economic agents are supposed to be rational.'"
+
+# load data OUTPUT_FILE = top_5_sentences_to_fake_sentence.feather
+
+data <- arrow::read_feather(here::here(data_path, "top_5_sentences_to_fake_sentence.feather"))
+
+# ;2 "Basically, for Professor Hicks, as for Jevons and Marshall, economic decisions are made by an abstract calculating machine";3 "I find myself continuing to believe ... that, whatever the origin of the want, when it rises to consciousness, it is subject to a process which we call rational, when the human agent decides 
+sentence_clean <- "Basically, for Professor Hicks, as for Jevons and Marshall, economic decisions are made by an abstract calculating machine."
+
+data |> 
+  filter(rank < 4, year %in% c(1950, 1975, 2000)) |>
+  mutate(sentence = ifelse(str_detect(sentence, "^;"), sentence_clean, sentence)) |>
+  # kable the table
+  select(year, sentence, similarity) |>
+  mutate(similarity = round(similarity, 3)) |>
+  knitr::kable() |> 
+  kableExtra::kable_styling(full_width = F, font_size = 17) 
+
+```
+::: 
+
+::: {.column width="35%" .fragment}
+::: {.callout-note}
+
+### Our empirical strategy:
+
+1. Compute a "representative vectors" for the concept of rationality.
+2. Retrieve the most similar sentences in the corpus from this vector.
+3. Group those sentences into clusters.
+::: 
+:::
+::::
+
+:::{.notes}
+- Not the word "rational" or "rationality" in the first sentence
+:::
+
+## 
+
+![](images/intertemporal_clusters_alluvial.png){width=100%}
+
+## Examples of some general results
+:::{.highlight-last}
+- Cluster 2 (1900-1940): the shift away from hedonistic psychology vs institutionnalists
+  - “to find the basis of economic rationality in the development of a social institution directs our attention away from that **dark subjective realm**, where so many economists have groped, to an objective realm, where behavior can be studied in the light of the common day” (Wesley Mitchell, 1916)
+- From the 1970s rational expectations became central and occupied substantial discussion, appearing across multiple textual clusters and bibliometric communities
+:::
+
+## Examples of some general results
+:::{.highlight-last}
+- Cluster 40 (1950-2019) and 50 (2000-2019): old and new behavioral economics
+  - "Nevertheless, it is worth emphasizing that, for the purpose of this paper, **rationality is an assumption** that is explored and **not a hypothesis that is tested**" (Amartya Sen, 1966)
+  - "Recent work on behavioral economics has helped to make the possibility of such **irrationality** or myopic behavior a part of mainstream economics." (Martin Feldstein, 2005)
+:::
+
+:::{.notes}
+- Not an alternative history of the concept, nor a comprehensive  account of its evolution. Its aim is to show, concretely, the benefits, limits, and uses of quantitative methods in the history of economics
+:::
+
+
+## Method 2: Through meta data (simple)
+
+:::{.highlight-last}
+- Beyond textual analysis, another important source of information is documents metadata (e.g., authors, journals, institutions, citations)
+- In contrast to textual analysis, bibliometric analysis in economics is largely confined to the postwar period (change in practices, data availability)
+- A focus on citation: lineage, influence, heritage, and community structure
+:::
+
+:::{.notes}
+- 
+:::
+
+## Method 2: Through meta data (simple)
+
+:::{.highlight-last}
+- Sent (2004) or Heukelom (2014) tracing and "explaining" the success of behavioral economics: prestigious publication, John Bates Clark medal, Nobel...
+:::
+:::{.fragment style="text-align: center; margin-top: -40px;"}
+![](images/plot_citations_bounded_combined.png){width=60%}
+:::
+:::{.notes}
+- Teplitskiy et al. 2022: importance of status of paper; highly cited paper are more read but also more deeply engaged with
+- This tool gives a rapid look at the differences in reception of old and new behavioral economics, something often commented upon but rarely precisly measured
+- It's both about the timing and scale: immediate success for KT, bigger scale
+- Can go further for example with relation to Nobel, or relation between old/new (Offer and Soderberg 2016)
+- Adopting simple tools such as these could be relatively standard: not very costly and quite informative when mixed with traditionnal qualitative milestones
+:::
+
+
+## Method 2: Through meta data (advanced)
+
+:::{.highlight-last}
+- Citation counts are a blunt tool and can be extended in several ways
+- Our present study presents different interest not really tackled in the literature:
+  - Situate the behavioral economics turn into a more general perspective regarding how we talk about rationality
+  - Dive deeper into the relationship between old and new behavioral economics
+- From descriptive to relational data: bibliographic coupling
+:::
+
+:::{.notes}
+- Bibliographic network allows for a detailed examination of the corpus because we can better understand the structure of the litterature: this means examining sub-groups within the corpus, their relation to each others... Typically, while looking at the whole corpus can put forward some authors, using clusters allows to identify important local actors and the role they play (for example an author that is particularly cited within one groups or spread across the whole network, etc...)
+:::
+
+## Bibliographic network 1990-1997
+:::{.highlight-last}
+![](images/Network_new_publications_coupling_kcom_1990.png){width=100%}
+:::
+
+## Bibliographic network 2007-2014
+![](images/Network_clean_2007.png){width=100%}
+
+## Conclusion
+
+:::{.highlight-last}
+- Do you still need to read ? Obviously, yes. Even minimal mixed methods are required
+- Quantitative tools comes in a variety of forms and complexity levels
+- They often require to be custom made for more profound insights
+- They also change very rapidly: LLMs offers a tool to quantify conceptual relationship between texts beyond co-occurence
+:::
+
+:::{.notes}
+:::
+
+
+## Navigating our own results with an app 
+
+[https://0199205a-7b17-ab11-595d-8f12aae160dd.share.connect.posit.cloud/](https://0199205a-7b17-ab11-595d-8f12aae160dd.share.connect.posit.cloud/)
