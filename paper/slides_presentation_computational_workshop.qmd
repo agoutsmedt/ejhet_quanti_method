@@ -1,0 +1,283 @@
+---
+title: "A history of rationality in economics - A computational approach"
+subtitle: "Workshop Computational Approaches in History and Philosophy of Economics"
+date: "October 9, 2025"
+author: 
+  - name: "Thomas Delcey"
+    affiliation: "Université de Bourgogne"
+    email: "Thomas.delcey@ube.fr"
+  - name: "Aurélien Goutsmedt"
+    affiliation: "UC Louvain; ICHEC"
+    email: "aurelien.goutsmedt@uclouvain.be" 
+  - name: "Alexandre Truc"
+    affiliation: "Université Côte d'Azur"
+    email: "Alexandre.truc[at]cnrs.Fr"
+format: 
+  revealjs: 
+    theme: 
+      - custom_clean.scss
+    css: custom.css
+    transition: fade
+    slide-number: true
+    toc: false 
+    toc-depth: 1
+    slide-level: 2
+    embed-resources: true
+    view-distance: 100
+    progress: true
+    width: 1200
+    margin: 0.03
+    incremental: true
+    lightbox: auto
+    fig-align: center
+    cap-location: top
+    center: true
+---
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| include: false
+
+
+# move to the root directory of the project with "here::here()"
+source(here::here("scripts", "paths_and_packages.R"))
+
+```
+
+## Context 
+
+:::{.highlight-last}
+- **Special issue**: methods in the history of economic thought (HET)
+
+- **Goal**: contribute a methodological essay showing how quantitative tools can enrich history of economic thought
+
+- **Neither a proof of concept paper, nor a review of methods**
+:::
+
+:::{.notes}
+- Pretentious title, at first look. Important to give you some bit of context.
+- Special issue on methods in HET.
+- Our goal is to contribute a methodological essay showing how quantitative tools can enrich HET. What it can bring to confirm some existing knowledge, refine it, complete it, or even challenge it.
+- Not a proof of concept paper, nor a review of methods. 
+:::
+
+## Our contribution
+
+:::{.highlight-last}
+:::{.fragment .nonincremental}
+- The meanings of rationality in 20<sup>th</sup>-century economics:  
+  - A long-standing concern for historians  
+  - Using computational methods to capture both the broader picture and more specific narratives   
+:::
+
+:::{.fragment .nonincremental}
+- A concrete methodological reflection based on our workflow:  
+  - Challenges, successes, limits, and possible improvements  
+:::
+:::
+
+:::{.notes .tiny-text}
+- Why choosing rationality? A long-standing concern for historians of economic thought with many contributions more or less directly related to rationality. Few general contributions on the history of rationality: Using computational methods as a way also to capture the broader picture as well as more specific narratives.
+- A concrete methodological reflection based on our workflow: challenges, successes, limits, and possible improvements. Make understand to the reader, not accustomed to computational methods, how we worked and how we learned from it. 
+- Today, as you are all more or less accustomed to computational methods, we will focus more on the reasons for chosing such and such methods and the challenges we faced.
+:::
+
+## From sources to data
+
+:::{.highlight-last}
+- Our main source: JSTOR fulltext database (around 300 000 documents, 31 millions sentences).
+- ... but also Web of Science structured citation data for the 1960s onwards
+
+
+::: {.callout-warning .fragment .nonincremental .small-text}
+### It is sometimes more challenging to build the data than to analyze it:
+
+- Access to the source (JSTOR Data for Research). 
+- Filtering documents (book reviews). 
+- Cleaning texts (headers, acknowledgments, etc.).
+- Matching datasets (JSTOR + WoS).
+- Handling large datasets. 
+:::
+:::
+
+:::{.notes}
+- First step for this history of rationality: finding sources. Which kind of sources are relevant for such a history? Our first target is textual sources, more specifically articles in economics journals.
+- But also Web of Science citation data because sometimes easier to interpret, and allows for cross checking.
+- Challenging to transform these sources into data. Implies many steps and choices.
+:::
+
+## 
+
+::: {#fig-distribution layout-ncol=2}
+![](images/documents_distribution_fulltext_database.png){width=90%}
+
+:::{.fragment}
+![](images/language_distribution_fulltext_database.png){width=90%}
+:::
+Distribution of documents in the JSTOR fulltext database
+::: 
+
+:::{.notes .tiny-text}
+- The types of sources available imply some constraints and some features that it is important to keep in mind. Usual when doing quantitative work: an exponential growth in the number of publications. But not as exponential as WoS or Scopus.
+- Disiquilibrated language distribution: anglophone dominance, but also some french and german texts. But difficulty to deal with multiple languages, so we left this aside for now.
+- What is missing? Some important journals after the 1960s (Journal of Economic Theory, Ecological Economics, Journal of Economic Behavior and Organization, etc.). Books are also missing, which is a problem for the early 20th century.
+:::
+
+## From sources to corpus
+:::{.highlight-last .very-small-text}
+- Quantitative work forces the researcher to settle on a narrow definition of its object
+- How to build a corpus about "rationality" in economics?
+  - Keyword-based search (e.g. "rational", "rationality", etc.) was an option...
+  - ... but misses many relevant sentences using different terms (e.g. "optimization", "maximization", "self-interest", "expected utility theory" etc.).
+  - Building a larger list of keywords is also arbitrary and biased.
+- Two steps strategy:
+  1. Using BERT sentences embeddings to find sentences similar to "rational" and "rationality", but taking into account historical context
+  2. Average sentences embeddings to find relevant documents for bibliographic coupling analysis
+:::
+
+:::{.notes}
+- We have identified sources, we have transformed them into data, but how to build a corpus about rationality in economics?
+:::
+
+##
+
+::: {#fig-exploration layout-ncol=2}
+
+![](images/relative_freq_rationality_and_rational.png)
+
+:::{.fragment}
+![Neighbor words of “rational” and “rationality”](images/top_neighbor_words_both.png)
+:::
+Exploration of the corpus with simple text analysis tools
+
+::: 
+
+:::{.notes}
+- That keyword-based search is not fully appropriate for building the corpus does not mean that keywords are useless. They can help to explore our data and get a first understanding of the data.
+- Rise of rational choice and rational behavior after the 1930s.
+- Social choice in the 1950s
+- Expectations arrived after the 1960s, and bounded rationality becomes important in the 1990s.
+:::
+
+## Introducing LLMs to HET 
+
+:::: {.columns}
+::: {.column width="65%"}
+
+![A simplified representation of words embeddings in 2D](images/fake_semantic_space_words_in_2D.png){#fig-vector_space width=100%}
+:::
+
+::: {.column width="35%"}
+
+<br>
+
+::: {.callout-note appearance="simple"}
+LLMs: Each unique word are represented as vectors. 
+::: 
+
+::: {.callout-warning appearance="simple"}
+The distance between vectors reflects semantic similarity.
+::: 
+::: 
+::::
+
+:::{.notes}
+- But to go beyond counting keywords, we need more sophisticated tools, notably to understand the change of meanings of rationality in economics, as well as how it is used and for what purpose.
+:::
+
+## Sentence embeddings 
+
+::: {.callout-note .small-text appearance="simple"}
+We use sentence-BERT, a fast LLM model that represents **sentences** as vectors and is optimized for semantic similarity tasks.
+::: 
+
+:::: {.columns}
+::: {.column .fragment .small-text width="69%"}
+
+```{r}
+#| echo: false
+#| message: false 
+#| warning: false
+#| label: tbl-top_sentences
+#| tbl-cap: "Closest to 'Economic agents are supposed to be rational.'"
+
+# load data OUTPUT_FILE = top_5_sentences_to_fake_sentence.feather
+
+data <- arrow::read_feather(here::here(data_path, "top_5_sentences_to_fake_sentence.feather"))
+
+# ;2 "Basically, for Professor Hicks, as for Jevons and Marshall, economic decisions are made by an abstract calculating machine";3 "I find myself continuing to believe ... that, whatever the origin of the want, when it rises to consciousness, it is subject to a process which we call rational, when the human agent decides 
+sentence_clean <- "Basically, for Professor Hicks, as for Jevons and Marshall, economic decisions are made by an abstract calculating machine."
+
+data |> 
+  filter(rank < 4, year %in% c(1950, 1975, 2000)) |>
+  mutate(sentence = ifelse(str_detect(sentence, "^;"), sentence_clean, sentence)) |>
+  # kable the table
+  select(year, sentence, similarity) |>
+  mutate(similarity = round(similarity, 3)) |>
+  knitr::kable() |> 
+  kableExtra::kable_styling(full_width = F, font_size = 17) 
+
+```
+::: 
+
+::: {.column width="31%" .small-text .fragment}
+::: {.callout-note}
+### Our empirical strategy:
+1. Compute a "representative vectors" for the concept of rationality.
+2. Retrieve the most similar sentences in the corpus from this vector (= building corpus).
+3. Group those sentences into clusters (identify meanings).
+::: 
+:::
+::::
+
+:::{.notes}
+- Not the word "rational" or "rationality" in the first sentence
+- We build clusters per decades. Then we want to analyze similarity between clusters across decades. So we study the similarity between the centroids of all the clusters identified. Fortunately, but that's the purpose of the clustering method, the similarity is low for clusters of the same decade. And between decades, there is often only one cluster which is similar to a cluster of the previous decade. If two clusters are sufficiently similar, we consider that they represent the same "meaning" of rationality.
+:::
+
+## 
+
+![](images/intertemporal_clusters_alluvial.png){width=100%}
+
+:::{.notes}
+- Cluster 2 (1900-1940) vs. cluster 3 and 1: the shift away from hedonistic psychology vs institutionnalists 
+- The cold war rationality after the 1940s until the 1970s: planning and social choice issues
+- The domination of "rational expectations" from the 1970s onwards
+- Cluster 121 (1990-2010): the very late arrival (or return) of game theory in economic theory
+- Cluster 57: the persistence of a cluster directly addressing the foundations of rationality, but bounded rationality only became important later, in the 1980s
+:::
+
+## Conclusion (1): understanding unsupervised methods results
+
+:::{.highlight-last .small-text}
+- How to interpret clusters?
+  - Producing a set of indicators to understand embeddings cluster (as well as bibliographic communities)
+  - Constant back-and-forth between qualitative and quantitative analysis
+- Navigating our own results with an app: [https://0199205a-7b17-ab11-595d-8f12aae160dd.share.connect.posit.cloud/](https://0199205a-7b17-ab11-595d-8f12aae160dd.share.connect.posit.cloud/)
+- Balancing between large-scale results and more specific historical analysis
+:::
+
+:::{.notes}
+- In the paper, we provide a set of specific focus, notably on rational expectations or on Herbert Simon's influence. But we still need to refine our understanding of the clusters and elaborate more systematic narratives from our results.
+- Topic modelling, cluster of meaning, bibliographic coupling, etc... are all very appropriate for HET. They offer the possibility for large-scale analysis but also to zoom in on specific features. But they also require a lot of work to be properly interpreted.
+:::
+
+## Conclusion (2): which models and which data for HET?
+
+:::{.highlight-last}
+- LLMs offers a tool to quantify conceptual relationship betweens texts. 
+
+:::{.fragment} 
+:::{.callout-caution}
+
+### But important challenges: 
+- Existing models are trained for understanding general language, not economic discourses.
+- Model are present-centric.
+- Computational ressources.
+- Data access (Elsevier, Taylor and Francis, Books, *etc*.).
+
+::: 
+:::
+:::
