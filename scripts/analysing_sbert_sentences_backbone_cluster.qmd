@@ -1,0 +1,656 @@
+---
+title: "Analysing Sentences Backbone Communities"
+format: html
+editor: source
+toc: true
+toc-depth: 3
+date: today
+theme: cosmo
+fontsize: 13pt
+width: 1400
+fig-align: center
+fig-width: 8
+fig-height: 6
+code-fold: true
+code-summary: "Show the code"
+cache: true
+embed-resources: true
+lightbox: auto
+execute:
+  echo: true
+  warning: false
+  message: false
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r loading-data}
+#| output: false
+source(here::here("scripts", "paths_and_packages.R"))
+p_load(see, backbone, kableExtra, DT)
+
+# Loading Data
+bert_df <- readRDS(file.path(
+  data_path,
+  "closest_sentences_0.01_rationality_score_filtered_with_embeddings.rds"
+)) %>%
+  arrange(sentence_id) %>%
+  filter(between(publication_year, 1900, 2019))
+
+metadata <- read_rds(file.path(
+  data_path,
+  "full_metadata_journals_cleaned.rds"
+)) %>%
+  .[
+    refined_sub_type == "research-article" & language == "eng",
+    .(id, is_part_of, title, creator, publication_year, jstor_url = url)
+  ] %>%
+  .[order(publication_year)]
+
+documents_cluster <- readRDS(file.path(
+  data_path,
+  "sentences_intertemporal_cluster.rds"
+)) %>%
+  left_join(select(bert_df, id, sentence, sentence_id, similarity)) %>%
+  left_join(metadata) %>%
+  arrange(sentence_id)
+
+rm(metadata)
+
+list_clusters <- documents_cluster %>%
+  pull(backbone_community) %>%
+  unique() |> 
+  sort()
+
+# results <- readRDS(file.path(data_path, "clustering_rational_sentences.rds"))
+
+match_jstor_wos <- readRDS(here::here(data_path, "final_match.RDS")) %>%
+  filter(!is.na(id_match_final)) %>%
+  distinct(url_jstor = id_jstor, ID_Art = id_match_final) %>%
+  mutate(
+    id_jstor = str_extract(url_jstor, "\\/[0-9]+$") %>% str_remove(., "/"),
+    ID_Art = as.character(ID_Art)
+  ) %>%
+  distinct(ID_Art, .keep_all = TRUE)
+```
+
+```{r preparing-cluster-similarity, eval=FALSE}
+centroids <- map(1:length(results), ~pluck(results, ., "centroids")) %>% 
+  bind_rows %>% 
+  mutate(cluster_original_id = 1:n())
+
+# Calculate cosine similarity between all centroids
+centroid_matrix <- centroids %>%
+  select(-.cluster, -window, -cluster_original_id) %>%
+  as.matrix()
+cosine_sim <- lsa::cosine(t(centroid_matrix))
+cluster_similarity <- as.data.frame(cosine_sim) %>% 
+  mutate(cluster_A = centroids$cluster_original_id) %>%
+  pivot_longer(-cluster_A, names_to = "cluster_B", values_to = "similarity") %>%
+  mutate(cluster_B = as.integer(str_remove(cluster_B, "V"))) %>% 
+  filter(cluster_A != cluster_B) %>% 
+  left_join(distinct(centroids, cluster_1 = .cluster, cluster_A = cluster_original_id, window_1 = window), by = "cluster_A") %>% 
+  left_join(distinct(centroids, cluster_2 = .cluster, cluster_B = cluster_original_id, window_2 = window), by = "cluster_B") %>% 
+  left_join(distinct(documents_cluster, backbone_community, window_1 = window, cluster_1 = cluster), by = c("cluster_1", "window_1")) %>%
+  left_join(distinct(documents_cluster, backbone_community_2 = backbone_community, window_2 = window, cluster_2 = cluster), by = c("cluster_2", "window_2"))
+```
+
+```{r adding-references, eval=FALSE}
+# Adding references
+cli::cli_alert_info("Adding references...")
+nodes <- map(graphs, ~ . %N>% as_tibble()) %>%
+  bind_rows() %>%
+  mutate(
+    value_col = if_else(is.na(value_col), dynamic_cluster_leiden, value_col),
+    ID_Art = as.integer(ID_Art),
+    Titre = if_else(
+      !is.na(url_jstor),
+      glue("<a href='{url_jstor}' target='_blank'>{Titre}</a>"),
+      Titre
+    )
+  )
+
+sentences_art <- documents_cluster %>% 
+  count(id, window, backbone_community) %>% 
+  inner_join(distinct(match_jstor_wos, id = id_jstor, ID_Art), relationship = "many-to-many")
+
+refs <- open_dataset(
+  here::here(wos_data_path, "all_ref.parquet"),
+  format = "parquet"
+) %>%
+  filter(ID_Art %in% unique(sentences_art$ID_Art)) %>%
+  select(ID_Art, ItemID_Ref, Annee, Nom, Revue_Abbrege) %>%
+  collect()
+
+top_refs <- nodes %>%
+  distinct(ID_Art, value_col, time_window) %>%
+  left_join(refs, by = "ID_Art", relationship = "many-to-many") %>%
+  filter(ItemID_Ref != 0) %>%
+  group_by(value_col, time_window, ItemID_Ref) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  arrange(time_window, value_col, desc(n)) %>%
+  group_by(time_window, value_col) %>%
+  slice_head(n = 20) %>%
+  ungroup() %>%
+  filter(n > 1) %>%
+  left_join(
+    refs %>% distinct(ItemID_Ref, Nom, Annee, Revue_Abbrege),
+    by = "ItemID_Ref",
+    relationship = "many-to-many"
+  ) %>%
+  distinct(value_col, time_window, ItemID_Ref, nb_cit = n, .keep_all = TRUE)
+
+top_refs_without_id <- nodes %>%
+  distinct(ID_Art, value_col, time_window) %>%
+  left_join(refs, by = "ID_Art", relationship = "many-to-many") %>%
+  filter(ItemID_Ref == 0 & Annee != 0 & Nom != "") %>%
+  group_by(value_col, time_window, Nom, Annee) %>%
+  add_count() %>%
+  filter(n > 1) %>%
+  distinct(ID_Art, value_col, time_window, .keep_all = TRUE) %>%
+  arrange(time_window, value_col, desc(n)) %>%
+  group_by(time_window, value_col) %>%
+  slice_head(n = 10) %>%
+  ungroup() %>%
+  # left_join(refs %>% distinct(ItemID_Ref, Nom, Annee, Revue_Abbrege), by = "ItemID_Ref", relationship = "many-to-many") %>%
+  select(value_col, time_window, Nom, Annee, Revue_Abbrege, nb_cit = n) %>%
+  distinct(value_col, time_window, Nom, Annee, .keep_all = TRUE)
+
+rm(refs)
+```
+
+```{r preparing-tfidf}
+# Naming clusters and tf-idf---------------------
+setDT(documents_cluster)
+unigrams <- documents_cluster[, .(sentence_id, sentence, window, backbone_community)][, token := tokenizers::tokenize_words(sentence, lowercase = TRUE)][, -("sentence")]
+bigrams <- documents_cluster[, .(sentence_id, sentence, window, backbone_community)][, token := tokenizers::tokenize_ngrams(sentence, n= 2, lowercase = TRUE)][, -("sentence")]
+tokens <- rbind(unigrams,
+                bigrams)
+tokens <- tokens[, .(token = unlist(token)), by = .(backbone_community, window)]
+tokens <- tokens[nchar(token) >= 2, ]
+tokens <- tokens[, c("word_1", "word_2") := tstrsplit(token, " ")]
+
+stop_words <- tidytext::stop_words$word %>% 
+  unique()
+tokens <- tokens[
+  # Remove any digits in either word
+  !grepl("[0-9]", word_1) & (is.na(word_2) | !grepl("[0-9]", word_2)) &
+    # Remove stopwords in either word
+    !(word_1 %in% stop_words) &
+    (is.na(word_2) | !(word_2 %in% stop_words))
+]
+tokens <- tokens[, .(backbone_community, window, token)]
+tokens[, token := str_replace(token, " ", "_")]
+
+tokens_count_cluster <- compute_tf_idf(tokens[, -"window"], 
+                                       token_col = "token", 
+                                       document_col = "backbone_community")
+
+# Top tf-idf terms
+top_terms_cluster <- tokens_count_cluster[order(-tf_idf)][absolute_tf > 30, head(.SD, 20), by = backbone_community]
+
+# Get top 4 tf-idf tokens per cluster
+labels_cluster <- tokens_count_cluster[order(-tf_idf)][absolute_tf > 40, head(.SD, 4), by = backbone_community][, .(backbone_community, token)]
+labels_cluster <- labels_cluster[, .(label = paste0(token, collapse = ", ")), by = backbone_community]
+labels_cluster[, label := paste0(str_extract(backbone_community, "\\d+$"), ": ", label)]
+
+documents_cluster <- merge(documents_cluster, labels_cluster, all.x = TRUE, by = "backbone_community")
+```
+
+```{r preparing-tfidf-window}
+tokens[, new_variable := str_c(backbone_community, "--", window)]
+tokens_count_window <- compute_tf_idf(tokens, 
+                                      token_col = "token", 
+                                      document_col = "new_variable")
+# Top tf-idf terms
+top_terms_window <- tokens_count_window[order(-tf_idf)][absolute_tf > 20, head(.SD, 15), by = new_variable]
+
+# Labels per decade
+labels_window<- tokens_count_window[order(-tf_idf)][absolute_tf > 20, head(.SD, 5), by = new_variable][, .(new_variable, token)]
+labels_window <- labels_window[, .(label = paste0(token, collapse = ", ")), by = new_variable]
+labels_window[, label := paste0(str_extract(new_variable, "\\d+(?=--)"), ": ", label)]
+
+```
+
+
+```{r top-sentences-rationality}
+bert_df <- merge(bert_df, 
+                 select(documents_cluster, sentence_id, window, backbone_community), 
+                 by = "sentence_id", 
+                 all.x = TRUE)
+
+top_sentences_rationality <- bert_df %>% 
+  select(id, sentence_id, sentence, similarity, publication_year, window, backbone_community) %>% 
+  group_by(backbone_community, window) %>% 
+  slice_max(similarity, n = 20) %>% 
+  ungroup() %>% 
+  mutate(similarity = round(similarity, 3))
+```
+
+```{r top-sentences-centroid}
+# Top sentences----------------------------------
+# Build embedding matrix
+
+# Convert to data.table
+bert_dt <- as.data.table(bert_df)
+
+# Expand bert_embedding_concat list into separate columns
+# Assume each embedding is length 3072
+bert_dt <- bert_dt[, as.data.table(do.call(rbind, embedding))]
+bert_dt$backbone_community <- bert_df$backbone_community
+
+# Calculate mean of each dimension by backbone_community
+cluster_centroids <- bert_dt[, lapply(.SD, mean), by = backbone_community]
+
+# Ensure embedding columns are correctly selected
+embedding_cols <- setdiff(names(bert_dt), "backbone_community")
+
+# Build paragraph matrix with sentence_id as row names
+sentences_mat <- as.matrix(bert_dt[, ..embedding_cols])
+rownames(sentences_mat) <- bert_df$sentence_id
+
+# Build centroid matrix with backbone_community as row names
+centroid_mat <- as.matrix(cluster_centroids[, ..embedding_cols])
+rownames(centroid_mat) <- cluster_centroids$backbone_community
+
+# Calculate cosine similarity between sentences and centroids
+#similarity_matrix <- text2vec::sim2(x = paragraph_mat, y = centroid_mat, method = "cosine", norm = "l2")
+
+# Get the list of clusters
+clusters <- unique(bert_dt$backbone_community)
+bert_dt$window <- bert_df$window
+bert_dt$sentence_id <- bert_df$sentence_id
+
+# Set how many top sentences you want
+top_n <- 50
+
+# Run similarity search per cluster and per window
+top_sentences_from_cluster_window <- map_dfr(clusters, function(cluster) {
+  
+  # Filter sentences for this cluster
+  cluster_sentences <- bert_dt[backbone_community == cluster]
+  
+  # Get unique time windows in this cluster
+  time_windows <- unique(bert_dt[backbone_community == cluster]$window)
+  
+  # Extract the centroid for this cluster
+  centroid_vec <- centroid_mat[cluster, , drop = FALSE]
+  
+  # Run similarity search per time window
+  map_dfr(time_windows, function(time_window) {
+    
+    # Select sentences in this window
+    window_sentences <- cluster_sentences[window == time_window]
+    if (nrow(window_sentences) == 0) return(NULL)  # Skip empty groups
+    
+    window_mat <- as.matrix(window_sentences[, ..embedding_cols])
+    rownames(window_mat) <- window_sentences$sentence_id
+    
+    # Calculate cosine similarity for this window
+    sim_vec <- text2vec::sim2(x = window_mat, y = centroid_vec, method = "cosine", norm = "l2")[, 1]
+    
+    # Get top N most similar sentences in this window
+    top_idx <- order(sim_vec, decreasing = TRUE)[1:min(top_n, length(sim_vec))]
+    
+    data.table(
+      backbone_community = cluster,
+      window = time_window,
+      sentence_id = names(sim_vec)[top_idx],
+      similarity = sim_vec[top_idx],
+      rank = 1:length(top_idx)
+    )
+  })
+})
+
+top_sentences_from_cluster_window <- top_sentences_from_cluster_window  %>% 
+  mutate(sentence_id = as.integer(sentence_id)) %>%
+  left_join(select(bert_df, sentence_id, sentence, publication_year)) %>% 
+  mutate(mention_rationality = str_detect(sentence, regex("(^| )rational", ignore_case = TRUE)),
+         similarity = round(similarity, 3))
+rm(bert_df,
+   bert_dt)
+```
+
+
+```{r attributing-colors}
+set.seed(89)
+palette_colors <- c(see::see_colors(), 
+                    see::oi_colors()[1:7], 
+                    scico::scico(n = 8, palette = "roma"), 
+                    scico::scico(n = 8, palette = "tokyo"),
+                    scico::scico(n = 8, palette = "hawaii"),
+                    scico::scico(n = 8, palette = "batlowK"),
+                    scico::scico(n = 7, palette = "bamako"),
+                    scico::scico(n = 7, palette = "glasgow")) %>% 
+  sample()
+
+nb_clusters <- documents_cluster %>% 
+  pull(backbone_community) %>% 
+  unique() %>% 
+  length
+if(nb_clusters > length(palette_colors)) message("no sufficient colors")
+cluster_colors <- palette_colors[1:nb_clusters]
+names(cluster_colors) <- documents_cluster$label %>% 
+  unique
+```
+
+```{r alluvial}
+label_alluvial_position <- documents_cluster %>%
+  distinct(backbone_community, label, window) %>%
+  mutate(first_year = str_extract(window, "\\d{4}") %>% as.integer()) %>%
+  mutate(label_alluvial = first_year == min(first_year), .by = label) %>%
+  filter(label_alluvial == TRUE) %>%
+  mutate(label_alluvial = label) %>%
+  distinct(backbone_community, label_alluvial, window)
+
+alluvial <- documents_cluster %>%
+  mutate(rank = str_extract(backbone_community, "\\d+$") %>% as.integer) %>%
+  count(window, backbone_community, rank, label) %>%
+  left_join(label_alluvial_position) %>%
+  mutate(
+    percent = n / sum(n),
+    .by = window,
+    label = fct_reorder(label, rank, max, .desc = TRUE)
+  ) %>%
+  #  mutate(backbone_community = factor(backbone_community, levels= all_clusters)) %>%
+  ggplot(aes(
+    x = window,
+    y = percent,
+    stratum = label,
+    alluvium = label,
+    fill = label
+  )) +
+  geom_flow(alpha = 0.7) +
+  geom_stratum(alpha = 0.8) +
+  geom_text(
+    aes(label = str_wrap(label_alluvial, 38)),
+    stat = "stratum",
+    size = 4.5,
+    fontface = "bold"
+  ) +
+  labs(title = NULL, x = NULL, y = "Percentage of Documents") +
+  theme_minimal(base_size = 25) +
+  theme(legend.position = "none") +
+  scale_y_continuous(expand = c(0, 0), label = scales::percent_format()) +
+  scale_fill_manual(values = cluster_colors) # HARD color lock
+
+ggsave(
+  here("pictures", "backbone_communities_alluvial.png"),
+  alluvial,
+  units = "cm",
+  width = 80,
+  height = 46,
+  dpi = 300
+)
+
+knitr::include_graphics(here("pictures", "backbone_communities_alluvial.png"))
+```
+
+```{r networks, eval=FALSE}
+# 1) Nodes: gather node attributes
+nodes <- cluster_similarity %>%
+  transmute(id = backbone_community) %>%
+  bind_rows(cluster_similarity %>% transmute(id = backbone_community_2)) %>%
+  distinct(id) %>%
+  left_join(count(documents_cluster, backbone_community, label),
+            by = c("id" = "backbone_community"))
+
+# 2) Edges = average similarity across windows (undirected)
+edges <- cluster_similarity %>%
+  transmute(from = backbone_community, to = backbone_community_2, w = similarity) %>%
+  mutate(a = pmin(from, to), b = pmax(from, to)) %>%
+  group_by(a, b) %>%
+  summarise(weight = mean(w, na.rm = TRUE), .groups = "drop") %>%
+  rename(from = a, to = b) %>%
+  filter(from != to, is.finite(weight)) %>%
+  filter(weight > 0)        # keep positive similarity; adjust threshold if needed
+
+# 3) Graph
+g <- tidygraph::tbl_graph(nodes = nodes, edges = edges, directed = FALSE) %>% 
+  disparity() %>% 
+  as_tbl_graph() %>% 
+  mutate(community = group_leiden(objective_function = "modularity") %>% as.factor())
+
+# 4) Plotsparsify()# 4) Plot (Fruchterman–Reingold)
+set.seed(42)
+graph_plot <- ggraph(g, layout = "fr") +
+  geom_edge_link(alpha = 0.2, show.legend = FALSE) +
+  geom_node_point(aes(color = community, size = n), show.legend = FALSE) +
+  geom_node_text(aes(label = label %>% str_wrap(25)), repel = TRUE, size = 3) +
+  scale_edge_width(range = c(0.2, 3)) +
+  scale_size_continuous(range = c(1, 25)) +
+  labs(edge_width = "Avg similarity") +
+  scale_color_see_d() +
+  theme_void()
+
+ggsave(here("pictures", "llm_cluster_graph.png"),
+       graph_plot,
+       width = 40,
+       height = 30,
+       units = "cm",
+       dpi = 300) 
+
+knitr::include_graphics(here("pictures", "llm_cluster_graph.png"))
+```
+
+```{r template}
+#| results: 'asis'
+
+for(cluster in list_clusters){
+  cluster_data <- documents_cluster %>% 
+    filter(backbone_community == !!cluster) %>% 
+    mutate(title = glue("<a href='{jstor_url}' target='_blank'>{title}</a>"))
+  cluster_name <- cluster_data %>% 
+    pull(label) %>% 
+    unique
+  
+  # extracting the first year and last year of the community
+  window <- c(first(unique(cluster_data$window)) %>% str_extract("^\\d{4}"), 
+              last(unique(cluster_data$window)) %>% str_extract("\\d{4}$"))
+  
+  ################ Beginning of the template ######################
+  cat(sprintf("  \n## Intertemporal cluster _%s_ \n\n", cluster_name))
+  
+  ############# General Info ##################
+  cat(paste0("  \nThe cluster gathers ", length(unique(cluster_data$sentence_id))," sentences from our corpus. It represents ",round(length(unique(cluster_data$sentence_id))/length(unique(documents_cluster$sentence_id))*100,2),"% of all the sentences selected over the whole period.\n"))
+  
+  cat(paste0("\nThe community exists from ", window[1]," to ", window[2],". \n\n"))
+  
+  recurring_authors <- cluster_data %>% 
+    select(creator) %>% 
+    unnest(creator) %>% 
+    count(creator, sort = TRUE) %>% 
+    slice(1:10)
+  cat(paste0("The most recurring authors are ", 
+             paste0(recurring_authors$creator, 
+                    " (", 
+                    recurring_authors$n,
+                    " sentences)",
+                    collapse = ", "),
+             ".\n\n"))
+  
+  recurring_journals <- cluster_data %>% 
+    select(is_part_of) %>% 
+    count(is_part_of, sort = TRUE) %>% 
+    slice(1:5)
+  cat(paste0("The most recurring journals are ", 
+             paste0(recurring_journals$is_part_of, 
+                    " (", 
+                    recurring_journals$n,
+                    " sentences)",
+                    collapse = ", "),
+             ".\n\n"))
+  
+  ############# TF-IDF ##################
+  cat("\n### Top TF-IDF terms describing the community\n\n")
+  # Extracting top terms in general and for window
+  top_terms_cluster %>% 
+    filter(backbone_community == !!cluster) %>% 
+    select(token, tf_idf) %>% 
+    kbl(col.names = c("Token","TF-IDF")) %>% 
+    kable_styling(bootstrap_options = c("striped","condensed"),
+                  font_size = 18) %>% 
+    print()
+  
+  if(length(unique(cluster_data$window)) > 1){
+    
+    cat("\n### Top TF-IDF terms describing the community for each time window{.panel-tabset}\n\n")
+    
+    for(decade in unique(cluster_data$window)){
+      cat(glue("#### Top terms {decade}\n\n"), sep = "")
+      
+      top_terms_window %>% 
+        filter(backbone_community == !!cluster & window == !! decade) %>% 
+        select(token, tf_idf) %>% 
+        kbl(col.names = c("Token", "TF-IDF")) %>% 
+        kable_styling(bootstrap_options = c("striped","condensed"),
+                      font_size = 18) %>% 
+        print()
+    }
+  }
+  
+  ############# Distribution sentences ##################
+  cat("\n### Distribution of sentences over time \n\n")
+  
+  plot(cluster_data %>% 
+         count(publication_year) %>% 
+         ggplot(aes(x = publication_year, y = n)) +
+         geom_bar(stat = "identity") + 
+         scale_x_continuous(expand = c(0.01,0), n.breaks = 10) +
+         scale_y_continuous(expand = c(0.01, 0)) +
+         theme_light(base_size = 20) +
+         labs(y = "Number of sentences",
+              x = NULL,
+              title = NULL)) 
+  
+  
+  top_sentences_rationality_filtered <- top_sentences_rationality %>% 
+    filter(backbone_community == !!cluster) %>% 
+    left_join(select(cluster_data, title, is_part_of, creator, jstor_url, sentence_id)) %>%
+    mutate(title = glue("<a href='{jstor_url}' target='_blank'>{title}</a>"))
+  
+  top_sentences_filtered <- top_sentences_from_cluster_window %>% 
+    filter(backbone_community == !!cluster) %>% 
+    left_join(select(cluster_data, title, publication_year, is_part_of, creator, sentence_id, jstor_url)) %>% 
+    mutate(title = glue("<a href='{jstor_url}' target='_blank'>{title}</a>"))
+  
+  ############# Top sentences rationality ##################
+  cat("\n\n")
+  cat("\n### Top sentences with 'rational' or 'rationality' of the cluster\n\n")
+  
+  cat("\n### Top sentences (in general) of the cluster's centroid\n\n")
+  
+  top_sentences_rationality_filtered %>% 
+    slice_max(similarity, n = 20, by = backbone_community) %>%
+    select(sentence, title, publication_year, is_part_of, creator, similarity) %>% 
+    kbl(escape = FALSE, col.names = c("Sentence", "Title", "Year", "Journal", "Authors", "Words Similarity")) %>% 
+    kable_styling(bootstrap_options = c("striped","condensed"),
+                  font_size = 13) %>% 
+    column_spec(2, "3.5cm") %>% 
+    print()
+  
+  if(length(unique(cluster_data$window)) > 1){
+    
+    cat("\n### Top sentence (in general) of the cluster's centroid for each time window{.panel-tabset}\n\n")
+    
+    for(decade in unique(cluster_data$window)){
+      cat(glue("#### Top sentences {decade}\n\n"))
+      
+      top_sentences_rationality_filtered %>%
+        filter(window == !! decade) %>%
+        slice_max(similarity, n = 12) %>% 
+        select(sentence, title, publication_year, is_part_of, creator, similarity) %>% 
+        kbl(escape = FALSE, col.names = c("Sentence", "Title", "Year", "Journal", "Authors", "Centroid Similarity")) %>% 
+        kable_styling(bootstrap_options = c("striped","condensed"),
+                      font_size = 13) %>% 
+        column_spec(2, "3.5cm") %>% 
+        print()
+    }
+  }
+  
+  ############# Top sentences centroid ##################
+  cat("\n### Closest sentences from the cluster's centroid\n\n")
+  
+  percentage_rationality <- round(nrow(filter(top_sentences_filtered, mention_rationality)) / nrow(top_sentences_filtered) * 100, 2)
+  cat(glue("\nAmong the {nrow(top_sentences_filtered)} closest sentences to the cluster's centroid, {percentage_rationality}% mention the terms 'rational' or 'rationality'\n\n"))
+  
+  if(top_sentences_filtered %>% filter(mention_rationality) %>% nrow() > 0){
+    top_sentences_filtered %>% 
+      filter(mention_rationality == TRUE) %>% 
+      slice_max(similarity, n = 15) %>% 
+      select(sentence, title, publication_year, is_part_of, creator, similarity) %>% 
+      kbl(escape = FALSE, col.names = c("Sentence", "Title", "Year", "Journal", "Authors", "Centroid Similarity")) %>% 
+      kable_styling(bootstrap_options = c("striped","condensed"),
+                    font_size = 13) %>% 
+      column_spec(2, "3.5cm") %>% 
+      print()
+  }
+  
+  
+  cat("\n### Top sentences (in general) of the cluster's centroid\n\n")
+  
+  top_sentences_filtered %>% 
+    slice_max(similarity, n = 15) %>% 
+    select(sentence, title, publication_year, is_part_of, creator, similarity) %>% 
+    kbl(escape = FALSE, col.names = c("Sentence", "Title", "Year", "Journal", "Authors", "Centroid Similarity")) %>% 
+    kable_styling(bootstrap_options = c("striped","condensed"),
+                  font_size = 13) %>% 
+    column_spec(2, "3.5cm") %>% 
+    print()
+  
+  if(length(unique(cluster_data$window)) > 1){
+    
+    cat("\n### Top sentence (in general) of the cluster's centroid for each time window{.panel-tabset}\n\n")
+    
+    for(decade in unique(cluster_data$window)){
+      cat(glue("#### Top sentences {decade}\n\n"))
+      
+      top_sentences_filtered %>%
+        filter(window == !! decade) %>%
+        slice_max(similarity, n = 10) %>% 
+        select(sentence, title, publication_year, is_part_of, creator, similarity) %>% 
+        kbl(escape = FALSE, col.names = c("Sentence", "Title", "Year", "Journal", "Authors", "Centroid Similarity")) %>% 
+        kable_styling(bootstrap_options = c("striped","condensed"),
+                      font_size = 13) %>% 
+        column_spec(2, "3.5cm") %>% 
+        print()
+    }
+  }
+  
+  ############# Top articles ##################
+  cat("\n### Top articles (most sentences) of the cluster\n\n")
+  # Extracting top terms in general and for window
+  cluster_data %>% 
+    mutate(mean_similarity = mean(similarity) %>% round(3),
+           n = n(),
+           .by = id) %>% 
+    distinct(title, publication_year, is_part_of, creator, n, mean_similarity) %>% 
+    slice_max(n, n = 10, with_ties = FALSE) %>% 
+    kbl(escape = FALSE, col.names = c("Title", "Year", "Journal", "Authors", "Number sentences", "Similarity")) %>% 
+    kable_styling(bootstrap_options = c("striped","condensed"),
+                  font_size = 13) %>% 
+    print()
+  
+  if(length(unique(cluster_data$window)) > 1){
+    
+    cat("\n### Top articles (most sentences) of the cluster for each time window{.panel-tabset}\n\n")
+    
+    for(decade in unique(cluster_data$window)){
+      cat(glue("#### Top articles {decade}\n\n"))
+      
+      cluster_data %>% 
+        filter(window == !! decade) %>% 
+        mutate(mean_similarity = mean(similarity) %>% round(3),
+               n = n(),
+               .by = id) %>% 
+        distinct(title, publication_year, is_part_of, creator, n, mean_similarity) %>% 
+        slice_max(n, n = 15, with_ties = FALSE) %>%  
+        kbl(escape = FALSE, col.names = c("Title", "Year", "Journal", "Authors", "Number sentences", "Similarity")) %>% 
+        kable_styling(bootstrap_options = c("striped","condensed"),
+                      font_size = 13) %>% 
+        print()
+    }
+  }
+}
+```
+
