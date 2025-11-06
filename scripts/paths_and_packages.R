@@ -44,8 +44,6 @@ if (str_detect(getwd(), "goutsmed")) {
     jstor_raw_data <- file.path(path.expand("~"), "data", "jstor") # I'm storing the raw data in a different folder because it's heavy.
     wos_data_path <- file.path(
       path.expand("~"),
-      "Nextcloud",
-      "Research",
       "data",
       "wos"
     )
