@@ -1,3 +1,5 @@
+p_load(docstring)
+
 #: Calculating semantic drift metrics-----------------------
 #' Normalize rows of a numeric matrix-like object to unit Euclidean length
 #'
@@ -73,6 +75,7 @@
 #'
 #' @keywords internal
 #' @author Your Name
+#' @export
 row_normalize <- function(mat) {
   # Accept data.frames by coercing to a matrix to enable vectorized ops
   if (is.data.frame(mat)) {
@@ -98,9 +101,343 @@ row_normalize <- function(mat) {
   # Subset kept rows and divide each row by its scalar norm.
   # Division by a vector of length nrows uses R's column-wise recycling so each
   # row i is divided by nrms[i], which is efficient and vectorized.
-  mat <- mat[keep, , drop = FALSE] / nrms[keep]
+  norm_mat <- mat[keep, , drop = FALSE] / nrms[keep]
 
-  mat
+  norm_mat
+}
+
+#' Compute Average Pairwise Distance (APD) matrix across years
+#'
+#' @title Compute APD matrix for sentence embeddings by year
+#' @description
+#' Build per-year embedding matrices from a sentence-level tibble and compute the
+#' average pairwise distance (APD = mean(1 - cosine)) for every unordered pair of years.
+#'
+#' @param bert_df data.frame or tibble. Must contain a column named by `year_col`
+#'   (one value per sentence row) and a list-column named by `embeddings_col`
+#'   where each element is a numeric vector (embedding). One row represents one
+#'   sentence. Rows with `NA` in the embedding column are filtered out prior to grouping.
+#' @param year_col character scalar. Name of the column in `bert_df` that contains
+#'   year labels. Default: `"publication_year"`. Values are treated as grouping keys;
+#'   they are coerced to `character` for matrix dimnames. NA year values are preserved
+#'   as a group if present.
+#' @param embeddings_col character scalar. Name of the list-column containing numeric
+#'   embedding vectors. Default: `"embedding"`. Each list element must be a numeric
+#'   vector of identical length for all embeddings within a year (and ideally across years).
+#'   Inconsistent lengths trigger an error.
+#' @param chunk_size integer scalar >= 1. Number of rows of `A` processed per block
+#'   inside `apd_from_mats()` to limit peak memory usage. Default: `5000L`. Smaller
+#'   values reduce memory at the cost of more matrix multiplies.
+#'
+#' @return numeric matrix (double) of shape (n_years x n_years) with row and column
+#'   names set to the character representation of the grouped `year` values. The
+#'   matrix is symmetric; off-diagonal entries are the APD between the corresponding
+#'   years. Diagonal entries are `NA_real_` (not computed). If no years with embeddings
+#'   are found the function returns a 0x0 numeric matrix. If fewer than two non-empty
+#'   years exist the returned matrix contains `NA` values (no pairwise computations).
+#'
+#' @details
+#' The function groups `bert_df` by `year_col`, coerces each year's list of embeddings
+#' into a numeric matrix with rows = sentences and columns = embedding dimensions, and
+#' then computes APD for every unordered pair of non-empty years using `apd_from_mats()`.
+#'
+#' Implementation notes:
+#' - High-level sequence:
+#'   1. Validate inputs and required columns early to provide clear errors.
+#'   2. Filter out rows with missing embeddings, group by year, and build a list-column
+#'      `emb_mat` where each element is a numeric matrix (rows = sentences).
+#'   3. Return an empty 0x0 matrix if no years remain.
+#'   4. Create an n_years x n_years result matrix `M` initialised with `NA_real_`.
+#'   5. Identify non-empty years and compute APD only for unordered pairs of these years
+#'      to avoid needless work; compute in a loop while updating a single progress bar.
+#'   6. For each pair call `apd_from_mats(Ai, Bj, chunk_size)` which performs blocked
+#'      matrix multiplication and returns the scalar APD; assign symmetrically in `M`.
+#' - Assumptions and preconditions:
+#'   - `bert_df` is a data.frame/tibble with the named columns.
+#'   - Each list element in `embeddings_col` is a numeric vector; vectors within a year
+#'     must share the same length. The function does not coerce non-numeric embeddings.
+#' - Edge-case handling and failure modes:
+#'   - Years with zero sentences produce empty matrices and are skipped for pairwise
+#'     computation (entries remain `NA`).
+#'   - If fewer than two non-empty years exist the function returns the `NA`-filled matrix.
+#'   - If embedding lengths are inconsistent within a year the function errors.
+#'   - If `apd_from_mats()` encounters zero-row inputs it returns `NA_real_`, which
+#'     propagates to the result.
+#' - Trade-offs:
+#'   - The function avoids building a full (n_total_sentences)^2 similarity matrix
+#'     by computing APD per-year-pair and using chunked multiplications inside `apd_from_mats()`.
+#' - Dependencies and side-effects:
+#'   - Uses `dplyr`, `tidyr`, `tibble`, `cli` and `utils` for grouping, shaping, and user feedback.
+#'   - Does not mutate global state or write files.
+#'
+#' @implementation
+#' The implementation materialises per-year matrices, enumerates unordered pairs via
+#' `utils::combn()`, and computes each APD by calling `apd_from_mats()` which performs
+#' blocked matrix multiplications (Ai %*% t(B)) and accumulates `sum(1 - similarity)`.
+#' Progress is reported with a single `cli` progress bar. Result matrix `M` is symmetric.
+#'
+#' @examples
+#' library(tibble)
+#' # normal case: two years with two 3-d embeddings each
+#' df <- tibble::tibble(
+#'   publication_year = c(2000, 2000, 2001, 2001),
+#'   embedding = list(
+#'     c(1, 0, 0),
+#'     c(0, 1, 0),
+#'     c(1, 1, 0),
+#'     c(0, 0, 1)
+#'   )
+#' )
+#' compute_apd_by_years(df, year_col = "publication_year", embeddings_col = "embedding", chunk_size = 2L)
+#'
+#' # edge case: a year with no embeddings (row filtered out) -> returns matrix with NAs
+#' df2 <- tibble::tibble(
+#'   publication_year = c(2000, 2001),
+#'   embedding = list(NA, c(1, 0, 0))
+#' )
+#' compute_apd_by_years(df2, year_col = "publication_year", embeddings_col = "embedding")
+#'
+#' @seealso apd_from_mats, proto_distance_matrix
+#' @keywords similarity
+#' @export
+compute_apd_by_years <- function(
+  bert_df,
+  year_col = "publication_year",
+  embeddings_col = "embedding",
+  chunk_size = 5000L
+) {
+  # Basic validations
+  if (!is.data.frame(bert_df)) {
+    cli::cli_abort("`bert_df` must be a data.frame or tibble.")
+  }
+  if (!all(c(year_col, embeddings_col) %in% colnames(bert_df))) {
+    cli::cli_abort(
+      "`bert_df` must contain columns {year_col} and {embeddings_col}."
+    )
+  }
+
+  # Build per-year embedding matrices: list of numeric matrices (n_sentences x dim)
+  per_year <- bert_df |>
+    dplyr::filter(!is.na(.data[[embeddings_col]])) |>
+    dplyr::group_by(year = .data[[year_col]]) |>
+    dplyr::summarise(
+      emb_mat = list({
+        # coerce list of numeric vectors -> numeric matrix (rows = sentences)
+        vecs <- .data[[embeddings_col]]
+        if (length(vecs) == 0L) {
+          matrix(numeric(0), nrow = 0, ncol = 0)
+        } else {
+          # ensure all vectors have the same length
+          lens <- vapply(vecs, length, integer(1))
+          if (length(unique(lens)) != 1L) {
+            cli::cli_abort(
+              "Embeddings for year {unique(year)} have inconsistent dimensions."
+            )
+          }
+          do.call(rbind, vecs)
+        }
+      }),
+      n = dplyr::n(),
+      .groups = "drop"
+    ) |>
+    dplyr::arrange(year)
+
+  # If no years remain, return empty matrix
+  if (nrow(per_year) == 0L) {
+    cli::cli_alert_info(
+      "No years with embeddings found; returning empty matrix."
+    )
+    return(matrix(NA_real_, nrow = 0, ncol = 0))
+  }
+
+  years <- as.character(per_year$year)
+  n_years <- length(years)
+  M <- matrix(NA_real_, n_years, n_years, dimnames = list(years, years))
+
+  total_sentences <- sum(per_year$n, na.rm = TRUE)
+  n_empty_years <- sum(per_year$n == 0L)
+  cli::cli_alert_info(
+    "Found {n_years} years with a total of {total_sentences} sentences; {n_empty_years} empty years will be skipped for APD computation."
+  )
+
+  # Identify non-empty years to avoid unnecessary work / NA results
+  non_empty_idx <- which(per_year$n > 0L)
+  if (length(non_empty_idx) < 2L) {
+    cli::cli_alert_info(
+      "Not enough non-empty years ({length(non_empty_idx)}) to compute pairwise APD; returning matrix with NA diagonals."
+    )
+    return(M)
+  }
+
+  # Build list of unordered pairs to compute so we can show a single progress bar
+  pairs_mat <- utils::combn(non_empty_idx, 2L)
+  total_pairs <- ncol(pairs_mat)
+
+  cli::cli_progress_bar("Computing APD across year pairs", total = total_pairs)
+  on.exit(cli::cli_progress_done(), add = TRUE)
+
+  # Loop over pairs (vectorized chunking handled inside apd_from_mats)
+  for (k in seq_len(total_pairs)) {
+    i <- pairs_mat[1L, k]
+    j <- pairs_mat[2L, k]
+
+    Ai <- per_year$emb_mat[[i]]
+    Bj <- per_year$emb_mat[[j]]
+
+    # defensive checks (shouldn't be necessary because we filtered non_empty_idx)
+    if (nrow(Ai) == 0L || nrow(Bj) == 0L) {
+      cli::cli_progress_update()
+      next
+    }
+
+    val <- apd_from_mats(Ai, Bj, chunk_size = as.integer(chunk_size))
+    M[i, j] <- val
+    M[j, i] <- val
+
+    cli::cli_progress_update()
+  }
+
+  cli::cli_alert_success("Computed APD for {total_pairs} year pairs.")
+
+  M
+}
+
+# Mean pairwise cosine distance between rows of A and B, vectorized
+#' @title Average Pairwise Distance (APD) between two sets of row-vectors
+#' @description
+#' Compute the average pairwise distance (APD) between the rows of two numeric
+#' matrices based on cosine similarity. APD is defined as the mean of
+#' (1 - cosine_similarity) over all row pairs (one row from `A`, one row from `B`).
+#'
+#' @param A numeric matrix with rows representing vectors (embedding matrix).
+#'   Expected shape: numeric matrix with `ncol(A) = d` (d >= 1) and `nrow(A) >= 0`.
+#'   Rows may contain zeros; behavior for zero-norm rows depends on the helper
+#'   `.row_normalize` (see Implementation notes). NA values in `A` will typically
+#'   propagate to the result or produce errors during normalization/multiplication.
+#' @param B numeric matrix with rows representing vectors (embedding matrix).
+#'   Expected shape: numeric matrix with `ncol(B) = d` (must match `ncol(A)`)
+#'   and `nrow(B) >= 0`. See `A` for NA/zero-handling notes.
+#' @param chunk_size integer scalar (positive) controlling the number of rows of
+#'   `A` processed per block when computing similarities. Default `5000L`.
+#'   Must be a positive integer; non-positive or non-integer values will cause
+#'   underlying functions (e.g. `seq.int`) to error. Chunking trades memory
+#'   for repeated matrix multiplies (smaller `chunk_size` uses less memory).
+#'
+#' @return
+#' Numeric scalar (double) equal to the APD:
+#' the mean value of `1 - cosine(a_i, b_j)` across all `i=1..nrow(A)`,
+#' `j=1..nrow(B)`. If either `A` or `B` has zero rows (`nrow(...) == 0`),
+#' the function returns `NA_real_` because the APD is undefined in that case.
+#' If matrix dimensions are incompatible (different `ncol`), the function will
+#' error when attempting matrix multiplication.
+#'
+#' @details
+#' At a high level, this function:
+#' - row-normalizes `A` and `B` so each row has unit (or defined) norm,
+#' - computes cosine similarities between rows of `A` and `B` in memory-bounded
+#'   chunks, and
+#' - returns the average of `1 - cosine_similarity` across all cross-pairs.
+#'
+#' The APD computed is:
+#' \deqn{APD(A,B) = \frac{1}{|A||B|} \sum_{i=1}^{|A|}\sum_{j=1}^{|B|} \left[1 - \cos(a_i, b_j)\right],}
+#' where \eqn{\cos(a_i, b_j)} is the cosine similarity between row vectors
+#' `a_i` (from `A`) and `b_j` (from `B`).
+#'
+#' Implementation notes:
+#' - High-level algorithm and major steps:
+#'   1. Call `row_normalize(A)` and `row_normalize(B)` to (attempt to)
+#'      normalize each row to unit length. The function relies on this helper
+#'      to handle zero-norm rows or to signal errors for invalid input.
+#'   2. If either matrix has zero rows after normalization (`nrow(A) == 0` or
+#'      `nrow(B) == 0`), return `NA_real_` because no pairwise distances exist.
+#'   3. Iterate over `A` in blocks of `chunk_size` rows. For each block `Ai`,
+#'      compute `S_chunk <- Ai %*% t(B)` which yields pairwise cosine
+#'      similarities for that block vs all rows of `B`. Accumulate
+#'      `sum(1 - S_chunk)` across blocks and divide by `nrow(A) * nrow(B)` at the end.
+#' - Memory and performance:
+#'   - The chunking strategy bounds memory by materializing only one similarity
+#'     block at a time (size `min(chunk_size, nrow(A)) x nrow(B)`).
+#'   - Time complexity is O(nrow(A) * nrow(B) * d) where `d = ncol(A)`.
+#'   - Choosing `chunk_size` trades memory (larger = fewer matrix multiplies)
+#'     for peak memory usage.
+#' - Assumptions and preconditions:
+#'   - `A` and `B` are numeric matrices with the same number of columns.
+#'   - `.row_normalize` is available in the environment and performs row-wise
+#'     normalization (it must not silently drop rows; it should preserve row
+#'     counts or the function's NA check will not behave as intended).
+#' - Edge-case handling and failure modes:
+#'   - Returns `NA_real_` if either matrix has zero rows (undefined APD).
+#'   - If `A` or `B` contains rows with zero norm, the result depends on
+#'     `row_normalize`'s behavior (e.g. it may return zero rows, `NaN`s, or
+#'     error). If `row_normalize` produces non-finite values, matrix
+#'     multiplication and the sum will propagate them.
+#'   - If `ncol(A) != ncol(B)` the `%*%` operation will error.
+#' - Alternatives and trade-offs:
+#'   - One could compute full similarity matrix in-memory when data is small,
+#'     avoiding repeated multiplications; chunking is chosen here for
+#'     scalability to larger datasets.
+#' - Dependencies and side-effects:
+#'   - Uses base R matrix multiplication. Requires a `row_normalize` helper
+#'     function to exist in scope. The function does not mutate global state
+#'     or write files.
+#'
+#' @implementation
+#' Blocked matrix multiplication over `A` rows: normalize rows -> iterate blocks
+#' of `A` -> compute `Ai %*% t(B)` -> accumulate `sum(1 - similarities)` ->
+#' divide by total number of pairs. This minimizes peak memory while remaining
+#' straightforward and numerically stable for typical dense numeric matrices.
+#'
+#' @examples
+#' # normal case: small random matrices (rows are vectors)
+#' set.seed(1)
+#' A <- matrix(rnorm(6), nrow = 2) # 2 x 3
+#' B <- matrix(rnorm(9), nrow = 3) # 3 x 3
+#' # assume .row_normalize exists and normalizes rows; for example:
+#' .row_normalize <- function(m) {
+#'   if (nrow(m) == 0) return(m)
+#'   norms <- sqrt(rowSums(m * m))
+#'   # avoid division by zero: leave zero rows as zeros
+#'   nz <- norms > 0
+#'   m[nz, , drop = FALSE] <- m[nz, , drop = FALSE] / norms[nz]
+#'   m
+#' }
+#' apd_from_mats(A, B, chunk_size = 1L)
+#'
+#' # edge case: one input has zero rows -> returns NA_real_
+#' A0 <- matrix(numeric(0), nrow = 0, ncol = 3)
+#' apd_from_mats(A0, B)
+#'
+#' # edge case: zero-norm row (depends on .row_normalize handling)
+#' A_zero <- rbind(c(0, 0, 0), c(1, 0, 0))
+#' apd_from_mats(A_zero, B, chunk_size = 2L)
+#'
+#' @author GitHub Copilot
+#' @keywords internal
+#' @family similarity
+#' @seealso base::`%*%`, stats::`dist`
+apd_from_mats <- function(A, B, chunk_size = 5000L) {
+  A <- row_normalize(A)
+  B <- row_normalize(B)
+  nA <- nrow(A)
+  nB <- nrow(B)
+  if (nA == 0L || nB == 0L) {
+    return(NA_real_)
+  } # undefined if any side empty or all-zero
+
+  # Chunk over the larger side to bound memory of the similarity matrix
+  # Computes mean(1 - S) without materializing all chunks at once
+  total_pairs <- as.double(nA) * as.double(nB)
+  sum_one_minus_cos <- 0.0
+
+  # choose chunking on A
+  idx_starts <- seq.int(1L, nA, by = chunk_size)
+  for (s in idx_starts) {
+    e <- min(s + chunk_size - 1L, nA) # end index for this chunk
+    Ai <- A[s:e, , drop = FALSE]
+    S_chunk <- Ai %*% t(B) # cosine similarities
+    sum_one_minus_cos <- sum_one_minus_cos + sum(1 - S_chunk)
+  }
+  sum_one_minus_cos / total_pairs
 }
 
 #' Compute a pairwise proto-distance matrix (1 - cosine similarity) for yearly prototypes
@@ -362,6 +699,1583 @@ consecutive_proto_drift <- function(mat) {
     year_prev = year_prev_col,
     prt = prt_vals
   )
+}
+
+#' Compute Average Pairwise Distance (APD) matrix across years
+#'
+#' @title Compute APD matrix for sentence embeddings by year
+#' @description
+#' Build per-year embedding matrices from a sentence-level tibble and compute the
+#' average pairwise distance (APD = mean(1 - cosine)) for every unordered pair of years.
+#'
+#' @param bert_df data.frame or tibble. Must contain a column named by `year_col`
+#'   (one value per sentence row) and a list-column named by `embeddings_col`
+#'   where each element is a numeric vector (embedding). One row represents one
+#'   sentence. Rows with `NA` in the embedding column are filtered out prior to grouping.
+#' @param year_col character scalar. Name of the column in `bert_df` that contains
+#'   year labels. Default: `"publication_year"`. Values are treated as grouping keys;
+#'   they are coerced to `character` for matrix dimnames. NA year values are preserved
+#'   as a group if present.
+#' @param embeddings_col character scalar. Name of the list-column containing numeric
+#'   embedding vectors. Default: `"embedding"`. Each list element must be a numeric
+#'   vector of identical length for all embeddings within a year (and ideally across years).
+#'   Inconsistent lengths trigger an error.
+#' @param chunk_size integer scalar >= 1. Number of rows of `A` processed per block
+#'   inside `apd_from_mats()` to limit peak memory usage. Default: `5000L`. Smaller
+#'   values reduce memory at the cost of more matrix multiplies.
+#'
+#' @return numeric matrix (double) of shape (n_years x n_years) with row and column
+#'   names set to the character representation of the grouped `year` values. The
+#'   matrix is symmetric; off-diagonal entries are the APD between the corresponding
+#'   years. Diagonal entries are `NA_real_` (not computed). If no years with embeddings
+#'   are found the function returns a 0x0 numeric matrix. If fewer than two non-empty
+#'   years exist the returned matrix contains `NA` values (no pairwise computations).
+#'
+#' @details
+#' The function groups `bert_df` by `year_col`, coerces each year's list of embeddings
+#' into a numeric matrix with rows = sentences and columns = embedding dimensions, and
+#' then computes APD for every unordered pair of non-empty years using `apd_from_mats()`.
+#'
+#' Implementation notes:
+#' - High-level sequence:
+#'   1. Validate inputs and required columns early to provide clear errors.
+#'   2. Filter out rows with missing embeddings, group by year, and build a list-column
+#'      `emb_mat` where each element is a numeric matrix (rows = sentences).
+#'   3. Return an empty 0x0 matrix if no years remain.
+#'   4. Create an n_years x n_years result matrix `M` initialised with `NA_real_`.
+#'   5. Identify non-empty years and compute APD only for unordered pairs of these years
+#'      to avoid needless work; compute in a loop while updating a single progress bar.
+#'   6. For each pair call `apd_from_mats(Ai, Bj, chunk_size)` which performs blocked
+#'      matrix multiplication and returns the scalar APD; assign symmetrically in `M`.
+#' - Assumptions and preconditions:
+#'   - `bert_df` is a data.frame/tibble with the named columns.
+#'   - Each list element in `embeddings_col` is a numeric vector; vectors within a year
+#'     must share the same length. The function does not coerce non-numeric embeddings.
+#' - Edge-case handling and failure modes:
+#'   - Years with zero sentences produce empty matrices and are skipped for pairwise
+#'     computation (entries remain `NA`).
+#'   - If fewer than two non-empty years exist the function returns the `NA`-filled matrix.
+#'   - If embedding lengths are inconsistent within a year the function errors.
+#'   - If `apd_from_mats()` encounters zero-row inputs it returns `NA_real_`, which
+#'     propagates to the result.
+#' - Trade-offs:
+#'   - The function avoids building a full (n_total_sentences)^2 similarity matrix
+#'     by computing APD per-year-pair and using chunked multiplications inside `apd_from_mats()`.
+#' - Dependencies and side-effects:
+#'   - Uses `dplyr`, `tidyr`, `tibble`, `cli` and `utils` for grouping, shaping, and user feedback.
+#'   - Does not mutate global state or write files.
+#'
+#' @implementation
+#' The implementation materialises per-year matrices, enumerates unordered pairs via
+#' `utils::combn()`, and computes each APD by calling `apd_from_mats()` which performs
+#' blocked matrix multiplications (Ai %*% t(B)) and accumulates `sum(1 - similarity)`.
+#' Progress is reported with a single `cli` progress bar. Result matrix `M` is symmetric.
+#'
+#' @examples
+#' library(tibble)
+#' # normal case: two years with two 3-d embeddings each
+#' df <- tibble::tibble(
+#'   publication_year = c(2000, 2000, 2001, 2001),
+#'   embedding = list(
+#'     c(1, 0, 0),
+#'     c(0, 1, 0),
+#'     c(1, 1, 0),
+#'     c(0, 0, 1)
+#'   )
+#' )
+#' compute_apd_by_years(df, year_col = "publication_year", embeddings_col = "embedding", chunk_size = 2L)
+#'
+#' # edge case: a year with no embeddings (row filtered out) -> returns matrix with NAs
+#' df2 <- tibble::tibble(
+#'   publication_year = c(2000, 2001),
+#'   embedding = list(NA, c(1, 0, 0))
+#' )
+#' compute_apd_by_years(df2, year_col = "publication_year", embeddings_col = "embedding")
+#'
+#' @seealso apd_from_mats, proto_distance_matrix
+#' @keywords similarity
+#' @export
+#' @author GitHub Copilot
+#' @family similarity
+compute_apd_by_years <- function(
+  bert_df,
+  year_col = "publication_year",
+  embeddings_col = "embedding",
+  chunk_size = 5000L
+) {
+  # Basic validations
+  if (!is.data.frame(bert_df)) {
+    cli::cli_abort("`bert_df` must be a data.frame or tibble.")
+  }
+  if (!all(c(year_col, embeddings_col) %in% colnames(bert_df))) {
+    cli::cli_abort(
+      "`bert_df` must contain columns {year_col} and {embeddings_col}."
+    )
+  }
+
+  # Build per-year embedding matrices: list of numeric matrices (n_sentences x dim)
+  per_year <- bert_df |>
+    dplyr::filter(!is.na(.data[[embeddings_col]])) |>
+    dplyr::group_by(year = .data[[year_col]]) |>
+    dplyr::summarise(
+      emb_mat = list({
+        # coerce list of numeric vectors -> numeric matrix (rows = sentences)
+        vecs <- .data[[embeddings_col]]
+        if (length(vecs) == 0L) {
+          matrix(numeric(0), nrow = 0, ncol = 0)
+        } else {
+          # ensure all vectors have the same length
+          lens <- vapply(vecs, length, integer(1))
+          if (length(unique(lens)) != 1L) {
+            cli::cli_abort(
+              "Embeddings for year {unique(year)} have inconsistent dimensions."
+            )
+          }
+          do.call(rbind, vecs)
+        }
+      }),
+      n = dplyr::n(),
+      .groups = "drop"
+    ) |>
+    dplyr::arrange(year)
+
+  # If no years remain, return empty matrix
+  if (nrow(per_year) == 0L) {
+    cli::cli_alert_info(
+      "No years with embeddings found; returning empty matrix."
+    )
+    return(matrix(NA_real_, nrow = 0, ncol = 0))
+  }
+
+  years <- as.character(per_year$year)
+  n_years <- length(years)
+  M <- matrix(NA_real_, n_years, n_years, dimnames = list(years, years))
+
+  total_sentences <- sum(per_year$n, na.rm = TRUE)
+  n_empty_years <- sum(per_year$n == 0L)
+  cli::cli_alert_info(
+    "Found {n_years} years with a total of {total_sentences} sentences; {n_empty_years} empty years will be skipped for APD computation."
+  )
+
+  # Identify non-empty years to avoid unnecessary work / NA results
+  non_empty_idx <- which(per_year$n > 0L)
+  if (length(non_empty_idx) < 2L) {
+    cli::cli_alert_info(
+      "Not enough non-empty years ({length(non_empty_idx)}) to compute pairwise APD; returning matrix with NA diagonals."
+    )
+    return(M)
+  }
+
+  # Build list of unordered pairs to compute so we can show a single progress bar
+  pairs_mat <- utils::combn(non_empty_idx, 2L)
+  total_pairs <- ncol(pairs_mat)
+
+  cli::cli_progress_bar("Computing APD across year pairs", total = total_pairs)
+  on.exit(cli::cli_progress_done(), add = TRUE)
+
+  # Loop over pairs (vectorized chunking handled inside apd_from_mats)
+  for (k in seq_len(total_pairs)) {
+    i <- pairs_mat[1L, k]
+    j <- pairs_mat[2L, k]
+
+    Ai <- per_year$emb_mat[[i]]
+    Bj <- per_year$emb_mat[[j]]
+
+    # defensive checks (shouldn't be necessary because we filtered non_empty_idx)
+    if (nrow(Ai) == 0L || nrow(Bj) == 0L) {
+      cli::cli_progress_update()
+      next
+    }
+
+    val <- apd_from_mats(Ai, Bj, chunk_size = as.integer(chunk_size))
+    M[i, j] <- val
+    M[j, i] <- val
+
+    cli::cli_progress_update()
+  }
+
+  cli::cli_alert_success("Computed APD for {total_pairs} year pairs.")
+
+  M
+}
+
+# Mean pairwise cosine distance between rows of A and B, vectorized
+#' @title Average Pairwise Distance (APD) between two sets of row-vectors
+#' @description
+#' Compute the average pairwise distance (APD) between the rows of two numeric
+#' matrices based on cosine similarity. APD is defined as the mean of
+#' (1 - cosine_similarity) over all row pairs (one row from `A`, one row from `B`).
+#'
+#' @param A numeric matrix with rows representing vectors (embedding matrix).
+#'   Expected shape: numeric matrix with `ncol(A) = d` (d >= 1) and `nrow(A) >= 0`.
+#'   Rows may contain zeros; behavior for zero-norm rows depends on the helper
+#'   `.row_normalize` (see Implementation notes). NA values in `A` will typically
+#'   propagate to the result or produce errors during normalization/multiplication.
+#' @param B numeric matrix with rows representing vectors (embedding matrix).
+#'   Expected shape: numeric matrix with `ncol(B) = d` (must match `ncol(A)`)
+#'   and `nrow(B) >= 0`. See `A` for NA/zero-handling notes.
+#' @param chunk_size integer scalar (positive) controlling the number of rows of
+#'   `A` processed per block when computing similarities. Default `5000L`.
+#'   Must be a positive integer; non-positive or non-integer values will cause
+#'   underlying functions (e.g. `seq.int`) to error. Chunking trades memory
+#'   for repeated matrix multiplies (smaller `chunk_size` uses less memory).
+#'
+#' @return
+#' Numeric scalar (double) equal to the APD:
+#' the mean value of `1 - cosine(a_i, b_j)` across all `i=1..nrow(A)`,
+#' `j=1..nrow(B)`. If either `A` or `B` has zero rows (`nrow(...) == 0`),
+#' the function returns `NA_real_` because the APD is undefined in that case.
+#' If matrix dimensions are incompatible (different `ncol`), the function will
+#' error when attempting matrix multiplication.
+#'
+#' @details
+#' At a high level, this function:
+#' - row-normalizes `A` and `B` so each row has unit (or defined) norm,
+#' - computes cosine similarities between rows of `A` and `B` in memory-bounded
+#'   chunks, and
+#' - returns the average of `1 - cosine_similarity` across all cross-pairs.
+#'
+#' The APD computed is:
+#' \deqn{APD(A,B) = \frac{1}{|A||B|} \sum_{i=1}^{|A|}\sum_{j=1}^{|B|} \left[1 - \cos(a_i, b_j)\right],}
+#' where \eqn{\cos(a_i, b_j)} is the cosine similarity between row vectors
+#' `a_i` (from `A`) and `b_j` (from `B`).
+#'
+#' Implementation notes:
+#' - High-level algorithm and major steps:
+#'   1. Call `row_normalize(A)` and `row_normalize(B)` to (attempt to)
+#'      normalize each row to unit length. The function relies on this helper
+#'      to handle zero-norm rows or to signal errors for invalid input.
+#'   2. If either matrix has zero rows after normalization (`nrow(A) == 0` or
+#'      `nrow(B) == 0`), return `NA_real_` because no pairwise distances exist.
+#'   3. Iterate over `A` in blocks of `chunk_size` rows. For each block `Ai`,
+#'      compute `S_chunk <- Ai %*% t(B)` which yields pairwise cosine
+#'      similarities for that block vs all rows of `B`. Accumulate
+#'      `sum(1 - S_chunk)` across blocks and divide by `nrow(A) * nrow(B)` at the end.
+#' - Memory and performance:
+#'   - The chunking strategy bounds memory by materializing only one similarity
+#'     block at a time (size `min(chunk_size, nrow(A)) x nrow(B)`).
+#'   - Time complexity is O(nrow(A) * nrow(B) * d) where `d = ncol(A)`.
+#'   - Choosing `chunk_size` trades memory (larger = fewer matrix multiplies)
+#'     for peak memory usage.
+#' - Assumptions and preconditions:
+#'   - `A` and `B` are numeric matrices with the same number of columns.
+#'   - `.row_normalize` is available in the environment and performs row-wise
+#'     normalization (it must not silently drop rows; it should preserve row
+#'     counts or the function's NA check will not behave as intended).
+#' - Edge-case handling and failure modes:
+#'   - Returns `NA_real_` if either matrix has zero rows (undefined APD).
+#'   - If `A` or `B` contains rows with zero norm, the result depends on
+#'     `row_normalize`'s behavior (e.g. it may return zero rows, `NaN`s, or
+#'     error). If `row_normalize` produces non-finite values, matrix
+#'     multiplication and the sum will propagate them.
+#'   - If `ncol(A) != ncol(B)` the `%*%` operation will error.
+#' - Alternatives and trade-offs:
+#'   - One could compute full similarity matrix in-memory when data is small,
+#'     avoiding repeated multiplications; chunking is chosen here for
+#'     scalability to larger datasets.
+#' - Dependencies and side-effects:
+#'   - Uses base R matrix multiplication. Requires a `row_normalize` helper
+#'     function to exist in scope. The function does not mutate global state
+#'     or write files.
+#'
+#' @implementation
+#' Blocked matrix multiplication over `A` rows: normalize rows -> iterate blocks
+#' of `A` -> compute `Ai %*% t(B)` -> accumulate `sum(1 - similarities)` ->
+#' divide by total number of pairs. This minimizes peak memory while remaining
+#' straightforward and numerically stable for typical dense numeric matrices.
+#'
+#' @examples
+#' # normal case: small random matrices (rows are vectors)
+#' set.seed(1)
+#' A <- matrix(rnorm(6), nrow = 2) # 2 x 3
+#' B <- matrix(rnorm(9), nrow = 3) # 3 x 3
+#' # assume .row_normalize exists and normalizes rows; for example:
+#' .row_normalize <- function(m) {
+#'   if (nrow(m) == 0) return(m)
+#'   norms <- sqrt(rowSums(m * m))
+#'   # avoid division by zero: leave zero rows as zeros
+#'   nz <- norms > 0
+#'   m[nz, , drop = FALSE] <- m[nz, , drop = FALSE] / norms[nz]
+#'   m
+#' }
+#' apd_from_mats(A, B, chunk_size = 1L)
+#'
+#' # edge case: one input has zero rows -> returns NA_real_
+#' A0 <- matrix(numeric(0), nrow = 0, ncol = 3)
+#' apd_from_mats(A0, B)
+#'
+#' # edge case: zero-norm row (depends on .row_normalize handling)
+#' A_zero <- rbind(c(0, 0, 0), c(1, 0, 0))
+#' apd_from_mats(A_zero, B, chunk_size = 2L)
+#'
+#' @author GitHub Copilot
+#' @keywords internal
+#' @family similarity
+#' @seealso base::`%*%`, stats::`dist`
+apd_from_mats <- function(A, B, chunk_size = 5000L) {
+  A <- row_normalize(A)
+  B <- row_normalize(B)
+  nA <- nrow(A)
+  nB <- nrow(B)
+  if (nA == 0L || nB == 0L) {
+    return(NA_real_)
+  } # undefined if any side empty or all-zero
+
+  # Chunk over the larger side to bound memory of the similarity matrix
+  # Computes mean(1 - S) without materializing all chunks at once
+  total_pairs <- as.double(nA) * as.double(nB)
+  sum_one_minus_cos <- 0.0
+
+  # choose chunking on A
+  idx_starts <- seq.int(1L, nA, by = chunk_size)
+  for (s in idx_starts) {
+    e <- min(s + chunk_size - 1L, nA) # end index for this chunk
+    Ai <- A[s:e, , drop = FALSE]
+    S_chunk <- Ai %*% t(B) # cosine similarities
+    sum_one_minus_cos <- sum_one_minus_cos + sum(1 - S_chunk)
+  }
+  sum_one_minus_cos / total_pairs
+}
+
+#' Extract APD series for a given anchor year
+#'
+#' @title Anchor series from APD matrix
+#' @description
+#' Extracts the Average Pairwise Distance (APD) values comparing every year
+#' in an APD matrix to a specified anchor year, returning a tidy two-column
+#' tibble of `year` and `apd`.
+#'
+#' @param APD numeric matrix. A matrix (usually square) whose row names and
+#'   column names are years (character). Rows represent source years and
+#'   columns represent target/anchor years. NA values are allowed.
+#' @param anchor_year integer scalar or character scalar. Year to use as the
+#'   anchor (e.g. `1920` or `"1920"`). Must match a row name (or a row name
+#'   coercible to integer). If not found the function errors.
+#'
+#' @return A tibble with two columns:
+#'   - `year` (integer): the compared year,
+#'   - `apd` (numeric): APD between `year` and `anchor_year`.
+#'   Rows with `NA` APD are removed and the anchor year itself is omitted.
+#'   If all comparisons to the anchor are `NA` the function returns a zero-row
+#'   tibble with the correct columns.
+#'
+#' @details
+#' The function looks up the anchor along both rows and columns of `APD` and
+#' coalesces the row-wise and column-wise comparisons so it works when the
+#' matrix stores comparisons in either orientation or is non-square.
+#'
+#' Implementation notes:
+#' - Validate that `APD` has row names and that `anchor_year` is present (or
+#'   coercible to a present row name). The function errors early with a clear
+#'   message if these preconditions are unmet.
+#' - Coerce `anchor_year` to character for lookup; extract the anchor row (if
+#'   present) and the anchor column (if present). Either may be missing.
+#' - Use `dplyr::coalesce()` to combine the row and column numeric vectors so
+#'   the first non-missing value is used for each compared year.
+#' - Build a tibble, drop `NA` APD entries and the anchor row itself, and
+#'   return results ordered by year.
+#' - Dependencies: uses `tibble::tibble()` and `dplyr::coalesce()`; it does not
+#'   mutate global state.
+#'
+#' Edge cases and failure modes:
+#' - Errors if `APD` has no row names or if `anchor_year` is not found among
+#'   the row names (after integer coercion).
+#' - If anchor row/column exists but all values are `NA`, the returned tibble
+#'   will have zero rows.
+#'
+#' @implementation See the "Implementation notes" subsection in @details for a
+#' step-by-step description of the algorithm.
+#' @examples
+#' # Normal case: small square APD matrix with years 1920:1922
+#' APD <- matrix(
+#'   c(0, 0.1, 0.2,
+#'     0.1, 0, 0.3,
+#'     0.2, 0.3, 0),
+#'   nrow = 3, byrow = TRUE
+#' )
+#' rownames(APD) <- colnames(APD) <- as.character(1920:1922)
+#' anchor_series_from_apd(APD, 1921)
+#'
+#' # Edge case: anchor present but all comparisons are NA -> returns zero-row tibble
+#' APD2 <- APD
+#' APD2["1921", ] <- NA_real_
+#' APD2[, "1921"] <- NA_real_
+#' anchor_series_from_apd(APD2, "1921")
+#'
+#' @keywords internal
+#' @family apd drift
+#' @author
+#' agoutsmedt
+anchor_series_from_apd <- function(APD, anchor_year) {
+  # Read row names (string years)
+  yrs_chr <- rownames(APD)
+
+  # Validate prerequisites with informative errors
+  if (is.null(yrs_chr)) {
+    stop("APD must have row names representing years", call. = FALSE)
+  }
+
+  # Allow anchor as integer or character matching row names (coerced)
+  anchor_present <- (as.character(anchor_year) %in% yrs_chr) ||
+    (anchor_year %in% as.integer(yrs_chr))
+
+  if (!anchor_present) {
+    stop(
+      "anchor_year '",
+      anchor_year,
+      "' is not present in APD row names: ",
+      paste(head(yrs_chr, 10), collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  # Coerce anchor to character for direct matrix lookup
+  a <- as.character(anchor_year)
+
+  # Extract anchor row if present, otherwise produce NA vector matching columns.
+  # This handles APD matrices that store comparisons row-wise.
+  row_vec <- if (a %in% rownames(APD)) {
+    APD[a, , drop = TRUE]
+  } else {
+    rep(NA_real_, ncol(APD))
+  }
+
+  # Extract anchor column if present, otherwise produce NA vector matching rows.
+  # This handles APD matrices that store comparisons column-wise.
+  col_vec <- if (a %in% colnames(APD)) {
+    APD[, a, drop = TRUE]
+  } else {
+    rep(NA_real_, nrow(APD))
+  }
+
+  # Combine row-wise and column-wise comparisons: prefer the first non-missing
+  # value for each year (useful if matrix is asymmetric or non-square).
+  v <- dplyr::coalesce(as.numeric(row_vec), as.numeric(col_vec))
+
+  # Build tidy result: `year` as integer, `apd` numeric; drop NAs and the anchor itself,
+  # and return ordered by year.
+  tibble::tibble(
+    year = as.integer(yrs_chr),
+    apd = v
+  ) |>
+    dplyr::filter(!is.na(apd), year != as.integer(anchor_year)) |>
+    dplyr::arrange(year)
+}
+
+#' Rank sentence drivers for a year pair by projection onto the year-to-year drift
+#'
+#' @title Rank driver sentences for a year pair
+#' @description
+#' For a pair of consecutive years `(t, t+1)` this function computes the
+#' unit change direction between the representative vectors in `mat`,
+#' projects sentence embeddings from each year onto that direction, and
+#' returns the top driver sentences from the earlier and later year.
+#'
+#' @param mat numeric matrix of representative vectors with rownames equal to years
+#'   (character). Rows correspond to years and columns to embedding dimensions.
+#' @param year_t integer scalar. The start year `t` for the pair `(t, t+1)`.
+#' @param year_col string scalar (default: `"publication_year"`). Column name
+#'   in sentence files that contains the year (integer). Must be present in the
+#'   per-year sentence files.
+#' @param embedding_col string scalar (default: `"embedding"`). Name of the
+#'   list-column that stores numeric embedding vectors (each element a numeric
+#'   vector of length equal to `ncol(mat)`).
+#' @param top_n integer scalar (default: 50). Number of top drivers to return
+#'   from each year (older-sense and newer-sense). If fewer rows exist the
+#'   available rows are returned.
+#' @param normalize_rows logical scalar (default: TRUE). If `TRUE` each sentence
+#'   embedding is unit-normalised by row before projection; zero-length rows are
+#'   left unchanged (treated as zeros).
+#'
+#' @return A tibble combining the top driver rows from the older and newer year.
+#'   The tibble contains (when available) `id`, `publication_year` (or the
+#'   column given by `year_col`), `sentence`, and `projection_score`. Rows are
+#'   annotated with a `type` column taking values `"old"` (from year `t`) or
+#'   `"new"` (from year `t+1`). The returned tibble has an attribute
+#'   `"dir_vec"` containing the numeric unit direction vector used for projection
+#'   (length = ncol(mat)). If no drift is detected the `projection_score` values
+#'   are `NA_real_` and the `"dir_vec"` attribute is `NA` (numeric vector).
+#'
+#' @details
+#' This function implements a fast, disk-friendly ranking of sentence drivers:
+#' - Validate that both `t` and `t+1` are present in `rownames(mat)`.
+#' - Compute the change vector Δ_t = repvec_{t+1} - repvec_{t} and its unit
+#'   direction `dir_vec = Δ_t / ||Δ_t||`. If the norm is zero (no drift),
+#'   sentences are still collected but projection scores are set to `NA`.
+#' - Read sentence files for each year sequentially from
+#'   `here::here(data_path, "sentences_embeddings", glue::glue("sentence_embeddings_{yr}.feather"))`.
+#'   The function keeps memory usage low by converting the embedding list-column
+#'   into a numeric matrix (rows = sentences) only for the single year being
+#'   processed and immediately removing the heavy objects after computing
+#'   projections.
+#'
+#' Implementation notes:
+#' - Algorithm: compute `dir_vec` then compute scores by matrix multiplication
+#'   `scores = embeddings_matrix %*% dir_vec`. Using matrix multiplication is
+#'   substantially faster and more memory-efficient than a per-row loop.
+#' - Assumptions: each embedding element in `embedding_col` is a numeric vector
+#'   of length equal to `ncol(mat)`. Files must exist under the `data_path`
+#'   hierarchy (see above) and contain the requested columns.
+#' - Edge-cases: if a sentence has a zero-length embedding its norm is treated
+#'   as 1 during normalization (so it remains zero); if representative vectors
+#'   are identical the function returns combined rows with `projection_score = NA`
+#'   and sets the `"dir_vec"` attribute to `NA_real_`.
+#' - Side effects & dependencies: the function reads files from disk (uses
+#'   `arrow::read_feather()`), reports progress via `cli::cli_inform()` and may
+#'   allocate temporary matrices which it frees with `rm()` + `gc()`. It relies
+#'   on `here`, `glue`, `arrow`, `tibble` and `dplyr`.
+#' - Return consistency: the function always returns a tibble (combined top
+#'   drivers) and exposes the projection direction via the `"dir_vec"`
+#'   attribute to avoid breaking callers that expect a data-frame-like result.
+#'
+#' @examples
+#' # Normal-case: small, temporary example with two years and one sentence per year
+#' data_path <- tempdir()
+#' dir.create(file.path(data_path, "sentences_embeddings"), showWarnings = FALSE)
+#' df2000 <- tibble::tibble(
+#'   id = 1L,
+#'   publication_year = 2000L,
+#'   sentence = "old sense",
+#'   embedding = list(c(0, 0, 1))
+#' )
+#' df2001 <- tibble::tibble(
+#'   id = 2L,
+#'   publication_year = 2001L,
+#'   sentence = "new sense",
+#'   embedding = list(c(0, 1, 0))
+#' )
+#' arrow::write_feather(df2000, file.path(data_path, "sentences_embeddings",
+#'                                        "sentence_embeddings_2000.feather"))
+#' arrow::write_feather(df2001, file.path(data_path, "sentences_embeddings",
+#'                                        "sentence_embeddings_2001.feather"))
+#' mat <- matrix(c(0, 0, 1, 0, 1, 0), nrow = 2, byrow = TRUE)
+#' rownames(mat) <- c("2000", "2001")
+#' res <- rank_drivers_for_year_pair(mat, 2000, year_col = "publication_year",
+#'                                   embedding_col = "embedding", top_n = 1)
+#' res
+#'
+#' # Edge-case: identical representative vectors → no detectable drift
+#' mat_identical <- matrix(rep(1, 6), nrow = 2, byrow = TRUE)
+#' rownames(mat_identical) <- c("2000", "2001")
+#' res_no_drift <- rank_drivers_for_year_pair(mat_identical, 2000,
+#'                                            year_col = "publication_year",
+#'                                            embedding_col = "embedding",
+#'                                            top_n = 1)
+#' res_no_drift
+#'
+#' @seealso compute_apd_by_years, proto_distance_matrix, plot_semantic_drift
+#' @keywords utilities
+#' @author Your Name
+#' @export
+rank_drivers_for_year_pair <- function(
+  mat,
+  year_t,
+  year_col = "publication_year",
+  embedding_col = "embedding",
+  top_n = 50L,
+  normalize_rows = TRUE
+) {
+  # validate years
+  year_next <- as.integer(year_t) + 1L
+  rn <- rownames(mat)
+  if (!as.character(year_t) %in% rn || !as.character(year_next) %in% rn) {
+    rlang::abort(glue::glue(
+      "Years {year_t} or {year_next} not present in `mat` rownames"
+    ))
+  }
+
+  cli::cli_inform(glue::glue("Processing year pair {year_t} → {year_next}"))
+
+  # compute Δ_t and unit direction
+  delta_t <- mat[as.character(year_next), , drop = TRUE] -
+    mat[as.character(year_t), , drop = TRUE]
+  norm_delta <- sqrt(sum(delta_t^2))
+  if (norm_delta == 0) {
+    # No detectable drift: still collect rows but set projection_score = NA
+    cli::cli_alert_warning(glue::glue(
+      "No drift detected between {year_t} and {year_next}"
+    ))
+
+    read_one_year <- function(yr) {
+      path <- here::here(
+        data_path,
+        "sentences_embeddings",
+        glue::glue("sentence_embeddings_{yr}.feather")
+      )
+      if (!file.exists(path)) {
+        return(tibble::tibble())
+      }
+      df <- arrow::read_feather(path)
+      if (!embedding_col %in% colnames(df)) {
+        rlang::abort(glue::glue(
+          "Embedding column '{embedding_col}' not found in file for {yr}"
+        ))
+      }
+      # Attach NA projection_score to signal no drift
+      df[["projection_score"]] <- NA_real_
+      tibble::as_tibble(df)
+    }
+
+    tbl_t <- read_one_year(year_t)
+    tbl_tp1 <- read_one_year(year_next)
+
+    # Combine and drop heavy embedding column if present
+    if (embedding_col %in% colnames(tbl_t)) {
+      tbl_t[[embedding_col]] <- NULL
+    }
+    if (embedding_col %in% colnames(tbl_tp1)) {
+      tbl_tp1[[embedding_col]] <- NULL
+    }
+
+    drivers_old <- tbl_t |> dplyr::slice_head(n = 0)
+    drivers_new <- tbl_tp1 |> dplyr::slice_head(n = 0)
+
+    scores_tbl <- dplyr::bind_rows(
+      tbl_t |>
+        dplyr::select(dplyr::any_of(c(
+          "id",
+          year_col,
+          "sentence",
+          "projection_score"
+        ))) |>
+        dplyr::rename(publication_year = dplyr::any_of(year_col)) |>
+        dplyr::mutate(type = "old"),
+      tbl_tp1 |>
+        dplyr::select(dplyr::any_of(c(
+          "id",
+          year_col,
+          "sentence",
+          "projection_score"
+        ))) |>
+        dplyr::rename(publication_year = dplyr::any_of(year_col)) |>
+        dplyr::mutate(type = "new")
+    )
+
+    # Attach dir_vec attribute (NA because no drift)
+    attr(scores_tbl, "dir_vec") <- rep(NA_real_, length(delta_t))
+    return(scores_tbl)
+  }
+
+  dir_vec <- delta_t / norm_delta
+  d <- length(dir_vec)
+
+  # helper: build matrix (rows = sentences) from a list-column preserving row order
+  build_matrix <- function(emb_list, d) {
+    if (length(emb_list) == 0L) {
+      return(matrix(numeric(0), nrow = 0, ncol = d))
+    }
+    # ensure every list element has the expected length
+    lens <- vapply(emb_list, length, integer(1))
+    if (any(lens != d)) {
+      rlang::abort(
+        "Inconsistent embedding lengths or mismatch with representative vector dimension"
+      )
+    }
+    # Fast construction: unlist and reshape by row
+    mat_r <- matrix(unlist(emb_list, use.names = FALSE), ncol = d, byrow = TRUE)
+
+    # Optionally unit-normalize each row (avoid division by zero)
+    if (normalize_rows && nrow(mat_r) > 0) {
+      rnms <- sqrt(rowSums(mat_r * mat_r))
+      zero_mask <- rnms == 0
+      if (any(zero_mask)) {
+        # keep zero rows as zeros by avoiding division by zero
+        rnms[zero_mask] <- 1
+      }
+      mat_r <- mat_r / rnms
+    }
+    mat_r
+  }
+
+  # helper to read a year's file and return top_n rows by projection (chunked)
+  process_year <- function(
+    yr,
+    direction = c("old", "new"),
+    top_n_local = top_n
+  ) {
+    direction <- match.arg(direction)
+    path <- here::here(
+      data_path,
+      "sentences_embeddings",
+      glue::glue("sentence_embeddings_{yr}.feather")
+    )
+    if (!file.exists(path)) {
+      rlang::abort(glue::glue("No sentence file found for year {yr}: {path}"))
+    }
+
+    # read full file metadata into a tibble (we filter by year_col)
+    sentences <- arrow::read_feather(path)
+    if (!year_col %in% colnames(sentences)) {
+      rlang::abort(glue::glue(
+        "Year column '{year_col}' not found in file for {yr}"
+      ))
+    }
+    if (!embedding_col %in% colnames(sentences)) {
+      rlang::abort(glue::glue(
+        "Embedding column '{embedding_col}' not found in file for {yr}"
+      ))
+    }
+    sentences_tbl <- tibble::as_tibble(sentences)
+
+    # Keep only requested year rows (file may contain mixed years)
+    sentences_tbl <- sentences_tbl |>
+      dplyr::filter(.data[[year_col]] == yr)
+
+    n_total <- nrow(sentences_tbl)
+    if (n_total == 0L) {
+      return(sentences_tbl |> dplyr::mutate(projection_score = numeric(0)))
+    }
+
+    # If small file, process all at once for simplicity
+    chunk_threshold <- 200000L
+    if (n_total <= chunk_threshold) {
+      emb_mat <- build_matrix(sentences_tbl[[embedding_col]], d = d)
+      scores <- if (nrow(emb_mat) == 0L) {
+        numeric(0)
+      } else {
+        as.numeric(emb_mat %*% dir_vec)
+      }
+      if (nrow(sentences_tbl) > 0) {
+        sentences_tbl$projection_score <- scores
+      } else {
+        sentences_tbl$projection_score <- numeric(0)
+      }
+      sentences_tbl[[embedding_col]] <- NULL
+      gc()
+      # keep only requested columns downstream; ranking will be done outside
+      return(sentences_tbl)
+    }
+
+    # Large file: process by row-chunks, keep only running top_n candidates
+    chunk_rows <- chunk_threshold
+    starts <- seq.int(1L, n_total, by = chunk_rows)
+    best_tbl <- NULL
+
+    for (s in starts) {
+      e <- min(s + chunk_rows - 1L, n_total)
+      chunk_tbl <- sentences_tbl[s:e, , drop = FALSE]
+
+      emb_mat <- build_matrix(chunk_tbl[[embedding_col]], d = d)
+      scores <- if (nrow(emb_mat) == 0L) {
+        numeric(0)
+      } else {
+        as.numeric(emb_mat %*% dir_vec)
+      }
+      if (nrow(chunk_tbl) > 0) {
+        chunk_tbl$projection_score <- scores
+      } else {
+        chunk_tbl$projection_score <- numeric(0)
+      }
+      chunk_tbl[[embedding_col]] <- NULL
+
+      # drop NA scores before ranking
+      chunk_tbl <- chunk_tbl |> dplyr::filter(!is.na(.data$projection_score))
+
+      if (nrow(chunk_tbl) == 0L) {
+        rm(emb_mat)
+        gc()
+        next
+      }
+
+      if (direction == "old") {
+        chunk_best <- chunk_tbl |>
+          dplyr::arrange(projection_score) |>
+          utils::head(top_n_local)
+      } else {
+        chunk_best <- chunk_tbl |>
+          dplyr::arrange(dplyr::desc(projection_score)) |>
+          utils::head(top_n_local)
+      }
+
+      if (is.null(best_tbl)) {
+        best_tbl <- chunk_best
+      } else {
+        best_tbl <- dplyr::bind_rows(best_tbl, chunk_best)
+        # reduce again to top_n_local
+        if (direction == "old") {
+          best_tbl <- best_tbl |>
+            dplyr::arrange(projection_score) |>
+            utils::head(top_n_local)
+        } else {
+          best_tbl <- best_tbl |>
+            dplyr::arrange(dplyr::desc(projection_score)) |>
+            utils::head(top_n_local)
+        }
+      }
+
+      rm(emb_mat, chunk_tbl, chunk_best)
+      gc()
+    }
+
+    # If there were NA-only scores and best_tbl is NULL, return empty tibble with projection_score
+    if (is.null(best_tbl)) {
+      sentences_tbl <- sentences_tbl |>
+        dplyr::mutate(projection_score = numeric(0)) |>
+        dplyr::slice_head(n = 0)
+      return(sentences_tbl)
+    }
+
+    best_tbl
+  }
+
+  # process t then t+1 sequentially to limit memory peak
+  tbl_t <- process_year(year_t, direction = "old", top_n_local = top_n)
+
+  drivers_old <- tbl_t |>
+    dplyr::arrange(projection_score) |>
+    utils::head(top_n) |>
+    dplyr::select(dplyr::any_of(c(
+      "id",
+      year_col,
+      "sentence",
+      "projection_score"
+    ))) |>
+    dplyr::rename(publication_year = dplyr::any_of(year_col)) |>
+    dplyr::mutate(type = "old")
+  rm(tbl_t)
+  gc()
+
+  tbl_tp1 <- process_year(year_next, direction = "new", top_n_local = top_n)
+  drivers_new <- tbl_tp1 |>
+    dplyr::arrange(dplyr::desc(projection_score)) |>
+    utils::head(top_n) |>
+    dplyr::select(dplyr::any_of(c(
+      "id",
+      year_col,
+      "sentence",
+      "projection_score"
+    ))) |>
+    dplyr::rename(publication_year = dplyr::any_of(year_col)) |>
+    dplyr::mutate(type = "new")
+  rm(tbl_tp1)
+  gc()
+
+  # Combined tibble (old then new). This is convenient for downstream binding
+  scores_tbl <- dplyr::bind_rows(drivers_old, drivers_new)
+
+  # Attach the direction vector as an attribute so callers can inspect it if needed
+  attr(scores_tbl, "dir_vec") <- dir_vec
+
+  scores_tbl
+}
+
+#: Plotting semantic drift-------------------------
+
+#' @title Plot rolling mean of a year-to-year semantic drift measure
+#' @description Compute and plot a moving average of a year-to-year drift measure
+#'   (for example prototype-based distance `prt` or average pairwise distance `apd`)
+#'   and optionally add a LOESS smooth of the raw values.
+#'
+#' @param drift tibble with at least two columns: `year` (integer or character scalar per row)
+#'   and a numeric column specified by `value_col`. Rows are treated as time-ordered after
+#'   arranging by `year`. NA values in `value_col` are allowed and handled by the rolling mean.
+#' @param value_col character scalar naming the numeric column in `drift` to plot and roll.
+#'   Allowed examples: `"prt"`, `"apd"`. Default in the function signature is `c("prt", "apd")`,
+#'   but the function requires a single character string and will error if multiple values are
+#'   supplied; pass a single name like `"prt"`.
+#' @param smooth logical scalar, whether to add a LOESS smooth of the raw `value_col`
+#'   values. Default: `FALSE`. When `TRUE` the smoothing uses `span` and `method = "loess"`.
+#' @param span numeric scalar in (0, 1] passed to `geom_smooth(method = "loess")` when
+#'   `smooth = TRUE`. Default: `0.25`. NA or out-of-range values will be passed to ggplot2
+#'   and may produce warnings/errors from `geom_smooth`.
+#' @param window integer scalar >= 2 giving the number of years used for the rolling mean
+#'   (right-aligned). Default: `NULL` (no rolling mean / no rolling line). If `window <= 1`
+#'   a warning is issued and no rolling mean is computed. NA values inside a rolling window
+#'   are ignored via `na.rm = TRUE` when computing the mean; if all values in the window are
+#'   missing the result is `NA`.
+#'
+#' @return A `ggplot` object. The plot contains:
+#'   - semi-transparent points for the raw year-to-year `value_col` values;
+#'   - an optional rolling-mean line (`numeric` column named `<value_col>_roll`) when
+#'     `window` >= 2; and
+#'   - an optional LOESS trend line when `smooth = TRUE`.
+#'   On error the function throws with `cli::cli_abort()` (e.g. missing column or invalid args).
+#'
+#' @details
+#' This helper visualises short-term year-to-year changes in a semantic drift measure by
+#' plotting raw year values and an optional right-aligned moving average. It is designed
+#' to be used with yearly prototype- or embedding-based drift measures.
+#'
+#' Implementation notes:
+#' - The function first validates inputs and arranges `drift` by `year`. If `year` is a
+#'   character vector the ordering is lexical — convert to integer or Date for chronological order.
+#' - The rolling mean uses `zoo::rollapply(..., align = "right", fill = NA_real_)` so each
+#'   rolling value corresponds to the current year and the `window - 1` previous years.
+#'   `mean(..., na.rm = TRUE)` is used inside the window to tolerate missing values.
+#' - If `window` is `NULL` or `<= 1` no rolling line is drawn. If `window` is larger than
+#'   the number of available rows, the resulting rolling column will contain mostly `NA`.
+#' - The function does not mutate global state. It depends on the `ggplot2`, `dplyr`,
+#'   `zoo`, `glue`, and `cli` packages; these should be available at runtime.
+#' - Trade-offs: `zoo::rollapply` is used because it provides explicit `align = "right"`
+#'   behaviour and flexible `fill` control. Alternatives such as `stats::filter` or
+#'   `slider::slide_*` were considered; `zoo` is chosen for compactness and fewer dependencies.
+#'
+#' @implementation
+#' Assembles a `ggplot2` with three optional layers: raw points, a computed rolling-mean
+#' line added when `window >= 2`, and a LOESS trend when `smooth = TRUE`. The rolling mean
+#' is stored in a new column `<value_col>_roll` on a local copy of `drift`.
+#'
+#' @examples
+#' # Normal case: integer years, rolling window of 3 and LOESS smoothing
+#' d <- tibble::tibble(
+#'   year = 2001:2008,
+#'   prt = c(0.1, 0.15, 0.12, 0.2, 0.18, 0.25, 0.22, 0.3)
+#' )
+#' plot_semantic_drift(d, value_col = "prt", window = 3L, smooth = TRUE)
+#'
+#' # Edge case: character years (lexical order) and NA values in the series
+#' d2 <- tibble::tibble(
+#'   year = as.character(c(2001:2004, 2010, 2005)),
+#'   apd = c(NA, 0.2, 0.18, 0.19, 0.25, 0.21)
+#' )
+#' # Convert year to integer for chronological ordering, or be aware lexical ordering:
+#' d2$year <- as.integer(d2$year)
+#' plot_semantic_drift(d2, value_col = "apd", window = 2L)
+#'
+#' # Edge case: no rolling (window = NULL) simply shows raw points (and optional LOESS)
+#' plot_semantic_drift(d, value_col = "prt", window = NULL, smooth = FALSE)
+#'
+#' @export
+#' @keywords plot timeseries semantic-drift
+#' @seealso [ggplot2::geom_smooth()], [zoo::rollapply()], [plot_prt_rolling()], [plot_cumulative_drift()]
+#' @family plotting
+#' @concept semantic drift
+plot_semantic_drift <- function(
+  drift,
+  value_col = c("prt", "apd"),
+  smooth = FALSE,
+  span = 0.25,
+  window = NULL
+) {
+  # Validate `value_col` is a single character string naming a column in `drift`.
+  if (!is.character(value_col) || length(value_col) != 1L) {
+    cli::cli_abort(
+      "`value_col` must be a single character string naming a column in `drift`. Either 'prt' or 'apd' are allowed."
+    )
+  }
+  if (!value_col %in% colnames(drift)) {
+    cli::cli_abort("Column {.val {value_col}} not found in `drift`.")
+  }
+
+  compute_roll <- FALSE
+  if (!is.null(window)) {
+    if (!is.numeric(window) || length(window) != 1L) {
+      cli::cli_abort("`window` must be a single integer-like value or NULL.")
+    }
+    window <- as.integer(window)
+    if (window <= 1L) {
+      # Inform the user that a window <= 1 is effectively no rolling computation.
+      cli::cli_alert_warning(
+        "No rolling applied; `window` <= 1. Results will be equivalent to year-to-year plot."
+      )
+      compute_roll <- FALSE
+    } else {
+      compute_roll <- TRUE
+    }
+  }
+
+  # Arrange rows by `year` before computing rolling mean. If `year` is character,
+  # ordering will be lexical; the user should supply integer or Date for chronological order.
+  d <- drift |>
+    dplyr::arrange(year)
+
+  roll_col <- paste0(value_col, "_roll")
+  if (compute_roll) {
+    vals <- d[[value_col]]
+    # Compute a right-aligned rolling mean with NA-aware averaging. `fill = NA_real_`
+    # ensures the first (window-1) rows receive NA (no incomplete-window padding).
+    rollvec <- zoo::rollapply(
+      vals,
+      width = window,
+      FUN = function(x) mean(x, na.rm = TRUE),
+      align = "right",
+      fill = NA_real_
+    )
+    d[[roll_col]] <- rollvec
+  }
+
+  # Nicely formatted display name for axis/title: uppercase common abbreviations.
+  display_name <- if (tolower(value_col) %in% c("prt", "apd")) {
+    toupper(value_col)
+  } else {
+    value_col
+  }
+
+  # Determine whether year column is integer-like for numeric x-axis with decade breaks.
+  yrs_num <- suppressWarnings(as.integer(d$year))
+  is_numeric_years <- !any(is.na(yrs_num)) && length(yrs_num) > 0L
+
+  if (is_numeric_years) {
+    # Build decade breaks from numeric years
+    yr_min <- min(yrs_num, na.rm = TRUE)
+    yr_max <- max(yrs_num, na.rm = TRUE)
+    decade_start <- floor(yr_min / 10) * 10
+    decade_end <- ceiling(yr_max / 10) * 10
+    decade_breaks <- seq(decade_start, decade_end, by = 10)
+
+    d$year_num <- yrs_num
+
+    # Base plot: numeric x-axis
+    p <- ggplot2::ggplot(d, ggplot2::aes(x = year_num)) +
+      ggplot2::geom_point(
+        ggplot2::aes(y = .data[[value_col]]),
+        alpha = 0.4,
+        size = 0.8
+      ) +
+      ggplot2::labs(
+        x = NULL,
+        y = glue::glue(
+          "{if (compute_roll) 'Rolling mean ' else ''}{display_name}{if (compute_roll) glue::glue(' (window = {window})') else ''}"
+        ),
+        title = glue::glue(
+          "{if (compute_roll) 'Rolling mean of ' else ''}{display_name}"
+        )
+      ) +
+      ggplot2::theme_minimal() +
+      ggplot2::scale_x_continuous(
+        breaks = decade_breaks,
+        labels = as.character(decade_breaks)
+      )
+  } else {
+    # Fallback: treat years as discrete factor and sample every 10th label for ticks
+    d$year_f <- factor(
+      as.character(d$year),
+      levels = unique(as.character(d$year))
+    )
+    n_lev <- length(levels(d$year_f))
+    step <- max(1L, floor(n_lev / 10)) # ensure roughly 10 or fewer ticks; keeps readability
+    idxs <- seq(1L, n_lev, by = step)
+    decade_breaks <- levels(d$year_f)[idxs]
+
+    p <- ggplot2::ggplot(d, ggplot2::aes(x = year_f)) +
+      ggplot2::geom_point(
+        ggplot2::aes(y = .data[[value_col]]),
+        alpha = 0.4,
+        size = 0.8
+      ) +
+      ggplot2::labs(
+        x = NULL,
+        y = glue::glue(
+          "{if (compute_roll) 'Rolling mean ' else ''}{display_name}{if (compute_roll) glue::glue(' (window = {window})') else ''}"
+        ),
+        title = glue::glue(
+          "{if (compute_roll) 'Rolling mean of ' else ''}{display_name}"
+        )
+      ) +
+      ggplot2::theme_minimal(base_size = 18) +
+      ggplot2::scale_x_discrete(breaks = decade_breaks, expand = c(0, 0))
+  }
+
+  # Add rolling mean line only when requested (window >= 2).
+  if (compute_roll) {
+    p <- p +
+      ggplot2::geom_line(
+        ggplot2::aes(y = .data[[roll_col]]),
+        color = "darkgreen",
+        linewidth = 0.8
+      )
+  }
+
+  # Optionally add LOESS smoothing of raw values for trend visualization.
+  if (isTRUE(smooth)) {
+    p <- p +
+      ggplot2::geom_smooth(
+        ggplot2::aes(y = .data[[value_col]]),
+        method = "loess",
+        span = span,
+        se = FALSE,
+        color = "darkred"
+      )
+  }
+
+  p
+}
+
+#' Cumulative semantic drift (running sum of year-to-year PRT)
+#'
+#' @title Plot cumulative PRT over time
+#' @description Compute and plot the running (cumulative) sum of yearly prototype-based
+#'   distances (`prt`) to visualise accumulated semantic drift.
+#'
+#' @param drift tibble with columns `year` (integer or character scalar per row) and
+#'   `prt` (numeric scalar). Rows represent years. `year` may be integer or character;
+#'   if character, ordering is lexical unless converted to integer before calling.
+#'   `NA` values in `prt` are allowed and are treated as zero for the cumulative sum
+#'   (see Implementation notes).
+#'
+#' @return A `ggplot` object (class `gg`) showing `cum_prt` (numeric vector) on the y-axis
+#'   and `year` on the x-axis. The function returns the plot object for further modification.
+#'   If required columns are missing the function errors with a descriptive message.
+#'
+#' @details
+#' This function orders the input `drift` by `year`, replaces missing yearly PRT values
+#' with zero (interpreting missing as "no observed change"), computes the cumulative
+#' sum via `cumsum()`, and plots the result as a line with year-wise points.
+#'
+#' Implementation notes:
+#' - Steps: (1) validate input columns, (2) sort by `year`, (3) replace `NA` in `prt` with 0,
+#'   (4) compute `cum_prt <- cumsum(prt_replaced)`, (5) draw line + points with `ggplot2`.
+#' - Assumptions: `drift` contains one row per year (duplicates are not collapsed). If
+#'   duplicate years exist they are included in the cumulative sum in their sorted order.
+#' - Ordering: `dplyr::arrange(year)` is used; if `year` is character this produces
+#'   lexical order. Convert `year` to integer prior to calling for chronological ordering.
+#' - NA handling: missing `prt` values are replaced with `0` before summation. This choice
+#'   treats missing drift as no change; an alternative is to omit missing values or carry
+#'   last observations forward — choose based on domain needs.
+#' - Failure modes: function errors if `year` or `prt` are missing. It does not mutate
+#'   global state or write files.
+#' - Dependencies: `dplyr`, `tidyr`, `ggplot2`, and `cli` (for user-facing errors/warnings).
+#'
+#' @implementation
+#' The implementation performs lightweight validation, sorts the data, replaces missing
+#' `prt` values with zero to preserve cumulative semantics, computes a running sum with
+#' `cumsum()`, and returns a `ggplot2` object built from that augmented tibble.
+#'
+#' @examples
+#' library(tibble)
+#' d <- tibble::tibble(
+#'   year = 2000:2005,
+#'   prt  = c(0.01, 0.02, NA, 0.01, 0.03, 0.00)
+#' )
+#' # normal case
+#' plot_cumulative_drift(d)
+#' # edge case: NA treated as zero (no change)
+#' plot_cumulative_drift(d)
+#'
+#' @seealso plot_prt_rolling, plot_prt_distribution, proto_distance_matrix
+#' @keywords plot
+#' @export
+plot_cumulative_drift <- function(drift) {
+  # Validate required columns early to provide a clear error message to users.
+  if (!all(c("year", "prt") %in% colnames(drift))) {
+    cli::cli_abort("`drift` must contain columns `year` and `prt`.")
+  }
+
+  d <- drift |>
+    dplyr::arrange(year) |> # Order by year (lexical if `year` is character)
+    dplyr::mutate(
+      # Replace NA with 0 so that missing yearly drift contributes no change to the running sum.
+      # This is an explicit design choice; alternatives (e.g., skipping NA) are valid depending on use.
+      cum_prt = cumsum(tidyr::replace_na(prt, 0))
+    )
+
+  ggplot2::ggplot(d, ggplot2::aes(x = year, y = cum_prt)) +
+    ggplot2::geom_line(color = "purple", linewidth = 0.8) +
+    ggplot2::geom_point(size = 0.8) +
+    ggplot2::labs(
+      x = NULL,
+      y = "Cumulative PRT",
+      title = "Cumulative semantic drift (sum of yearly PRT)"
+    ) +
+    ggplot2::theme_minimal()
+}
+
+#' Distribution of year-to-year PRT values
+#'
+#' @title Distribution of PRT values
+#' @description Compute and plot the distribution of prototype-based distances (PRT)
+#'   using a histogram overlaid with a density estimate.
+#'
+#' @param drift tibble with a numeric column `prt` (vector). Each row is one observation
+#'   (typically a year-to-year PRT). `prt` may contain `NA`; missing values are ignored
+#'   when drawing the histogram and density. No other columns are required.
+#' @param bins integer scalar >= 1. Number of bins used by the histogram. Default: `30`.
+#'   Non-integer inputs are coerced to integer; inputs < 1 cause an error.
+#'
+#' @return A `ggplot` object (class `gg`) showing the histogram (density-scaled) with an
+#'   overlaid kernel density. The function returns the plot for further modification or
+#'   printing. If `drift` lacks a `prt` column or `bins` is invalid the function errors
+#'   with a descriptive message.
+#'
+#' @details
+#' The function draws a density-scaled histogram of `prt` values and overlays a kernel
+#' density estimate to aid visual assessment of the distribution (skew, modes, tails).
+#'
+#' Implementation notes:
+#' - Steps: (1) validate that `drift` contains `prt` and that `bins` is a positive
+#'   integer-like scalar, (2) coerce `bins` to integer, (3) build a `ggplot2` histogram
+#'   with `aes(y = ..density..)` and overlay `geom_density()`.
+#' - NA handling: `geom_histogram()` and `geom_density()` drop `NA` by default; the function
+#'   explicitly sets `na.rm = TRUE` for clarity. If all `prt` values are `NA` the plot
+#'   will be empty (no bars/curve).
+#' - Assumptions: `drift` is a small-to-moderate tibble; the function does not aggregate,
+#'   rescale, or otherwise transform `prt` values beyond plotting.
+#' - Dependencies: `ggplot2` and `cli`. The function does not modify global state or write files.
+#'
+#' @implementation
+#' The implementation validates inputs with `cli::cli_abort()` for clear user messages,
+#' coerces `bins` to integer, and builds the ggplot using `geom_histogram()` (density-scaled)
+#' plus `geom_density()` (kernel estimate). No sampling or bootstrap is performed.
+#'
+#' @examples
+#' library(tibble)
+#' d <- tibble::tibble(prt = c(0.01, 0.02, 0.03, NA, 0.01, 0.00, 0.02))
+#' # normal case
+#' plot_prt_distribution(d)
+#' # change number of bins
+#' plot_prt_distribution(d, bins = 10L)
+#' # edge case: all NA (produces an empty plot)
+#' plot_prt_distribution(tibble::tibble(prt = rep(NA_real_, 5)))
+#'
+#' @seealso plot_prt_rolling, plot_cumulative_drift, proto_distance_matrix
+#' @keywords plot
+#' @export
+plot_prt_distribution <- function(drift, bins = 30) {
+  # Validate presence of `prt` column for clear user feedback.
+  if (!"prt" %in% colnames(drift)) {
+    cli::cli_abort("`drift` must contain a numeric column named `prt`.")
+  }
+
+  # Validate bins: require a single numeric-like value and coerce to integer.
+  if (!is.numeric(bins) || length(bins) != 1L) {
+    cli::cli_abort("`bins` must be a single numeric-like value >= 1.")
+  }
+  bins <- as.integer(bins)
+  if (is.na(bins) || bins < 1L) {
+    cli::cli_abort("`bins` must be an integer >= 1.")
+  }
+
+  # Build the plot. Use density scaling for the histogram so it matches the density curve.
+  ggplot2::ggplot(drift, ggplot2::aes(x = prt)) +
+    ggplot2::geom_histogram(
+      ggplot2::aes(y = after_stat(density)),
+      bins = bins,
+      fill = "gray70",
+      color = "white",
+      na.rm = TRUE # explicitly ignore NA values in plotting
+    ) +
+    ggplot2::geom_density(color = "black", size = 0.6, na.rm = TRUE) +
+    ggplot2::labs(
+      x = "PRT",
+      y = "Density",
+      title = "Distribution of year-to-year PRT values"
+    ) +
+    ggplot2::theme_minimal()
+}
+
+#' Heatmap of pairwise prototype distances (years × years)
+#'
+#' @title Heatmap of pairwise proto-distances
+#' @description Create a year-by-year heatmap from a square distance matrix where
+#'   row and column names encode years. Useful to visualise pairwise prototype-based
+#'   distances (PRT) across time.
+#'
+#' @param distance_matrix numeric square matrix (n x n) with both `rownames` and
+#'   `colnames` set to the corresponding year labels (character vector of length n).
+#'   Values are numeric distances (e.g., 1 - cosine). `NA` values are allowed and
+#'   are shown with `na.value` (defaults to light grey in the plot).
+#' @param legend_title character scalar, title for the colour legend. Default: "PRT\n(1 - cosine)".
+#'
+#' @return A `ggplot` object (class `gg`) showing a raster heatmap of pairwise
+#'   distances. The x and y axes use the provided year labels. If input validation
+#'   fails the function throws an error (via `cli::cli_abort()`).
+#'
+#' @details
+#' The function converts the square matrix to a long tibble and plots it with
+#' `ggplot2::geom_raster()`, mapping distance to a perceptually-uniform colour
+#' scale (from the `scico` package). Axis ticks are reduced to decade breaks when
+#' possible to keep the plot readable.
+#'
+#' Implementation notes:
+#' - Validates that `distance_matrix` is a numeric square matrix with dimnames.
+#' - Converts the matrix to a long data frame (`as.data.frame()` + `pivot_longer()`),
+#'   then converts the row/column labels to factors preserving the original order
+#'   so that the matrix layout is preserved in the raster.
+#' - Computes decade breaks by attempting to coerce row names to integer years;
+#'   if coercion fails (non-numeric names) it falls back to character positions and
+#'   picks every 10th label.
+#' - If `rownames` and `colnames` are not identical a warning is emitted but the
+#'   function will still plot using the provided labels (the plot may be asymmetric).
+#' - NA handling: NA values in the matrix are plotted using `na.value = "grey90"`.
+#' - Side effects: none (no global state modified, no files written).
+#' - Dependencies: `ggplot2`, `tidyr`, `tibble`, `dplyr`, `scico`, and `cli`.
+#'
+#' @implementation
+#' Steps performed:
+#' 1. Validate type/shape and presence of dimnames.
+#' 2. Optionally warn if row/col names differ.
+#' 3. Convert matrix -> long tibble, set factor levels to preserve ordering.
+#' 4. Compute decade breaks from numeric years when possible; otherwise fall back
+#'    to regular 10-step sampling of labels.
+#' 5. Build and return a `ggplot2` raster plot with `scico` palette.
+#'
+#' @examples
+#' # normal case: symmetric matrix with year labels
+#' yrs <- as.character(2000:2004)
+#' m <- matrix(runif(25, 0, 0.2), nrow = 5, ncol = 5)
+#' rownames(m) <- colnames(m) <- yrs
+#' plot_distance_heatmap(m)
+#'
+#' # edge case: NA values in the matrix are visualised with a neutral color
+#' m_na <- m
+#' m_na[2, 4] <- NA_real_
+#' plot_distance_heatmap(m_na)
+#'
+#' @seealso proto_distance_matrix, plot_prt_rolling, plot_cumulative_drift
+#' @keywords plot
+#' @export
+#' @author
+#' Positron Assistant
+plot_distance_heatmap <- function(
+  distance_matrix,
+  legend_title = "PRT\n(1 - cosine)"
+) {
+  # Basic validations to provide clear user feedback early
+  if (!is.matrix(distance_matrix) || !is.numeric(distance_matrix)) {
+    cli::cli_abort("`distance_matrix` must be a numeric matrix.")
+  }
+  if (nrow(distance_matrix) != ncol(distance_matrix)) {
+    cli::cli_abort(
+      "`distance_matrix` must be square (same number of rows and columns)."
+    )
+  }
+  if (
+    is.null(rownames(distance_matrix)) || is.null(colnames(distance_matrix))
+  ) {
+    cli::cli_abort(
+      "`distance_matrix` must have both rownames and colnames set to year labels."
+    )
+  }
+
+  # Warn if row and column labels differ; still proceed but user may get asymmetric plot.
+  if (!identical(rownames(distance_matrix), colnames(distance_matrix))) {
+    cli::cli_warn(
+      "Row names and column names differ; plot will use the provided labels as-is."
+    )
+  }
+
+  # Convert matrix to a long tibble suitable for ggplot.
+  # rownames_to_column preserves the original row order (important for matrix layout).
+  df <- as.data.frame(distance_matrix) |>
+    tibble::rownames_to_column(var = "year") |>
+    tidyr::pivot_longer(
+      cols = -year,
+      names_to = "year2",
+      values_to = "dist"
+    ) |>
+    # Convert the year columns to factors with levels in the original order so the
+    # raster preserves the matrix layout (row/column order).
+    dplyr::mutate(
+      year = factor(year, levels = unique(year)),
+      year2 = factor(year2, levels = unique(year2))
+    )
+
+  # Attempt to compute decade breaks using numeric years; if conversion fails,
+  # fall back to sampling every 10th label to avoid over-crowding axis ticks.
+  yrs_num <- suppressWarnings(as.integer(unique(rownames(distance_matrix))))
+  if (any(is.na(yrs_num))) {
+    decade_breaks <- unique(rownames(distance_matrix))[seq(
+      1,
+      length(unique(rownames(distance_matrix))),
+      by = 10
+    )]
+  } else {
+    yr_min <- min(yrs_num, na.rm = TRUE)
+    yr_max <- max(yrs_num, na.rm = TRUE)
+    decade_seq <- seq(floor(yr_min / 10) * 10, floor(yr_max / 10) * 10, by = 10)
+    decade_breaks <- as.character(decade_seq)
+  }
+
+  p <- ggplot2::ggplot(df, ggplot2::aes(x = year, y = year2, fill = dist)) +
+    # geom_raster is efficient for regularly-gridded heatmaps and preserves aspect ratio
+    ggplot2::geom_raster() +
+    # perceptually-uniform colour scale from scico; reverse direction for readability
+    scico::scale_fill_scico(
+      palette = "lipari",
+      na.value = "grey90",
+      direction = -1,
+      name = legend_title
+    ) +
+    coord_fixed(expand = FALSE) +
+    ggplot2::labs(
+      x = NULL,
+      y = NULL
+    ) +
+    ggplot2::theme_minimal(base_size = 18) +
+    ggplot2::theme(
+      axis.text.x = ggplot2::element_text(angle = 90, vjust = 0.5, hjust = 1)
+    ) +
+    # Reduce tick labels to decade breaks (or sampled labels) for readability
+    ggplot2::scale_x_discrete(breaks = decade_breaks, labels = decade_breaks) +
+    ggplot2::scale_y_discrete(breaks = decade_breaks, labels = decade_breaks)
+
+  p
+}
+
+#' Plot APD series against one or more anchor years
+#'
+#' @title Plot APD vs anchor year(s)
+#' @description
+#' Create a ggplot2 visualization of Average Pairwise Distance (APD) relative to
+#' one anchor year or multiple anchor years. In single-anchor mode
+#' (`facet = FALSE`) the function returns a single panel for `anchor_year`.
+#' In multi-anchor mode (`facet = TRUE`) it returns a faceted plot for each
+#' value in `anchors`.
+#'
+#' @param APD numeric matrix, square (years x years). Row names and column names
+#'   must be present and represent years (character or integer). `APD[i, j]`
+#'   denotes the distance between the i-th (row) year and the j-th (column) year.
+#'   NAs are allowed in the matrix and will appear as gaps in the plotted series
+#'   (the function does not impute missing values).
+#' @param anchor_year integer scalar or character(1). The anchor year to use
+#'   when `facet = FALSE`. Must match one of the row names of `APD`.
+#' @param anchors integer vector or NULL. Anchor years to use when `facet = TRUE`.
+#'   All values must be present in the row names of `APD`.
+#' @param facet logical scalar. If `TRUE` the function plots multiple anchors
+#'   (from `anchors`) using `facet_wrap`; if `FALSE` it plots a single anchor
+#'   specified by `anchor_year`. Default: `FALSE`.
+#' @param scales character(1). Passed to `ggplot2::facet_wrap()` when
+#'   `facet = TRUE`. One of `"fixed"`, `"free"`, `"free_x"`, `"free_y"`.
+#'   Default: `"fixed"`.
+#' @param span numeric scalar in (0, 1]. Smoothing span passed to `geom_smooth`
+#'   (loess). Smaller values follow the data more closely. Default: `0.25`.
+#'
+#' @return
+#' A `ggplot` object. The function stops with an error if `APD` lacks row names,
+#' if required anchors are missing, or if required arguments are not supplied
+#' (e.g., `anchor_year` when `facet = FALSE`). It never returns NULL.
+#'
+#' @details
+#' The function extracts APD series for the requested anchor(s) and visualizes
+#' them over time. The plotted series show APD between each year and the
+#' anchor year; a vertical dashed line marks the anchor. When faceting, each
+#' anchor gets its own panel and its own vertical marker.
+#'
+#' Implementation notes:
+#' - Validate that `APD` has row names. Row names are used to match anchors.
+#' - For faceted mode, convert `anchors` to character to compare with
+#'   `rownames(APD)` and error on missing anchors.
+#' - For each anchor the function calls `anchor_series_from_apd(APD,
+#'   anchor_year = a)`, which is expected to return a tibble with columns
+#'   `year` (integer or numeric) and `apd` (numeric). These per-anchor tibbles
+#'   are combined with `purrr::map_dfr()` and annotated with an `anchor`
+#'   column for faceting.
+#' - The plot uses `geom_line`, `geom_point`, and a LOESS smoother
+#'   (`geom_smooth(method = "loess")`) with the specified `span`. The vertical
+#'   dashed line (`geom_vline`) highlights the anchor year.
+#' - Assumptions: `APD` is square and its row/column names share the same set
+#'   of year labels; `anchor_series_from_apd()` exists and returns the expected
+#'   columns. The function does not mutate global state.
+#' - Edge cases & failure modes: function errors if `rownames(APD)` is NULL,
+#'   if requested anchors are absent, or if `anchor_year` is missing when
+#'   `facet = FALSE`. Very short time series may not be well suited for LOESS;
+#'   switch smoothing method if needed.
+#'
+#' @implementation
+#' The function builds the plotting data by extracting anchor-specific series
+#' (via `anchor_series_from_apd`) and optionally stacking them for faceting.
+#' It then constructs a ggplot with common aesthetics and returns it. Using
+#' `purrr::map_dfr()` keeps memory usage modest when combining multiple small
+#' tibbles; LOESS smoothing is used for flexibility on typical time-series
+#' lengths encountered here.
+#'
+#' @examples
+#' # Minimal runnable examples
+#' set.seed(1)
+#' years <- 2000:2004
+#' APD <- matrix(runif(25, 0, 1), nrow = 5, ncol = 5)
+#' rownames(APD) <- colnames(APD) <- as.character(years)
+#'
+#' # Single-anchor plot
+#' library(ggplot2)
+#' plot_anchor(APD, anchor_year = 2002)
+#'
+#' # Faceted anchors
+#' plot_anchor(APD, anchors = c(2000, 2003), facet = TRUE, scales = "free_y")
+#'
+#' @seealso anchor_series_from_apd, ggplot2::geom_smooth
+#' @keywords internal
+#' @family plotting
+#' @author Positron Assistant
+#' @aliases plot_anchor
+plot_anchor <- function(
+  APD,
+  anchor_year = NULL,
+  anchors = NULL,
+  facet = FALSE,
+  scales = "fixed",
+  span = 0.25
+) {
+  # Validate APD rownames
+  yrs_chr <- rownames(APD)
+  if (is.null(yrs_chr)) {
+    stop("APD must have row names representing years")
+  }
+
+  if (facet) {
+    if (is.null(anchors)) {
+      stop("When facet = TRUE you must provide a vector of `anchors`")
+    }
+    # Convert anchors to character to match rownames(APD) which are character
+    anchors_chr <- as.character(anchors)
+    missing_anchors <- setdiff(anchors_chr, yrs_chr)
+    if (length(missing_anchors) > 0) {
+      stop(
+        "The following anchors are not present in APD rownames: ",
+        paste(missing_anchors, collapse = ", ")
+      )
+    }
+
+    # Build a combined tibble with an `anchor` column by extracting the
+    # series for each anchor using anchor_series_from_apd().
+    # anchor_series_from_apd() is expected to return a tibble with
+    # columns `year` and `apd`.
+    df <- purrr::map_dfr(anchors_chr, function(a) {
+      anchor_series_from_apd(APD, anchor_year = a) |>
+        dplyr::mutate(anchor = as.integer(a))
+    })
+
+    # Prepare vertical line positions (one per unique anchor)
+    vlines <- data.frame(anchor = unique(as.integer(df$anchor)))
+
+    gg <- ggplot2::ggplot(df, ggplot2::aes(x = year, y = apd)) +
+      ggplot2::geom_line() +
+      ggplot2::geom_point(size = 1.5) +
+      # LOESS smoother: flexible local smoothing; span controls smoothness
+      ggplot2::geom_smooth(
+        method = "loess",
+        se = FALSE,
+        color = "blue",
+        alpha = 0.9,
+        linetype = 1,
+        span = span
+      ) +
+      ggplot2::facet_wrap(~anchor, scales = scales) +
+      # Draw a dashed vertical line at the anchor year in each facet
+      ggplot2::geom_vline(
+        data = vlines,
+        ggplot2::aes(xintercept = anchor),
+        linetype = 2
+      ) +
+      ggplot2::labs(y = "APD vs anchor", x = NULL) +
+      ggplot2::theme_minimal(base_size = 18)
+
+    gg
+  } else {
+    if (is.null(anchor_year)) {
+      stop("Provide `anchor_year` when facet = FALSE")
+    }
+    # Extract the single series for the requested anchor
+    df_single <- anchor_series_from_apd(APD, anchor_year = anchor_year)
+
+    gg <- ggplot2::ggplot(df_single, ggplot2::aes(x = year, y = apd)) +
+      ggplot2::geom_line() +
+      ggplot2::geom_point(size = 1.5) +
+      ggplot2::geom_smooth(
+        method = "loess",
+        se = FALSE,
+        color = "blue",
+        alpha = 0.9,
+        linetype = 1,
+        span = span
+      ) +
+      # Single vertical dashed line at the anchor year
+      ggplot2::geom_vline(xintercept = as.integer(anchor_year), linetype = 2) +
+      ggplot2::labs(y = "APD vs anchor", x = NULL) +
+      ggplot2::theme_minimal(base_size = 18)
+
+    gg
+  }
 }
 
 #: Method for text analysis-------------------------

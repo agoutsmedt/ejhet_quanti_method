@@ -1,12 +1,14 @@
 # The goal: using the representative vectors of sentence embeddings for each year to measure semantic drift over time
 source(file.path("scripts", "paths_and_packages.R"))
+source(file.path("scripts", "_functions.R"))
+p_load(patchwork)
 
 # Load per-year representative vectors (list-column: embedding_by_year_centered)
 representative_vectors <- read_feather(here::here(
   data_path,
   "representative_vectors_window_5.feather"
 )) |>
-  filter(between(year, 1950, 2010)) |>
+  filter(between(year, 1900, 2009)) |>
   select(year, embedding_by_year) |>
   unnest(embedding_by_year) |>
   mutate(dimension = row_number(), .by = year)
@@ -21,158 +23,337 @@ mat <- as.matrix(mat)
 # ---- usage ----
 drift <- consecutive_proto_drift(mat) # year-to-year PRT drift
 
-
 # Visualisations for year-to-year proto-distance (PRT) drift-------------
-#'
-#'
-#' Functions expect a tibble `drift` with columns: year (int or chr), year_prev, prt (numeric)
-#' and/or a square distance matrix with dimnames as years.
-#' Uses ggplot2 for plotting and zoo for simple rolling means.
-#' ...existing code...
 
-#' Rolling mean (moving average) of PRT
-#' @param drift tibble with `year` and `prt`
-#' @param window integer window size (years) for rolling mean; must be >= 1
-#' @return ggplot object
-plot_prt_rolling <- function(drift, smooth = FALSE, span = 0.25, window = 5L) {
-  if (window < 1L) {
-    cli::cli_alert_warning(
-      "No rollling applied; equivalent to year-to-year plot."
-    )
-  }
-  d <- drift |>
-    arrange(year) |>
-    mutate(
-      prt_roll = zoo::rollapply(
-        prt,
-        width = window,
-        FUN = function(x) mean(x, na.rm = TRUE),
-        align = "right",
-        fill = NA_real_
-      )
-    )
-  p <- ggplot(d, aes(x = year)) +
-    geom_line(aes(y = prt_roll), color = "darkgreen", size = 0.8) +
-    geom_point(aes(y = prt), alpha = 0.4, size = 0.8) +
-    labs(
-      x = NULL,
-      y = glue::glue("Rolling mean PRT (window = {window})"),
-      title = "Rolling mean of year-to-year PRT"
-    ) +
-    theme_minimal()
+prt_drift <- plot_semantic_drift(drift, value_col = "prt", smooth = TRUE)
+ggsave(
+  filename = here::here(
+    image_path_temp,
+    "prt_representative_vectors_drift.png"
+  ),
+  width = 8,
+  height = 5
+)
 
-  if (smooth) {
-    p <- p +
-      geom_smooth(
-        aes(y = prt),
-        method = "loess",
-        span = span,
-        se = FALSE,
-        color = "darkred"
-      )
-  }
-
-  p
-}
-
-#' Cumulative drift over time (running sum of PRT)
-#' @param drift tibble with `year` and `prt`
-#' @return ggplot object
-plot_cumulative_drift <- function(drift) {
-  d <- drift |>
-    arrange(year) |>
-    mutate(cum_prt = cumsum(replace_na(prt, 0)))
-  ggplot(d, aes(x = year, y = cum_prt)) +
-    geom_line(color = "purple", size = 0.8) +
-    geom_point(size = 0.8) +
-    labs(
-      x = NULL,
-      y = "Cumulative PRT",
-      title = "Cumulative semantic drift (sum of yearly PRT)"
-    ) +
-    theme_minimal()
-}
-
-#' Distribution of PRT values
-#' @param drift tibble with `prt`
-#' @return ggplot object
-plot_prt_distribution <- function(drift, bins = 30) {
-  ggplot(drift, aes(x = prt)) +
-    geom_histogram(
-      aes(y = ..density..),
-      bins = bins,
-      fill = "gray70",
-      color = "white"
-    ) +
-    geom_density(color = "black", size = 0.6) +
-    labs(
-      x = "PRT",
-      y = "Density",
-      title = "Distribution of year-to-year PRT values"
-    ) +
-    theme_minimal()
-}
-
-plot_prt_rolling(drift, smooth = FALSE, window = 10L)
-plot_cumulative_drift(drift)
-plot_prt_distribution(drift, bins = 30)
-
-# Exploring representative vectors similarity ------------
-#' Heatmap of the full distance matrix (years x years)
-#' @param distance_matrix square numeric matrix with dimnames = years
-#' @return ggplot object
-plot_distance_heatmap <- function(distance_matrix) {
-  if (is.null(dimnames(distance_matrix))) {
-    cli::cli_abort("distance_matrix must have dimnames (years).")
-  }
-
-  # prepare data frame for plotting
-  df <- as.data.frame(distance_matrix) |>
-    tibble::rownames_to_column(var = "year") |>
-    tidyr::pivot_longer(-year, names_to = "year2", values_to = "dist") |>
-    mutate(
-      year = factor(year, levels = unique(year)),
-      year2 = factor(year2, levels = unique(year2))
-    )
-
-  # compute decade breaks from numeric year rownames (fall back to character if needed)
-  yrs_num <- suppressWarnings(as.integer(unique(rownames(distance_matrix))))
-  if (any(is.na(yrs_num))) {
-    decade_breaks <- unique(rownames(distance_matrix))[seq(
-      1,
-      length(unique(rownames(distance_matrix))),
-      by = 10
-    )]
-  } else {
-    yr_min <- min(yrs_num, na.rm = TRUE)
-    yr_max <- max(yrs_num, na.rm = TRUE)
-    decade_seq <- seq(floor(yr_min / 10) * 10, floor(yr_max / 10) * 10, by = 10)
-    decade_breaks <- as.character(decade_seq)
-  }
-
-  p <- ggplot(df, aes(x = year, y = year2, fill = dist)) +
-    geom_raster() +
-    scale_fill_scico(
-      palette = "lipari",
-      na.value = "grey90",
-      direction = -1,
-      name = "PRT\n(1 - cosine)"
-    ) +
-    coord_fixed(expand = FALSE) +
-    labs(
-      x = NULL,
-      y = NULL,
-      title = "Heatmap of pairwise proto-distances"
-    ) +
-    theme_minimal(base_size = 18) +
-    theme(
-      axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)
-    ) +
-    scale_x_discrete(breaks = decade_breaks, labels = decade_breaks) +
-    scale_y_discrete(breaks = decade_breaks, labels = decade_breaks)
-
-  p
-}
-
+# Heatmap of proto-distance matrix
 dm <- proto_distance_matrix(mat)
-plot_distance_heatmap(dm)
+prt_heatmap <- plot_distance_heatmap(dm)
+ggsave(
+  filename = here::here(
+    image_path_temp,
+    "prt_representative_vectors_heatmap.png"
+  ),
+  width = 8,
+  height = 6
+)
+
+# Average Pairwise Distance on sentence embeddings------------------
+## APD on top 1% closest sentences to "rationality" and "rational"-----------
+bert_df <- read_rds(file.path(
+  data_path,
+  "closest_sentences_0.01_rationality_score_filtered_with_embeddings.rds"
+)) %>%
+  filter(between(publication_year, 1900, 2009))
+
+apd_sentence_matrix <- compute_apd_by_years(
+  bert_df,
+  year_col = "publication_year",
+  embeddings_col = "embedding",
+  chunk_size = 5000L
+)
+
+# Persist to disk for downstream use (safe, reproducible path)
+apd_output_path <- file.path(data_path, "apd_sentence_embeddings_years.rds")
+saveRDS(apd_sentence_matrix, apd_output_path)
+
+#' Load data if needed
+#' `apd_sentence_matrix <- readRDS(file.path(data_path, "apd_sentence_embeddings_years.rds"))``
+
+# plotting
+years <- rownames(apd_sentence_matrix)
+year_col <- years[-1]
+year_prev_col <- years[-length(years)]
+
+idx <- seq_len(length(years) - 1)
+apd_vals <- as.numeric(apd_sentence_matrix[cbind(idx + 1, idx)])
+
+# Return a tibble with the later year, previous year, and the proto-distance.
+apd_drift <- tibble::tibble(
+  year = year_col,
+  year_prev = year_prev_col,
+  apd = apd_vals
+)
+
+plot_semantic_drift(apd_drift, value_col = "apd", smooth = TRUE)
+ggsave(
+  filename = here::here(
+    image_path_temp,
+    "apd_sentence_embeddings_drift.png"
+  ),
+  width = 8,
+  height = 5
+)
+
+plot_distance_heatmap(
+  apd_sentence_matrix,
+  legend_title = "Average Pairwise\nDistance"
+)
+ggsave(
+  filename = here::here(
+    image_path_temp,
+    "apd_sentence_embeddings_heatmap.png"
+  ),
+  width = 8,
+  height = 6
+)
+
+# Using anchor year
+apd_anchor_sentences <- plot_anchor(
+  apd_sentence_matrix,
+  anchors = seq(1920, 2000, by = 10),
+  facet = TRUE,
+  scales = "free_y"
+) +
+  ggplot2::ggtitle("APD of top 1% sentences to various anchor years")
+ggsave(
+  filename = here::here(
+    image_path_temp,
+    "apd_sentence_embeddings_anchors_facet.png"
+  ),
+  plot = apd_anchor_sentences,
+  width = 12,
+  height = 8
+)
+
+## APD on sentences with "rationality"------------
+dataset <- open_dataset(
+  file.path(data_path, "sentences_embeddings"),
+  format = "feather"
+)
+
+rationality_sentences <- dataset %>%
+  filter(
+    between(publication_year, 1900, 2009),
+    str_detect(sentence, regex("\\brationality\\b", ignore_case = TRUE))
+  ) %>%
+  collect()
+
+rational_sentences <- dataset %>%
+  filter(
+    between(publication_year, 1900, 2009),
+    str_detect(sentence, regex("\\brational\\b", ignore_case = TRUE))
+  ) %>%
+  collect()
+
+apd_rationality_sentence_matrix <- compute_apd_by_years(
+  rationality_sentences,
+  year_col = "publication_year",
+  embeddings_col = "embedding",
+  chunk_size = 5000L
+)
+
+apd_rational_sentence_matrix <- compute_apd_by_years(
+  rational_sentences,
+  year_col = "publication_year",
+  embeddings_col = "embedding",
+  chunk_size = 5000L
+)
+
+# Drop years before 1910
+apd_rationality_sentence_matrix <- apd_rationality_sentence_matrix[
+  rownames(apd_rationality_sentence_matrix) >= "1920",
+  colnames(apd_rationality_sentence_matrix) >= "1920"
+]
+apd_rational_sentence_matrix <- apd_rational_sentence_matrix[
+  rownames(apd_rational_sentence_matrix) >= "1920",
+  colnames(apd_rational_sentence_matrix) >= "1920"
+]
+
+# plotting
+years <- rownames(apd_rationality_sentence_matrix)
+year_col <- years[-1]
+year_prev_col <- years[-length(years)]
+idx <- seq_len(length(years) - 1)
+apd_rationality_vals <- as.numeric(apd_rationality_sentence_matrix[cbind(
+  idx + 1,
+  idx
+)])
+apd_rational_vals <- as.numeric(apd_rational_sentence_matrix[cbind(
+  idx + 1,
+  idx
+)])
+# Return a tibble with the later year, previous year, and the proto-distance.
+apd_rationality_drift <- tibble::tibble(
+  year = year_col,
+  year_prev = year_prev_col,
+  apd_rationality = apd_rationality_vals,
+  apd_rational = apd_rational_vals
+)
+
+plot_rationality_drift <- plot_semantic_drift(
+  apd_rationality_drift,
+  value_col = "apd_rationality",
+  smooth = TRUE
+)
+plot_rational_drift <- plot_semantic_drift(
+  apd_rationality_drift,
+  value_col = "apd_rational",
+  smooth = TRUE
+)
+
+combined_plot <- plot_rationality_drift + plot_rational_drift
+ggsave(
+  filename = here::here(
+    image_path_temp,
+    "apd_rationality_rational_drift.png"
+  ),
+  plot = combined_plot,
+  width = 10,
+  height = 5
+)
+
+# Heatmaps
+# collect legends from both plots and place a single legend at the bottom
+heatmap_rationality <- plot_distance_heatmap(
+  apd_rationality_sentence_matrix,
+  legend_title = "Average Pairwise\nDistance"
+) +
+  labs(title = "Rationality")
+heatmap_rational <- plot_distance_heatmap(
+  apd_rational_sentence_matrix,
+  legend_title = "Average Pairwise\nDistance"
+) +
+  labs(title = "Rational")
+
+combined_heatmap <- (heatmap_rationality + heatmap_rational) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+
+# return the combined plot object and (optionally) save it
+ggsave(
+  filename = here::here(
+    image_path_temp,
+    "apd_rationality_rational_heatmaps_shared_legend.png"
+  ),
+  plot = combined_heatmap,
+  width = 12,
+  height = 6
+)
+
+# Anchor plots
+apd_anchor_rationality <- plot_anchor(
+  apd_rationality_sentence_matrix,
+  anchors = seq(1930, 2000, by = 10),
+  facet = TRUE
+) +
+  ggplot2::ggtitle(
+    "APD of sentences with 'rationality' to various anchor years"
+  )
+ggsave(
+  filename = here::here(
+    image_path_temp,
+    "apd_rationality_sentence_embeddings_anchors_facet.png"
+  ),
+  plot = apd_anchor_rationality,
+  width = 12,
+  height = 8
+)
+
+apd_anchor_rational <- plot_anchor(
+  apd_rational_sentence_matrix,
+  anchors = seq(1930, 2000, by = 10),
+  facet = TRUE
+) +
+  ggplot2::ggtitle("APD of sentences with 'rational' to various anchor years")
+ggsave(
+  filename = here::here(
+    image_path_temp,
+    "apd_rational_sentence_embeddings_anchors_facet.png"
+  ),
+  plot = apd_anchor_rational,
+  width = 12,
+  height = 8
+)
+
+# Analysing drift in specific dimensions------------------
+# Example usage of rank_drivers_for_year_pair (sequential, disk-backed to avoid memory growth)
+output_dir <- file.path(data_path, "top_sentence_drivers_year_pairs")
+if (!dir.exists(output_dir)) {
+  dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+}
+
+years_already_processed <- list.files(
+  output_dir,
+  pattern = "^drivers_\\d{4}\\.rds$",
+  full.names = FALSE
+) %>%
+  str_extract("\\d{4}") %>%
+  as.integer()
+
+years_to_process <- 1900:2008L |>
+  setdiff(years_already_processed)
+processed_files <- character(0)
+
+for (yr in years_to_process) {
+  cli::cli_inform(glue::glue("Starting year {yr}"))
+  out_path <- file.path(output_dir, glue::glue("drivers_{yr}.rds"))
+
+  if (file.exists(out_path)) {
+    cli::cli_inform(glue::glue("Skipping {yr} — output exists at {out_path}"))
+    processed_files <- c(processed_files, out_path)
+    next
+  }
+
+  res <- tryCatch(
+    {
+      rank_drivers_for_year_pair(
+        mat = mat,
+        year_t = yr,
+        year_col = "publication_year",
+        embedding_col = "embedding",
+        top_n = 50L,
+        normalize_rows = TRUE
+      )
+    },
+    error = function(e) {
+      cli::cli_alert_danger(glue::glue("Error processing {yr}: {e$message}"))
+      NULL
+    },
+    warning = function(w) {
+      cli::cli_alert_warning(glue::glue("Warning processing {yr}: {w$message}"))
+      invokeRestart("muffleWarning")
+    }
+  )
+
+  if (is.null(res)) {
+    next
+  }
+
+  saveRDS(res, out_path) # small object per year
+  processed_files <- c(processed_files, out_path)
+
+  # free memory promptly
+  rm(res)
+  gc()
+  cli::cli_inform(glue::glue("Saved results for {yr} → {out_path}"))
+}
+
+# Optionally: combine all per-year files into a single list and persist once (small).
+combined_path <- file.path(data_path, "top_sentence_drivers_all_years.rds")
+if (!file.exists(combined_path) && length(processed_files) > 0) {
+  all_processed_files <- list.files(
+    output_dir,
+    pattern = "^drivers_\\d{4}\\.rds$",
+    full.names = TRUE
+  )
+  years_processed <- all_processed_files %>%
+    str_extract("\\d{4}") %>%
+    as.integer()
+  all_list <- purrr::map(all_processed_files, readRDS)
+  names(all_list) <- paste0(years_processed)
+  all_list <- bind_rows(all_list, .id = "year_pair_start")
+  saveRDS(all_list, combined_path)
+  rm(all_list)
+  gc()
+  cli::cli_inform(glue::glue("Combined file written to {combined_path}"))
+}
