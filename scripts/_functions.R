@@ -1165,71 +1165,114 @@ anchor_series_from_apd <- function(APD, anchor_year) {
 #' Rank sentence drivers for a year pair by projection onto the year-to-year drift
 #'
 #' @title Rank driver sentences for a year pair
+#'
 #' @description
-#' For a pair of consecutive years `(t, t+1)` this function computes the
-#' unit change direction between the representative vectors in `mat`,
-#' projects sentence embeddings from each year onto that direction, and
-#' returns the top driver sentences from the earlier and later year.
+#' For a consecutive year pair (t, t+1) compute the unit change direction
+#' between representative vectors in `mat`, project sentence embeddings from
+#' each year onto that direction and return the top driving sentences from the
+#' earlier and later year (those that most strongly project against or with the
+#' direction).
 #'
-#' @param mat numeric matrix of representative vectors with rownames equal to years
-#'   (character). Rows correspond to years and columns to embedding dimensions.
-#' @param year_t integer scalar. The start year `t` for the pair `(t, t+1)`.
-#' @param year_col string scalar (default: `"publication_year"`). Column name
-#'   in sentence files that contains the year (integer). Must be present in the
-#'   per-year sentence files.
-#' @param embedding_col string scalar (default: `"embedding"`). Name of the
-#'   list-column that stores numeric embedding vectors (each element a numeric
-#'   vector of length equal to `ncol(mat)`).
-#' @param top_n integer scalar (default: 50). Number of top drivers to return
-#'   from each year (older-sense and newer-sense). If fewer rows exist the
-#'   available rows are returned.
-#' @param normalize_rows logical scalar (default: TRUE). If `TRUE` each sentence
-#'   embedding is unit-normalised by row before projection; zero-length rows are
-#'   left unchanged (treated as zeros).
+#' @param mat numeric matrix. Representative vectors with rows = years and
+#'   columns = embedding dimensions. Row names must be character year labels
+#'   (e.g. `"2000"`). `mat` must be finite numeric; rows with `NA` or
+#'   inconsistent lengths are not accepted.
+#' @param year_t integer scalar. Start year `t` for the pair `(t, t+1)`.
+#'   Coerced to integer. Error if either `t` or `t+1` is not present in
+#'   `rownames(mat)`.
+#' @param data_path character scalar or NULL. Base path where per-year sentence
+#'   feather files live under `sentences_embeddings/`. If `NULL` the option
+#'   `ejhet.data_path` is consulted and, if missing, `here::here()` is used.
+#'   Files are expected at `file.path(data_path, "sentences_embeddings",
+#'   glue::glue("sentence_embeddings_{yr}.feather"))`.
+#' @param year_col character scalar. Column name in the per-year files that
+#'   contains the year identifier. Default: `"publication_year"`. Must exist
+#'   in the feather files; values are used to filter rows for the requested year.
+#' @param embedding_col character scalar. Name of the list-column holding numeric
+#'   embedding vectors (each element a numeric vector of length `ncol(mat)`).
+#'   Default: `"embedding"`. Missing or non-list columns cause an error.
+#' @param top_n integer scalar >= 1. Number of top drivers to return from each
+#'   year. If fewer rows are available the function returns all available rows.
+#'   Default: `50L`. Non-integer values are coerced with `as.integer()`.
+#' @param normalize_rows logical scalar. If `TRUE` sentence embeddings are
+#'   row-normalised (L2) before projection; zero-length rows are left as zeros
+#'   (their norm treated as 1 to avoid division-by-zero). Default: `TRUE`.
+#' @param chunk_threshold integer scalar. When a year's sentence table contains
+#'   more than this many rows, processing is done in on-disk chunks of this
+#'   size to bound memory. Default: `200000L`. Must be positive.
 #'
-#' @return A tibble combining the top driver rows from the older and newer year.
-#'   The tibble contains (when available) `id`, `publication_year` (or the
-#'   column given by `year_col`), `sentence`, and `projection_score`. Rows are
-#'   annotated with a `type` column taking values `"old"` (from year `t`) or
-#'   `"new"` (from year `t+1`). The returned tibble has an attribute
-#'   `"dir_vec"` containing the numeric unit direction vector used for projection
-#'   (length = ncol(mat)). If no drift is detected the `projection_score` values
-#'   are `NA_real_` and the `"dir_vec"` attribute is `NA` (numeric vector).
+#' @return A tibble with the top driver rows from the earlier (`type = "old"`)
+#'   and later (`type = "new"`) year. Columns retained (when present in the
+#'   source files) include `id` (same type as in files), the year column named
+#'   by `year_col` (returned as `publication_year`), `sentence` (character),
+#'   and `projection_score` (numeric). The tibble has an attribute `"dir_vec"`
+#'   containing the numeric unit direction vector used for projection (length =
+#'   `ncol(mat)`). If no drift is detected the function returns a tibble with
+#'   zero rows and `attr(..., "dir_vec")` set to a numeric `NA` vector of the
+#'   appropriate length; in this case `projection_score` values would be `NA`.
 #'
 #' @details
-#' This function implements a fast, disk-friendly ranking of sentence drivers:
-#' - Validate that both `t` and `t+1` are present in `rownames(mat)`.
-#' - Compute the change vector Δ_t = repvec_{t+1} - repvec_{t} and its unit
-#'   direction `dir_vec = Δ_t / ||Δ_t||`. If the norm is zero (no drift),
-#'   sentences are still collected but projection scores are set to `NA`.
-#' - Read sentence files for each year sequentially from
-#'   `here::here(data_path, "sentences_embeddings", glue::glue("sentence_embeddings_{yr}.feather"))`.
-#'   The function keeps memory usage low by converting the embedding list-column
-#'   into a numeric matrix (rows = sentences) only for the single year being
-#'   processed and immediately removing the heavy objects after computing
-#'   projections.
+#' The function identifies which sentences best explain the change from year
+#' `t` to `t+1` by projecting sentence embeddings onto the direction vector
+#' between the two representative vectors. It reads per-year embedding files on
+#' disk (Feather via `arrow::read_feather()`), computes projection scores with
+#' a matrix multiply (fast and memory-efficient), and returns the top scoring
+#' sentences from each year.
 #'
 #' Implementation notes:
-#' - Algorithm: compute `dir_vec` then compute scores by matrix multiplication
-#'   `scores = embeddings_matrix %*% dir_vec`. Using matrix multiplication is
-#'   substantially faster and more memory-efficient than a per-row loop.
-#' - Assumptions: each embedding element in `embedding_col` is a numeric vector
-#'   of length equal to `ncol(mat)`. Files must exist under the `data_path`
-#'   hierarchy (see above) and contain the requested columns.
-#' - Edge-cases: if a sentence has a zero-length embedding its norm is treated
-#'   as 1 during normalization (so it remains zero); if representative vectors
-#'   are identical the function returns combined rows with `projection_score = NA`
-#'   and sets the `"dir_vec"` attribute to `NA_real_`.
-#' - Side effects & dependencies: the function reads files from disk (uses
-#'   `arrow::read_feather()`), reports progress via `cli::cli_inform()` and may
-#'   allocate temporary matrices which it frees with `rm()` + `gc()`. It relies
-#'   on `here`, `glue`, `arrow`, `tibble` and `dplyr`.
-#' - Return consistency: the function always returns a tibble (combined top
-#'   drivers) and exposes the projection direction via the `"dir_vec"`
-#'   attribute to avoid breaking callers that expect a data-frame-like result.
+#' - Major steps in the implementation:
+#'   1. Validate `mat` and that both `t` and `t+1` are present in `rownames(mat)`.
+#'   2. Compute the change vector Δ = rep_{t+1} - rep_{t} and its L2 norm.
+#'      If the norm is zero or not finite the function emits a warning and
+#'      returns an empty result with `dir_vec` set to `NA_real_`.
+#'   3. Build a numeric matrix of sentence embeddings for a year by unlisting
+#'      the `embedding_col` and reshaping into a matrix (`matrix(..., byrow = TRUE)`).
+#'      The helper `build_matrix()` validates embedding lengths and optionally
+#'      normalises rows. Zero-length sentence embeddings are protected by
+#'      replacing zero norms with 1 before division so they remain zero vectors.
+#'   4. Score sentences by computing `scores = embeddings_matrix %*% dir_vec`.
+#'      Using a single matrix multiplication per chunk is considerably faster
+#'      than iterating per row.
+#'   5. When a year's table is large (`nrow > chunk_threshold`) the file's rows
+#'      are processed in chunks; per-chunk top candidates are kept and merged
+#'      to maintain only the `top_n` best rows (streaming top-k).
+#'   6. Combine the top `old` and `new` drivers, attach `dir_vec` as an
+#'      attribute and return the result.
+#'
+#' - Important assumptions and preconditions:
+#'   * Each element in the `embedding_col` list-column is a numeric vector of
+#'     length equal to `ncol(mat)`. Inconsistent lengths raise an error.
+#'   * The per-year Feather files exist and contain the requested columns.
+#'   * The function relies on `arrow`, `here`, `glue`, `dplyr`, `tibble`, and
+#'     `rlang` being available at runtime.
+#'
+#' - Edge-case handling & failure modes:
+#'   * Missing files or missing columns cause an immediate error with a
+#'     descriptive message.
+#'   * Identical representative vectors (zero Δ) cause an early warning and an
+#'     empty tibble return (with `dir_vec = NA`).
+#'   * If rows contain `NA` projection scores they are filtered out before
+#'     ranking.
+#'   * If `top_n` exceeds available rows the function returns all available
+#'     rows (no padding).
+#'
+#' - Trade-offs:
+#'   * The implementation favours streaming and chunking to limit peak memory at
+#'     the cost of repeated matrix multiplies when chunking is necessary.
+#'   * Normalising sentence rows improves comparability to unit-direction vectors
+#'     but may be skipped by setting `normalize_rows = FALSE`.
+#'
+#' @implementation
+#' Vectorised projection pipeline:
+#' - Compute `dir_vec` = (rep_{t+1} - rep_t) / ||...||.
+#' - For each year: read feather file, filter rows for that year, convert the
+#'   embedding list-column to a numeric matrix, optionally normalize rows,
+#'   compute `scores = emb_mat %*% dir_vec`, and keep top-K by sorting.
+#' - For large tables, process sequential chunks, keep per-chunk top-K and
+#'   merge to retain global top-K (streaming top-k).
 #'
 #' @examples
-#' # Normal-case: small, temporary example with two years and one sentence per year
+#' # Minimal runnable example
 #' data_path <- tempdir()
 #' dir.create(file.path(data_path, "sentences_embeddings"), showWarnings = FALSE)
 #' df2000 <- tibble::tibble(
@@ -1250,144 +1293,96 @@ anchor_series_from_apd <- function(APD, anchor_year) {
 #'                                        "sentence_embeddings_2001.feather"))
 #' mat <- matrix(c(0, 0, 1, 0, 1, 0), nrow = 2, byrow = TRUE)
 #' rownames(mat) <- c("2000", "2001")
-#' res <- rank_drivers_for_year_pair(mat, 2000, year_col = "publication_year",
+#' res <- rank_drivers_for_year_pair(mat, 2000, data_path = data_path,
+#'                                   year_col = "publication_year",
 #'                                   embedding_col = "embedding", top_n = 1)
 #' res
 #'
-#' # Edge-case: identical representative vectors → no detectable drift
-#' mat_identical <- matrix(rep(1, 6), nrow = 2, byrow = TRUE)
-#' rownames(mat_identical) <- c("2000", "2001")
-#' res_no_drift <- rank_drivers_for_year_pair(mat_identical, 2000,
-#'                                            year_col = "publication_year",
-#'                                            embedding_col = "embedding",
-#'                                            top_n = 1)
-#' res_no_drift
-#'
-#' @seealso compute_apd_by_years, proto_distance_matrix, plot_semantic_drift
-#' @keywords utilities
-#' @author Your Name
+#' @seealso compute_apd_by_years, proto_distance_matrix, plot_semantic_drift,
+#'   arrow::read_feather, here::here, glue::glue
+#' @keywords utilities drivers
 #' @export
+#' @author Your Name
 rank_drivers_for_year_pair <- function(
   mat,
   year_t,
+  data_path = NULL,
   year_col = "publication_year",
   embedding_col = "embedding",
   top_n = 50L,
-  normalize_rows = TRUE
+  normalize_rows = TRUE,
+  chunk_threshold = 200000L
 ) {
-  # validate years
-  year_next <- as.integer(year_t) + 1L
+  # validate inputs
+  if (!is.matrix(mat) && !is.data.frame(mat)) {
+    rlang::abort(
+      "`mat` must be a matrix or matrix-like object with rownames for years."
+    )
+  }
   rn <- rownames(mat)
+  if (is.null(rn)) {
+    rlang::abort("`mat` must have rownames representing years.")
+  }
+  year_t <- as.integer(year_t)
+  year_next <- year_t + 1L
   if (!as.character(year_t) %in% rn || !as.character(year_next) %in% rn) {
     rlang::abort(glue::glue(
       "Years {year_t} or {year_next} not present in `mat` rownames"
     ))
   }
 
+  # resolve data_path
+  if (is.null(data_path)) {
+    data_path <- getOption("ejhet.data_path", default = here::here())
+  }
+
   cli::cli_inform(glue::glue("Processing year pair {year_t} → {year_next}"))
 
-  # compute Δ_t and unit direction
-  delta_t <- mat[as.character(year_next), , drop = TRUE] -
-    mat[as.character(year_t), , drop = TRUE]
+  # compute direction vector
+  delta_t <- as.numeric(mat[as.character(year_next), , drop = TRUE]) -
+    as.numeric(mat[as.character(year_t), , drop = TRUE])
   norm_delta <- sqrt(sum(delta_t^2))
-  if (norm_delta == 0) {
-    # No detectable drift: still collect rows but set projection_score = NA
+  if (!is.finite(norm_delta) || norm_delta == 0) {
     cli::cli_alert_warning(glue::glue(
       "No drift detected between {year_t} and {year_next}"
     ))
-
-    read_one_year <- function(yr) {
-      path <- here::here(
-        data_path,
-        "sentences_embeddings",
-        glue::glue("sentence_embeddings_{yr}.feather")
-      )
-      if (!file.exists(path)) {
-        return(tibble::tibble())
-      }
-      df <- arrow::read_feather(path)
-      if (!embedding_col %in% colnames(df)) {
-        rlang::abort(glue::glue(
-          "Embedding column '{embedding_col}' not found in file for {yr}"
-        ))
-      }
-      # Attach NA projection_score to signal no drift
-      df[["projection_score"]] <- NA_real_
-      tibble::as_tibble(df)
-    }
-
-    tbl_t <- read_one_year(year_t)
-    tbl_tp1 <- read_one_year(year_next)
-
-    # Combine and drop heavy embedding column if present
-    if (embedding_col %in% colnames(tbl_t)) {
-      tbl_t[[embedding_col]] <- NULL
-    }
-    if (embedding_col %in% colnames(tbl_tp1)) {
-      tbl_tp1[[embedding_col]] <- NULL
-    }
-
-    drivers_old <- tbl_t |> dplyr::slice_head(n = 0)
-    drivers_new <- tbl_tp1 |> dplyr::slice_head(n = 0)
-
-    scores_tbl <- dplyr::bind_rows(
-      tbl_t |>
-        dplyr::select(dplyr::any_of(c(
-          "id",
-          year_col,
-          "sentence",
-          "projection_score"
-        ))) |>
-        dplyr::rename(publication_year = dplyr::any_of(year_col)) |>
-        dplyr::mutate(type = "old"),
-      tbl_tp1 |>
-        dplyr::select(dplyr::any_of(c(
-          "id",
-          year_col,
-          "sentence",
-          "projection_score"
-        ))) |>
-        dplyr::rename(publication_year = dplyr::any_of(year_col)) |>
-        dplyr::mutate(type = "new")
+    # return empty tibble with expected columns and NA dir_vec attribute
+    empty_tbl <- tibble::tibble(
+      id = integer(0),
+      publication_year = integer(0),
+      sentence = character(0),
+      projection_score = numeric(0),
+      type = character(0)
     )
-
-    # Attach dir_vec attribute (NA because no drift)
-    attr(scores_tbl, "dir_vec") <- rep(NA_real_, length(delta_t))
-    return(scores_tbl)
+    attr(empty_tbl, "dir_vec") <- rep(NA_real_, length(delta_t))
+    return(empty_tbl)
   }
-
   dir_vec <- delta_t / norm_delta
   d <- length(dir_vec)
 
-  # helper: build matrix (rows = sentences) from a list-column preserving row order
-  build_matrix <- function(emb_list, d) {
+  # helper: build numeric matrix (rows = sentences) from list-column
+  build_matrix <- function(emb_list) {
     if (length(emb_list) == 0L) {
-      return(matrix(numeric(0), nrow = 0, ncol = d))
+      return(matrix(numeric(0), nrow = 0L, ncol = d))
     }
-    # ensure every list element has the expected length
     lens <- vapply(emb_list, length, integer(1))
     if (any(lens != d)) {
       rlang::abort(
         "Inconsistent embedding lengths or mismatch with representative vector dimension"
       )
     }
-    # Fast construction: unlist and reshape by row
-    mat_r <- matrix(unlist(emb_list, use.names = FALSE), ncol = d, byrow = TRUE)
-
-    # Optionally unit-normalize each row (avoid division by zero)
-    if (normalize_rows && nrow(mat_r) > 0) {
-      rnms <- sqrt(rowSums(mat_r * mat_r))
-      zero_mask <- rnms == 0
-      if (any(zero_mask)) {
-        # keep zero rows as zeros by avoiding division by zero
-        rnms[zero_mask] <- 1
-      }
-      mat_r <- mat_r / rnms
+    # Build matrix by unlisting then shaping by row; this is fast and memory efficient.
+    m <- matrix(unlist(emb_list, use.names = FALSE), ncol = d, byrow = TRUE)
+    if (normalize_rows && nrow(m) > 0L) {
+      # Compute row L2 norms and avoid division by zero by replacing zeros with 1.
+      rnms <- sqrt(rowSums(m * m))
+      rnms[rnms == 0] <- 1
+      m <- m / rnms
     }
-    mat_r
+    m
   }
 
-  # helper to read a year's file and return top_n rows by projection (chunked)
+  # helper: read/process one year and return top candidates (keeps only requested columns)
   process_year <- function(
     yr,
     direction = c("old", "new"),
@@ -1403,124 +1398,108 @@ rank_drivers_for_year_pair <- function(
       rlang::abort(glue::glue("No sentence file found for year {yr}: {path}"))
     }
 
-    # read full file metadata into a tibble (we filter by year_col)
-    sentences <- arrow::read_feather(path)
-    if (!year_col %in% colnames(sentences)) {
+    tbl <- arrow::read_feather(path)
+    if (!year_col %in% colnames(tbl)) {
       rlang::abort(glue::glue(
         "Year column '{year_col}' not found in file for {yr}"
       ))
     }
-    if (!embedding_col %in% colnames(sentences)) {
+    if (!embedding_col %in% colnames(tbl)) {
       rlang::abort(glue::glue(
         "Embedding column '{embedding_col}' not found in file for {yr}"
       ))
     }
-    sentences_tbl <- tibble::as_tibble(sentences)
 
-    # Keep only requested year rows (file may contain mixed years)
-    sentences_tbl <- sentences_tbl |>
-      dplyr::filter(.data[[year_col]] == yr)
-
-    n_total <- nrow(sentences_tbl)
+    tbl <- tibble::as_tibble(tbl) |> dplyr::filter(.data[[year_col]] == yr)
+    n_total <- nrow(tbl)
     if (n_total == 0L) {
-      return(sentences_tbl |> dplyr::mutate(projection_score = numeric(0)))
+      return(
+        tbl |>
+          dplyr::mutate(projection_score = numeric(0)) |>
+          dplyr::slice_head(n = 0)
+      )
     }
 
-    # If small file, process all at once for simplicity
-    chunk_threshold <- 200000L
-    if (n_total <= chunk_threshold) {
-      emb_mat <- build_matrix(sentences_tbl[[embedding_col]], d = d)
+    score_and_select <- function(df_chunk) {
+      emb_mat <- build_matrix(df_chunk[[embedding_col]])
       scores <- if (nrow(emb_mat) == 0L) {
         numeric(0)
       } else {
+        # Matrix multiplication projects every row onto dir_vec in one fast operation.
         as.numeric(emb_mat %*% dir_vec)
       }
-      if (nrow(sentences_tbl) > 0) {
-        sentences_tbl$projection_score <- scores
-      } else {
-        sentences_tbl$projection_score <- numeric(0)
-      }
-      sentences_tbl[[embedding_col]] <- NULL
-      gc()
-      # keep only requested columns downstream; ranking will be done outside
-      return(sentences_tbl)
+      df_chunk$projection_score <- scores
+      df_chunk[[embedding_col]] <- NULL
+      df_chunk |> dplyr::filter(!is.na(.data$projection_score))
     }
 
-    # Large file: process by row-chunks, keep only running top_n candidates
-    chunk_rows <- chunk_threshold
-    starts <- seq.int(1L, n_total, by = chunk_rows)
+    if (n_total <= chunk_threshold) {
+      out <- score_and_select(tbl)
+      if (nrow(out) == 0L) {
+        return(out |> dplyr::slice_head(n = 0))
+      }
+      if (direction == "old") {
+        out <- out |>
+          dplyr::arrange(projection_score) |>
+          utils::head(top_n_local)
+      } else {
+        out <- out |>
+          dplyr::arrange(dplyr::desc(projection_score)) |>
+          utils::head(top_n_local)
+      }
+      return(out)
+    }
+
+    # large file: process in chunks and keep running top_n_local
+    starts <- seq.int(1L, n_total, by = chunk_threshold)
     best_tbl <- NULL
 
     for (s in starts) {
-      e <- min(s + chunk_rows - 1L, n_total)
-      chunk_tbl <- sentences_tbl[s:e, , drop = FALSE]
-
-      emb_mat <- build_matrix(chunk_tbl[[embedding_col]], d = d)
-      scores <- if (nrow(emb_mat) == 0L) {
-        numeric(0)
-      } else {
-        as.numeric(emb_mat %*% dir_vec)
-      }
-      if (nrow(chunk_tbl) > 0) {
-        chunk_tbl$projection_score <- scores
-      } else {
-        chunk_tbl$projection_score <- numeric(0)
-      }
-      chunk_tbl[[embedding_col]] <- NULL
-
-      # drop NA scores before ranking
-      chunk_tbl <- chunk_tbl |> dplyr::filter(!is.na(.data$projection_score))
-
-      if (nrow(chunk_tbl) == 0L) {
-        rm(emb_mat)
-        gc()
+      e <- min(s + chunk_threshold - 1L, n_total)
+      chunk <- tbl[s:e, , drop = FALSE]
+      scored <- score_and_select(chunk)
+      if (nrow(scored) == 0L) {
         next
       }
 
       if (direction == "old") {
-        chunk_best <- chunk_tbl |>
+        scored_best <- scored |>
           dplyr::arrange(projection_score) |>
           utils::head(top_n_local)
       } else {
-        chunk_best <- chunk_tbl |>
+        scored_best <- scored |>
           dplyr::arrange(dplyr::desc(projection_score)) |>
           utils::head(top_n_local)
       }
 
-      if (is.null(best_tbl)) {
-        best_tbl <- chunk_best
+      best_tbl <- if (is.null(best_tbl)) {
+        scored_best
       } else {
-        best_tbl <- dplyr::bind_rows(best_tbl, chunk_best)
-        # reduce again to top_n_local
+        cand <- dplyr::bind_rows(best_tbl, scored_best)
         if (direction == "old") {
-          best_tbl <- best_tbl |>
-            dplyr::arrange(projection_score) |>
-            utils::head(top_n_local)
+          cand |> dplyr::arrange(projection_score) |> utils::head(top_n_local)
         } else {
-          best_tbl <- best_tbl |>
+          cand |>
             dplyr::arrange(dplyr::desc(projection_score)) |>
             utils::head(top_n_local)
         }
       }
-
-      rm(emb_mat, chunk_tbl, chunk_best)
+      rm(chunk, scored, scored_best)
       gc()
     }
 
-    # If there were NA-only scores and best_tbl is NULL, return empty tibble with projection_score
     if (is.null(best_tbl)) {
-      sentences_tbl <- sentences_tbl |>
-        dplyr::mutate(projection_score = numeric(0)) |>
-        dplyr::slice_head(n = 0)
-      return(sentences_tbl)
+      return(
+        tbl |>
+          dplyr::slice_head(n = 0) |>
+          dplyr::mutate(projection_score = numeric(0))
+      )
     }
-
     best_tbl
   }
 
-  # process t then t+1 sequentially to limit memory peak
+  # process both years sequentially to limit memory
   tbl_t <- process_year(year_t, direction = "old", top_n_local = top_n)
-
   drivers_old <- tbl_t |>
     dplyr::arrange(projection_score) |>
     utils::head(top_n) |>
@@ -1550,13 +1529,9 @@ rank_drivers_for_year_pair <- function(
   rm(tbl_tp1)
   gc()
 
-  # Combined tibble (old then new). This is convenient for downstream binding
-  scores_tbl <- dplyr::bind_rows(drivers_old, drivers_new)
-
-  # Attach the direction vector as an attribute so callers can inspect it if needed
-  attr(scores_tbl, "dir_vec") <- dir_vec
-
-  scores_tbl
+  result <- dplyr::bind_rows(drivers_old, drivers_new)
+  attr(result, "dir_vec") <- dir_vec
+  result
 }
 
 #: Plotting semantic drift-------------------------
@@ -2280,71 +2255,184 @@ plot_anchor <- function(
 
 #: Method for text analysis-------------------------
 
-#' Compute Term Frequency-Inverse Document Frequency (TF-IDF)
+#' Compute Term Frequency–Inverse Document Frequency (TF–IDF) for tokenized documents
 #'
-#' This function computes the Term Frequency (TF), Inverse Document Frequency (IDF),
-#' and TF-IDF score for tokens within documents in a data.table.
+#' @title Compute TF–IDF in a data.table
+#' @description
+#' Calculate term frequency (TF), document frequency (DF), inverse document
+#' frequency (IDF) and TF–IDF scores for tokens within documents stored in a
+#' `data.table`. The result contains one row per unique token × document pair
+#' with common TF–IDF components.
 #'
-#' @param dt A `data.table` containing at least two columns: one for tokens (e.g., words)
-#' and one for documents (e.g., time windows, article IDs, etc.).
-#' @param token_col A string indicating the name of the column containing tokens. Default is `"token"`.
-#' @param document_col A string indicating the name of the column containing document identifiers. Default is `"document"`.
+#' @param dt data.table or data.frame. Table containing at least two columns:
+#'   a token column and a document identifier column. May contain multiple rows
+#'   per token occurrence. The function coerces to `data.table` internally and
+#'   works on a copy (does not modify the input).
+#' @param token_col character scalar. Name of the token column (e.g., `"word"`,
+#'   `"token"`). Each cell is expected to be a single token (character). `NA`
+#'   tokens are kept in counts unless pre-filtered by the caller.
+#' @param document_col character scalar. Name of the document identifier column
+#'   (e.g., `"doc"`, `"document"`, `"time_window"`). Identifiers may be numeric
+#'   or character; they are treated as grouping keys. `NA` document ids are kept.
 #'
-#' @return A `data.table` with one row per unique token-document pair, including the following columns:
-#' \describe{
-#'   \item{absolute_tf}{Total frequency of each token across all documents.}
-#'   \item{nb_word}{Total number of tokens in each document.}
-#'   \item{tf}{Term frequency of each token within each document.}
-#'   \item{df}{Document frequency — the number of documents in which each token appears.}
-#'   \item{idf}{Inverse document frequency: \code{log(total_docs / df)}.}
-#'   \item{tf_idf}{TF-IDF score: \code{tf * idf}.}
-#' }
+#' @return A `data.table` with one row per unique token × document pair and at
+#'   least the following columns (in addition to the original identifier columns):
+#'   - `absolute_tf` (integer): total count of the token across all documents.
+#'   - `nb_word` (integer): total number of token occurrences in the document.
+#'   - `tf` (numeric): term frequency within the document (token count in doc / nb_word).
+#'   - `df` (integer): document frequency — number of distinct documents containing the token.
+#'   - `idf` (numeric): inverse document frequency computed as `log(total_docs / df)`.
+#'   - `tf_idf` (numeric): TF–IDF score computed as `tf * idf`.
+#'   If the input contains no rows the function returns an empty `data.table`
+#'   with the above columns (as appropriate).
+#'
+#' @details
+#' This function implements a compact, data.table-based TF–IDF pipeline:
+#' 1. Coerce input to `data.table` and operate on a copy to avoid side effects.
+#' 2. Temporarily rename the supplied `token_col` and `document_col` to
+#'    `token` and `document` for concise expressions.
+#' 3. Compute global token counts (`absolute_tf`), per-document totals
+#'    (`nb_word`), and per-document token frequency (`tf`) using grouped `.N`.
+#' 4. Reduce to unique token×document rows so DF is computed per token correctly.
+#' 5. Compute DF (`df`), IDF (`log(total_docs / df)`), and TF–IDF (`tf * idf`).
+#'
+#' Implementation notes:
+#' - Algorithmic choices and trade-offs:
+#'   - Uses `data.table` grouped operations (`.N`) for speed and low memory overhead.
+#'   - The function keeps `NA` values in token/document columns (they count as a key)
+#'     rather than silently dropping them; callers should pre-filter missing tokens
+#'     or documents if that is desired.
+#'   - `idf` uses the natural logarithm; alternative scalings (add-one smoothing,
+#'     log1p, idf with +1 in denominator) are possible but not applied here.
+#' - Preconditions and validation:
+#'   - `dt` must contain the named token and document columns; otherwise the
+#'     function errors early with `stop()`.
+#'   - The function assumes each row of `dt` represents one token occurrence.
+#' - Edge cases / failure modes:
+#'   - If a token appears in zero documents (impossible given the pipeline), `df`
+#'     would be zero and `idf` would be -Inf; this cannot occur because `df` is
+#'     computed from observed rows.
+#'   - Very large corpora may produce large `absolute_tf` and `nb_word` values;
+#'     they remain integers but may overflow in extreme pathological cases.
+#' - Dependencies / side-effects:
+#'   - Depends on `data.table`. Operates on a local copy and does not modify the
+#'     caller's object or global state.
 #'
 #' @examples
 #' library(data.table)
 #' dt <- data.table(doc = c(1, 1, 2, 2, 2, 3), word = c("apple", "banana", "apple", "apple", "kiwi", "banana"))
-#' result <- compute_tf_idf(dt, token_col = "word", document_col = "doc")
-#' print(result)
+#' compute_tf_idf(dt, token_col = "word", document_col = "doc")
 #'
-#' @import data.table
+#' # Edge case: an empty data.table yields an empty result
+#' compute_tf_idf(data.table::data.table(word = character(0), doc = integer(0)))
+#'
+#' @seealso \code{\link[data.table]{data.table}}, \code{\link[base]{log}}
+#' @keywords text tf-idf
 #' @export
+#' @author Your Name
 compute_tf_idf <- function(dt, token_col = "token", document_col = "document") {
-  # Make a copy to avoid modifying in-place
-  dt <- copy(dt)
+  # Coerce to data.table and operate on a copy to avoid mutating caller data.
+  dt <- data.table::as.data.table(dt)
+  dt <- data.table::copy(dt)
 
-  # Convert column names to symbols
-  token_sym <- as.name(token_col)
-  time_sym <- as.name(document_col)
+  # Ensure inputs are character vectors
+  document_col <- as.character(document_col)
+  token_col <- as.character(token_col)
 
-  # Standardize names temporarily for easier handling
-  setnames(dt, c(document_col, token_col), c("document", "token"))
+  # Validate required columns exist; provide a clear error if not.
+  if (!all(document_col %in% colnames(dt))) {
+    stop(
+      "Input must contain document column(s): ",
+      paste(document_col, collapse = ", "),
+      call. = FALSE
+    )
+  }
+  if (!token_col %in% colnames(dt)) {
+    stop("Input must contain token column: ", token_col, call. = FALSE)
+  }
 
-  # Calculate absolute term frequency
-  dt[, absolute_tf := .N, by = token]
-  dt[, nb_word := .N, by = document]
-  dt[, tf := .N / nb_word, by = .(document, token)]
+  # Prevent collision: token_col must not be one of the document grouping columns
+  if (token_col %in% document_col) {
+    stop("`token_col` must be distinct from `document_col`", call. = FALSE)
+  }
 
-  # Make unique for TF-IDF calculation
+  # Create a temporary composite document key when multiple document columns are provided.
+  # Use a name unlikely to collide with existing columns.
+  doc_key <- ".document_tmp_key"
+  i <- 1L
+  while (doc_key %in% colnames(dt)) {
+    doc_key <- paste0(".document_tmp_key", i)
+    i <- i + 1L
+  }
+
+  if (length(document_col) == 1L) {
+    # If single document column, create the temp key as a copy for uniform downstream code
+    dt[, (doc_key) := as.character(.SD[[1]]), .SDcols = document_col]
+  } else {
+    # Multiple columns: paste together with a separator unlikely to appear in values
+    dt[,
+      (doc_key) := do.call(paste, c(.SD, sep = "\r")),
+      .SDcols = document_col
+    ]
+  }
+
+  # Temporarily standardise token column name to `token` to simplify expressions.
+  if (token_col != "token") {
+    data.table::setnames(dt, token_col, "token")
+    token_was_renamed <- TRUE
+  } else {
+    token_was_renamed <- FALSE
+  }
+
+  # Compute counts using grouped `.N`:
+  # - `absolute_tf`: total occurrences of each token across the corpus
+  # - `nb_word`: number of token occurrences in each document (composite)
+  # - `tf`: token occurrences in (document, token) divided by document length
+  #
+  # Use character column name for doc_key in by= (data.table accepts string names).
+  dt[, absolute_tf := .N, by = "token"]
+  dt[, nb_word := .N, by = doc_key]
+  dt[, tf := .N / nb_word, by = c(doc_key, "token")]
+
+  # Reduce to unique token × document rows for DF and TF–IDF computation.
   tokens_count <- unique(dt)
 
-  # TF table
-  tf_dt <- dt[, .N, by = .(document, token)]
-  setnames(tf_dt, "N", "tf")
+  # Document frequency: number of distinct documents containing each token.
+  df_dt <- tokens_count[, .N, by = "token"]
+  data.table::setnames(df_dt, "N", "df")
 
-  # DF table
-  df_dt <- tokens_count[, .N, by = token]
-  setnames(df_dt, "N", "df")
+  # Merge DF into tokens_count (left join), compute IDF and TF–IDF.
+  total_docs <- uniqueN(tokens_count[[doc_key]]) # total number of distinct documents (composite)
+  tokens_count <- merge(
+    tokens_count,
+    df_dt,
+    by = "token",
+    all.x = TRUE,
+    sort = FALSE
+  )
 
-  # Merge and compute IDF and TF-IDF
-  total_docs <- uniqueN(tokens_count$document)
-  tokens_count <- merge(tokens_count, df_dt, by = "token", all.x = TRUE)
+  # IDF: natural log of (total_docs / df). This follows idf = log(N/df).
   tokens_count[, idf := log(total_docs / df)]
+
+  # TF–IDF = tf * idf
   tokens_count[, tf_idf := tf * idf]
 
-  # Rename back to original column names
-  setnames(tokens_count, c("document", "token"), c(document_col, token_col))
+  # Restore token original name
+  if (token_was_renamed) {
+    data.table::setnames(tokens_count, "token", token_col)
+  }
 
-  return(tokens_count[])
+  # If original document_col was a single column, rename the composite back to that name.
+  # If multiple document columns were used, remove the composite key (original columns are preserved).
+  if (length(document_col) == 1L) {
+    data.table::setnames(tokens_count, doc_key, document_col)
+  } else {
+    # remove composite helper column before returning to avoid confusing callers
+    tokens_count[, (doc_key) := NULL]
+  }
+
+  # Return the data.table (explicit [] to print when called interactively)
+  tokens_count[]
 }
 
 #: Function for Shiny App-------------------------

@@ -311,8 +311,10 @@ for (yr in years_to_process) {
         year_t = yr,
         year_col = "publication_year",
         embedding_col = "embedding",
-        top_n = 50L,
-        normalize_rows = TRUE
+        top_n = 200L,
+        normalize_rows = TRUE,
+        chunk_threshold = 200000L,
+        data_path = data_path
       )
     },
     error = function(e) {
@@ -353,7 +355,164 @@ if (!file.exists(combined_path) && length(processed_files) > 0) {
   names(all_list) <- paste0(years_processed)
   all_list <- bind_rows(all_list, .id = "year_pair_start")
   saveRDS(all_list, combined_path)
-  rm(all_list)
-  gc()
   cli::cli_inform(glue::glue("Combined file written to {combined_path}"))
 }
+
+# Visualising results
+setDT(all_list, key = "id")
+# Updated: support arbitrary n-grams (scalar max or vector of n values)
+extract_ngrams <- function(
+  df,
+  ngrams = c(1L, 2L), # either integer scalar (max n) or integer vector of n values
+  grouping_cols = c(
+    "year_pair_start",
+    "type"
+  ),
+  text_col = "sentence",
+  min_nchar = 2L,
+  stop_words = NULL
+) {
+  if (!requireNamespace("tokenizers", quietly = TRUE)) {
+    stop("Please install the 'tokenizers' package.")
+  }
+  if (!requireNamespace("tidytext", quietly = TRUE)) {
+    stop("Please install the 'tidytext' package.")
+  }
+  if (!requireNamespace("stringr", quietly = TRUE)) {
+    stop("Please install the 'stringr' package.")
+  }
+  data.table::setDT(df)
+
+  if (is.null(stop_words)) {
+    stop_words <- unique(tidytext::stop_words$word)
+  }
+  stop_words <- tolower(stop_words)
+
+  required_cols <- unique(c(
+    grouping_cols,
+    text_col
+  ))
+  missing_cols <- setdiff(required_cols, names(df))
+  if (length(missing_cols) > 0) {
+    stop(
+      "Missing required columns in df: ",
+      paste(missing_cols, collapse = ", ")
+    )
+  }
+
+  # Normalize ngrams input: if scalar -> 1:max, else use provided vector
+  if (length(ngrams) == 1L) {
+    ng_range <- seq_len(as.integer(ngrams))
+  } else {
+    ng_range <- as.integer(ngrams)
+  }
+
+  # generate token data.tables for each ngram and rbind
+  token_list <- lapply(ng_range, function(n) {
+    tmp <- df[, c(grouping_cols, text_col), with = FALSE]
+    tmp[,
+      token := tokenizers::tokenize_ngrams(
+        get(text_col),
+        n = as.integer(n),
+        lowercase = TRUE
+      )
+    ]
+    tmp[, (text_col) := NULL]
+    tmp[, ngram := as.integer(n)]
+    tmp
+  })
+
+  tokens <- data.table::rbindlist(token_list, use.names = TRUE, fill = TRUE)
+
+  # unnest list-column of tokens into rows, grouped by desired grouping columns + ngram
+  tokens <- tokens[, .(token = unlist(token)), by = c(grouping_cols, "ngram")]
+
+  # filter short tokens
+  tokens <- tokens[nchar(token) >= as.integer(min_nchar), ]
+
+  # split token into words (list column) to enable multi-word checks
+  tokens[, words := strsplit(token, " ", fixed = TRUE)]
+
+  # remove tokens containing digits in any part
+  tokens[,
+    has_digit := vapply(words, function(ws) any(grepl("[0-9]", ws)), logical(1))
+  ]
+
+  # remove tokens containing stopwords in any part
+  tokens[,
+    has_stop := vapply(words, function(ws) any(ws %in% stop_words), logical(1))
+  ]
+
+  tokens <- tokens[!has_digit & !has_stop]
+
+  # keep grouping columns + token, replace spaces with underscores for multi-word tokens
+  tokens <- tokens[, c(grouping_cols, "token", "ngram"), with = FALSE]
+  tokens[, token := stringr::str_replace_all(token, " ", "_")]
+
+  # return result (data.table)
+  tokens[]
+}
+all_list[, sentence_id := .I]
+
+driver_tokens <- all_list |>
+  extract_ngrams(
+    ngrams = 2L,
+    grouping_cols = c("year_pair_start", "type"),
+    text_col = "sentence",
+    min_nchar = 3L
+  )
+
+tf_idf_drivers <- driver_tokens %>%
+  compute_tf_idf(document_col = c("year_pair_start", "type"))
+tf_idf_drivers <- tf_idf_drivers[absolute_tf > 10, ]
+
+# Plot of top 2 per year
+# Keep only 'new' drivers, select top 2 by tf_idf per year, and build a plot with years on x-axis
+top2_new_per_year <- tf_idf_drivers |>
+  filter(type == "new") |>
+  group_by(year_pair_start) |>
+  slice_max(tf_idf, n = 2, with_ties = FALSE) |>
+  ungroup() |>
+  mutate(
+    year = as.integer(year_pair_start),
+    token = as.character(token)
+  )
+
+yr_seq <- seq(min(top2_new_per_year$year), max(top2_new_per_year$year), by = 5)
+
+p_top2_new <- ggplot(
+  top2_new_per_year,
+  aes(x = year, y = tf_idf, group = token)
+) +
+  geom_text_repel(
+    aes(label = token),
+    angle = 90,
+    hjust = 0,
+    vjust = 0.5,
+    show.legend = FALSE,
+    na.rm = TRUE,
+    direction = "y", # only repel vertically
+    force = 6, # increase repulsive force -> larger displacement
+    box.padding = 0.6, # space around label boxes
+    point.padding = 0.25, # padding around the data point
+    segment.size = 0,
+    max.iter = 5000, # allow more iterations for placement
+    seed = 42
+  ) +
+  scale_x_continuous(breaks = yr_seq) +
+  scale_y_continuous(expand = expansion(mult = c(0.02, 0.5))) + # give extra headroom
+  coord_cartesian(clip = "off") + # let labels extend outside panel
+  labs(
+    title = "Top 2 'new' drivers per year (by TF-IDF)",
+    x = NULL,
+    y = "TF-IDF",
+    colour = "Token"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "none",
+    plot.margin = ggplot2::margin(t = 5, r = 60, b = 5, l = 5, unit = "pt") # space for long labels
+  )
+
+p_top2_new
