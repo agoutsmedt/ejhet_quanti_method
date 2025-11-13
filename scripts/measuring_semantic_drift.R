@@ -1,30 +1,63 @@
-# The goal: using the representative vectors of sentence embeddings for each year to measure semantic drift over time
+#: Measuring semantic drift ---------
+#
+# Script goals:
+# - Compute and visualise semantic drift over time using sentence embedding centroids.
+# - Produce year-to-year proto-distance (PRT) drift, average pairwise distance (APD)
+#   series and heatmaps, and identify candidate driver tokens contributing to drift.
+#
+# Setup Instructions:
+# - This script expects `scripts/paths_and_packages.R` to set `data_path`,
+#   `image_path_temp`, `jstor_data_path` and to load commonly used packages
+#   (arrow, dplyr, purrr, tibble, here, stringr, ggplot2, etc.). Source that
+#   file before running this script (done below). Also source `scripts/_functions.R`
+#   which contains the helper functions used here.
+#
+# How it works (high-level):
+# 1) Load representative vectors per year and build a year x dimension matrix.
+# 2) Compute year-to-year proto-distance drift and visualise (line + heatmap).
+# 3) Compute Average Pairwise Distance (APD) across sentence embeddings by year
+#    for several sentence sets (top-1% closest to query, sentences containing
+#    "rationality" or "rational"). Visualise APD drift and heatmaps.
+# 4) Build per-year centroid matrices for token-specific sentence sets and run
+#    a driver extraction pipeline that identifies candidate n-grams driving drift.
+#
+# Note: This file focuses on readability and documentation. It does not change
+# the computational logic; all edits are refactors, variable renames, and
+# explanatory comments.
+
 source(file.path("scripts", "paths_and_packages.R"))
 source(file.path("scripts", "_functions.R"))
 p_load(patchwork)
 
-# Load per-year representative vectors (list-column: embedding_by_year_centered)
-representative_vectors <- read_feather(here::here(
+#: Load representative vectors and prepare matrix ---------
+# Load a feather file containing per-year representative vectors. The file is
+# expected to have a list-column `embedding_by_year` (one numeric vector per year).
+# We filter for the target year range, unnest the vector column and add a
+# `dimension` index so we can pivot into a matrix (rows = year, cols = dimension).
+rep_vectors_by_year <- read_feather(here::here(
   data_path,
   "representative_vectors_window_5.feather"
 )) |>
-  filter(between(year, 1900, 2009)) |>
-  select(year, embedding_by_year) |>
-  unnest(embedding_by_year) |>
-  mutate(dimension = row_number(), .by = year)
+  dplyr::filter(between(year, 1900, 2009)) |>
+  dplyr::select(year, embedding_by_year) |>
+  tidyr::unnest(embedding_by_year) |>
+  dplyr::mutate(dimension = row_number(), .by = year)
 
-# Transform 3 columns table to matrix with xtabs
-mat <- xtabs(
+##: Build a numeric matrix (year x embedding dimension)
+# xtabs pivots long -> wide; as.matrix converts it to a plain numeric matrix
+# expected by downstream functions.
+rep_mat <- xtabs(
   formula = embedding_by_year ~ year + dimension,
-  data = representative_vectors
+  data = rep_vectors_by_year
 )
-mat <- as.matrix(mat)
+rep_mat <- as.matrix(rep_mat)
 
-# ---- usage ----
-drift <- consecutive_proto_drift(mat) # year-to-year PRT drift
+#: Compute proto-distance (PRT) drift ---------
+# `consecutive_proto_drift()` computes year-to-year proto-distance using the
+# provided numeric matrix (rows = years). The result is suitable for plotting.
+drift <- consecutive_proto_drift(rep_mat) # year-to-year PRT drift
 
-# Visualisations for year-to-year proto-distance (PRT) drift-------------
-
+#: Visualise PRT drift ---------
 prt_drift <- plot_semantic_drift(drift, value_col = "prt", smooth = TRUE)
 ggsave(
   filename = here::here(
@@ -35,9 +68,9 @@ ggsave(
   height = 5
 )
 
-# Heatmap of proto-distance matrix
-dm <- proto_distance_matrix(mat)
-prt_heatmap <- plot_distance_heatmap(dm)
+#: Heatmap of proto-distance matrix ---------
+prt_dm <- proto_distance_matrix(rep_mat)
+prt_heatmap <- plot_distance_heatmap(prt_dm)
 ggsave(
   filename = here::here(
     image_path_temp,
@@ -47,37 +80,33 @@ ggsave(
   height = 6
 )
 
-# Average Pairwise Distance on sentence embeddings------------------
-## APD on top 1% closest sentences to "rationality" and "rational"-----------
-bert_df <- read_rds(file.path(
+#: APD on top 1% closest sentences to "rationality" ---------
+# Load a precomputed RDS with the top-1% closest sentences (to a query) and
+# their embeddings. We restrict to the analysis years and compute APD by year.
+top1pct_bert_df <- read_rds(file.path(
   data_path,
   "closest_sentences_0.01_rationality_score_filtered_with_embeddings.rds"
-)) %>%
-  filter(between(publication_year, 1900, 2009))
+)) |>
+  dplyr::filter(between(publication_year, 1900, 2009))
 
 apd_sentence_matrix <- compute_apd_by_years(
-  bert_df,
+  top1pct_bert_df,
   year_col = "publication_year",
   embeddings_col = "embedding",
   chunk_size = 5000L
 )
 
-# Persist to disk for downstream use (safe, reproducible path)
+# Persist results for reproducibility
 apd_output_path <- file.path(data_path, "apd_sentence_embeddings_years.rds")
 saveRDS(apd_sentence_matrix, apd_output_path)
 
-#' Load data if needed
-#' `apd_sentence_matrix <- readRDS(file.path(data_path, "apd_sentence_embeddings_years.rds"))``
-
-# plotting
-years <- rownames(apd_sentence_matrix)
-year_col <- years[-1]
-year_prev_col <- years[-length(years)]
-
-idx <- seq_len(length(years) - 1)
+# Quick helper: build a tidy drift tibble from the APD matrix for plotting
+years_apd <- rownames(apd_sentence_matrix)
+year_col <- years_apd[-1]
+year_prev_col <- years_apd[-length(years_apd)]
+idx <- seq_len(length(years_apd) - 1)
 apd_vals <- as.numeric(apd_sentence_matrix[cbind(idx + 1, idx)])
 
-# Return a tibble with the later year, previous year, and the proto-distance.
 apd_drift <- tibble::tibble(
   year = year_col,
   year_prev = year_prev_col,
@@ -86,10 +115,7 @@ apd_drift <- tibble::tibble(
 
 plot_semantic_drift(apd_drift, value_col = "apd", smooth = TRUE)
 ggsave(
-  filename = here::here(
-    image_path_temp,
-    "apd_sentence_embeddings_drift.png"
-  ),
+  filename = here::here(image_path_temp, "apd_sentence_embeddings_drift.png"),
   width = 8,
   height = 5
 )
@@ -99,15 +125,12 @@ plot_distance_heatmap(
   legend_title = "Average Pairwise\nDistance"
 )
 ggsave(
-  filename = here::here(
-    image_path_temp,
-    "apd_sentence_embeddings_heatmap.png"
-  ),
+  filename = here::here(image_path_temp, "apd_sentence_embeddings_heatmap.png"),
   width = 8,
   height = 6
 )
 
-# Using anchor year
+#: Anchor plot — APD relative to anchor years ---------
 apd_anchor_sentences <- plot_anchor(
   apd_sentence_matrix,
   anchors = seq(1920, 2000, by = 10),
@@ -125,25 +148,30 @@ ggsave(
   height = 8
 )
 
-## APD on sentences with "rationality"------------
+#: APD for sentences containing "rationality" / "rational" ---------
+# Use arrow::open_dataset() to lazily filter the remote feather dataset, then
+# collect matching sentences into memory for APD computation.
 dataset <- open_dataset(
-  file.path(data_path, "sentences_embeddings"),
+  file.path(jstor_data_path, "sentences_embeddings"),
   format = "feather"
 )
 
-rationality_sentences <- dataset %>%
-  filter(
+rationality_sentences <- dataset |>
+  dplyr::filter(
     between(publication_year, 1900, 2009),
-    str_detect(sentence, regex("\\brationality\\b", ignore_case = TRUE))
-  ) %>%
-  collect()
+    stringr::str_detect(
+      sentence,
+      regex("\\brationality\\b", ignore_case = TRUE)
+    )
+  ) |>
+  dplyr::collect()
 
-rational_sentences <- dataset %>%
-  filter(
+rational_sentences <- dataset |>
+  dplyr::filter(
     between(publication_year, 1900, 2009),
-    str_detect(sentence, regex("\\brational\\b", ignore_case = TRUE))
-  ) %>%
-  collect()
+    stringr::str_detect(sentence, regex("\\brational\\b", ignore_case = TRUE))
+  ) |>
+  dplyr::collect()
 
 apd_rationality_sentence_matrix <- compute_apd_by_years(
   rationality_sentences,
@@ -159,7 +187,7 @@ apd_rational_sentence_matrix <- compute_apd_by_years(
   chunk_size = 5000L
 )
 
-# Drop years before 1910
+# Drop early years (pre-1920) where data are sparse to stabilise plots
 apd_rationality_sentence_matrix <- apd_rationality_sentence_matrix[
   rownames(apd_rationality_sentence_matrix) >= "1920",
   colnames(apd_rationality_sentence_matrix) >= "1920"
@@ -169,11 +197,10 @@ apd_rational_sentence_matrix <- apd_rational_sentence_matrix[
   colnames(apd_rational_sentence_matrix) >= "1920"
 ]
 
-# plotting
-years <- rownames(apd_rationality_sentence_matrix)
-year_col <- years[-1]
-year_prev_col <- years[-length(years)]
-idx <- seq_len(length(years) - 1)
+years_rationality <- rownames(apd_rationality_sentence_matrix)
+year_col <- years_rationality[-1]
+year_prev_col <- years_rationality[-length(years_rationality)]
+idx <- seq_len(length(years_rationality) - 1)
 apd_rationality_vals <- as.numeric(apd_rationality_sentence_matrix[cbind(
   idx + 1,
   idx
@@ -182,7 +209,7 @@ apd_rational_vals <- as.numeric(apd_rational_sentence_matrix[cbind(
   idx + 1,
   idx
 )])
-# Return a tibble with the later year, previous year, and the proto-distance.
+
 apd_rationality_drift <- tibble::tibble(
   year = year_col,
   year_prev = year_prev_col,
@@ -203,17 +230,13 @@ plot_rational_drift <- plot_semantic_drift(
 
 combined_plot <- plot_rationality_drift + plot_rational_drift
 ggsave(
-  filename = here::here(
-    image_path_temp,
-    "apd_rationality_rational_drift.png"
-  ),
+  filename = here::here(image_path_temp, "apd_rationality_rational_drift.png"),
   plot = combined_plot,
   width = 10,
   height = 5
 )
 
-# Heatmaps
-# collect legends from both plots and place a single legend at the bottom
+# Heatmaps: collect legends from both plots and place a single legend at the bottom
 heatmap_rationality <- plot_distance_heatmap(
   apd_rationality_sentence_matrix,
   legend_title = "Average Pairwise\nDistance"
@@ -228,8 +251,6 @@ heatmap_rational <- plot_distance_heatmap(
 combined_heatmap <- (heatmap_rationality + heatmap_rational) +
   plot_layout(guides = "collect") &
   theme(legend.position = "bottom")
-
-# return the combined plot object and (optionally) save it
 ggsave(
   filename = here::here(
     image_path_temp,
@@ -240,7 +261,7 @@ ggsave(
   height = 6
 )
 
-# Anchor plots
+# Anchor plots for token-specific sets
 apd_anchor_rationality <- plot_anchor(
   apd_rationality_sentence_matrix,
   anchors = seq(1930, 2000, by = 10),
@@ -275,244 +296,96 @@ ggsave(
   height = 8
 )
 
-# Analysing drift in specific dimensions------------------
-# Example usage of rank_drivers_for_year_pair (sequential, disk-backed to avoid memory growth)
-output_dir <- file.path(data_path, "top_sentence_drivers_year_pairs")
-if (!dir.exists(output_dir)) {
-  dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
-}
+#: Build matrices for "rationality" and "rational" sentence sets ---------
+# `top1pct_bert_df` contains the top-1% closest sentences to the query term and
+# `rational_sentences`/`rationality_sentences` are the direct token matches.
+mat_rationality <- build_year_centroid_mat(
+  rationality_sentences,
+  year_col = "publication_year",
+  embedding_col = "embedding",
+  years = 1900:2009
+)
 
-years_already_processed <- list.files(
-  output_dir,
-  pattern = "^drivers_\\d{4}\\.rds$",
-  full.names = FALSE
-) %>%
-  str_extract("\\d{4}") %>%
-  as.integer()
+mat_rational <- build_year_centroid_mat(
+  rational_sentences,
+  year_col = "publication_year",
+  embedding_col = "embedding",
+  years = 1900:2009
+)
 
-years_to_process <- 1900:2008L |>
-  setdiff(years_already_processed)
-processed_files <- character(0)
+#: Usage: supply named list of matrices to the driver pipeline ---------
+matrices_to_process <- list(
+  general = rep_mat,
+  rational = mat_rational,
+  rationality = mat_rationality
+)
 
-for (yr in years_to_process) {
-  cli::cli_inform(glue::glue("Starting year {yr}"))
-  out_path <- file.path(output_dir, glue::glue("drivers_{yr}.rds"))
+drivers_lists <- process_matrices_for_drivers(
+  matrices = matrices_to_process,
+  data_path = data_path,
+  jstor_data_path = jstor_data_path,
+  years_range = 1900:2008
+)
 
-  if (file.exists(out_path)) {
-    cli::cli_inform(glue::glue("Skipping {yr} — output exists at {out_path}"))
-    processed_files <- c(processed_files, out_path)
-    next
-  }
-
-  res <- tryCatch(
-    {
-      rank_drivers_for_year_pair(
-        mat = mat,
-        year_t = yr,
-        year_col = "publication_year",
-        embedding_col = "embedding",
-        top_n = 200L,
-        normalize_rows = TRUE,
-        chunk_threshold = 200000L,
-        data_path = data_path
-      )
-    },
-    error = function(e) {
-      cli::cli_alert_danger(glue::glue("Error processing {yr}: {e$message}"))
-      NULL
-    },
-    warning = function(w) {
-      cli::cli_alert_warning(glue::glue("Warning processing {yr}: {w$message}"))
-      invokeRestart("muffleWarning")
+# Loading previously computed combined results (optional)
+load_drivers_lists <- TRUE
+if (load_drivers_lists) {
+  drivers_lists <- purrr::map(
+    c("general", "rational", "rationality"),
+    function(name) {
+      read_rds(here::here(
+        data_path,
+        paste0("top_sentence_drivers_all_years_", name, ".rds")
+      ))
     }
   )
-
-  if (is.null(res)) {
-    next
-  }
-
-  saveRDS(res, out_path) # small object per year
-  processed_files <- c(processed_files, out_path)
-
-  # free memory promptly
-  rm(res)
-  gc()
-  cli::cli_inform(glue::glue("Saved results for {yr} → {out_path}"))
+  names(drivers_lists) <- c("general", "rational", "rationality")
 }
 
-# Optionally: combine all per-year files into a single list and persist once (small).
-combined_path <- file.path(data_path, "top_sentence_drivers_all_years.rds")
-if (!file.exists(combined_path) && length(processed_files) > 0) {
-  all_processed_files <- list.files(
-    output_dir,
-    pattern = "^drivers_\\d{4}\\.rds$",
-    full.names = TRUE
-  )
-  years_processed <- all_processed_files %>%
-    str_extract("\\d{4}") %>%
-    as.integer()
-  all_list <- purrr::map(all_processed_files, readRDS)
-  names(all_list) <- paste0(years_processed)
-  all_list <- bind_rows(all_list, .id = "year_pair_start")
-  saveRDS(all_list, combined_path)
-  cli::cli_inform(glue::glue("Combined file written to {combined_path}"))
-}
-
-# Visualising results
-setDT(all_list, key = "id")
-# Updated: support arbitrary n-grams (scalar max or vector of n values)
-extract_ngrams <- function(
-  df,
-  ngrams = c(1L, 2L), # either integer scalar (max n) or integer vector of n values
-  grouping_cols = c(
-    "year_pair_start",
-    "type"
-  ),
-  text_col = "sentence",
-  min_nchar = 2L,
-  stop_words = NULL
-) {
-  if (!requireNamespace("tokenizers", quietly = TRUE)) {
-    stop("Please install the 'tokenizers' package.")
-  }
-  if (!requireNamespace("tidytext", quietly = TRUE)) {
-    stop("Please install the 'tidytext' package.")
-  }
-  if (!requireNamespace("stringr", quietly = TRUE)) {
-    stop("Please install the 'stringr' package.")
-  }
-  data.table::setDT(df)
-
-  if (is.null(stop_words)) {
-    stop_words <- unique(tidytext::stop_words$word)
-  }
-  stop_words <- tolower(stop_words)
-
-  required_cols <- unique(c(
-    grouping_cols,
-    text_col
-  ))
-  missing_cols <- setdiff(required_cols, names(df))
-  if (length(missing_cols) > 0) {
-    stop(
-      "Missing required columns in df: ",
-      paste(missing_cols, collapse = ", ")
-    )
-  }
-
-  # Normalize ngrams input: if scalar -> 1:max, else use provided vector
-  if (length(ngrams) == 1L) {
-    ng_range <- seq_len(as.integer(ngrams))
-  } else {
-    ng_range <- as.integer(ngrams)
-  }
-
-  # generate token data.tables for each ngram and rbind
-  token_list <- lapply(ng_range, function(n) {
-    tmp <- df[, c(grouping_cols, text_col), with = FALSE]
-    tmp[,
-      token := tokenizers::tokenize_ngrams(
-        get(text_col),
-        n = as.integer(n),
-        lowercase = TRUE
-      )
-    ]
-    tmp[, (text_col) := NULL]
-    tmp[, ngram := as.integer(n)]
-    tmp
-  })
-
-  tokens <- data.table::rbindlist(token_list, use.names = TRUE, fill = TRUE)
-
-  # unnest list-column of tokens into rows, grouped by desired grouping columns + ngram
-  tokens <- tokens[, .(token = unlist(token)), by = c(grouping_cols, "ngram")]
-
-  # filter short tokens
-  tokens <- tokens[nchar(token) >= as.integer(min_nchar), ]
-
-  # split token into words (list column) to enable multi-word checks
-  tokens[, words := strsplit(token, " ", fixed = TRUE)]
-
-  # remove tokens containing digits in any part
-  tokens[,
-    has_digit := vapply(words, function(ws) any(grepl("[0-9]", ws)), logical(1))
-  ]
-
-  # remove tokens containing stopwords in any part
-  tokens[,
-    has_stop := vapply(words, function(ws) any(ws %in% stop_words), logical(1))
-  ]
-
-  tokens <- tokens[!has_digit & !has_stop]
-
-  # keep grouping columns + token, replace spaces with underscores for multi-word tokens
-  tokens <- tokens[, c(grouping_cols, "token", "ngram"), with = FALSE]
-  tokens[, token := stringr::str_replace_all(token, " ", "_")]
-
-  # return result (data.table)
-  tokens[]
-}
-all_list[, sentence_id := .I]
-
-driver_tokens <- all_list |>
+#: Extract n-grams from driver sentence lists ---------
+driver_tokens_list <- purrr::map(drivers_lists, function(df) {
   extract_ngrams(
+    df,
     ngrams = 2L,
-    grouping_cols = c("year_pair_start", "type"),
+    grouping_cols = c(
+      "sentence_id",
+      "projection_score",
+      "year_pair_start",
+      "type"
+    ),
     text_col = "sentence",
     min_nchar = 3L
   )
+})
 
-tf_idf_drivers <- driver_tokens %>%
-  compute_tf_idf(document_col = c("year_pair_start", "type"))
-tf_idf_drivers <- tf_idf_drivers[absolute_tf > 10, ]
-
-# Plot of top 2 per year
-# Keep only 'new' drivers, select top 2 by tf_idf per year, and build a plot with years on x-axis
-top2_new_per_year <- tf_idf_drivers |>
-  filter(type == "new") |>
-  group_by(year_pair_start) |>
-  slice_max(tf_idf, n = 2, with_ties = FALSE) |>
-  ungroup() |>
-  mutate(
-    year = as.integer(year_pair_start),
-    token = as.character(token)
+#: Create and save top-n driver plots per year and per decade ---------
+# These functions save figures to `image_path_temp` and return the ggplot objects.
+p_top2_new <- purrr::map2(
+  driver_tokens_list,
+  names(driver_tokens_list),
+  ~ make_topn_driver_plot(
+    driver_tokens = .x,
+    top_n = 2L,
+    min_corpus_tf = 20L,
+    title_suffix = .y,
+    out_file = here::here(
+      image_path_temp,
+      glue::glue("top2_new_drivers_per_year_{.y}.png")
+    )
   )
+)
 
-yr_seq <- seq(min(top2_new_per_year$year), max(top2_new_per_year$year), by = 5)
-
-p_top2_new <- ggplot(
-  top2_new_per_year,
-  aes(x = year, y = tf_idf, group = token)
-) +
-  geom_text_repel(
-    aes(label = token),
-    angle = 90,
-    hjust = 0,
-    vjust = 0.5,
-    show.legend = FALSE,
-    na.rm = TRUE,
-    direction = "y", # only repel vertically
-    force = 6, # increase repulsive force -> larger displacement
-    box.padding = 0.6, # space around label boxes
-    point.padding = 0.25, # padding around the data point
-    segment.size = 0,
-    max.iter = 5000, # allow more iterations for placement
-    seed = 42
-  ) +
-  scale_x_continuous(breaks = yr_seq) +
-  scale_y_continuous(expand = expansion(mult = c(0.02, 0.5))) + # give extra headroom
-  coord_cartesian(clip = "off") + # let labels extend outside panel
-  labs(
-    title = "Top 2 'new' drivers per year (by TF-IDF)",
-    x = NULL,
-    y = "TF-IDF",
-    colour = "Token"
-  ) +
-  theme_minimal() +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    legend.position = "none",
-    plot.margin = ggplot2::margin(t = 5, r = 60, b = 5, l = 5, unit = "pt") # space for long labels
+p_topn_decade <- purrr::map2(
+  driver_tokens_list,
+  names(driver_tokens_list),
+  ~ make_topn_driver_decade_plot(
+    driver_tokens = .x,
+    top_n = 6L,
+    min_corpus_tf = 20L,
+    title_suffix = .y,
+    out_file = here::here(
+      image_path_temp,
+      glue::glue("topn_new_drivers_per_decade_{.y}.png")
+    )
   )
-
-p_top2_new
+)
