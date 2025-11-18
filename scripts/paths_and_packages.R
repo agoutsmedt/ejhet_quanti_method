@@ -58,20 +58,23 @@ if (str_detect(getwd(), "goutsmed")) {
   data_path <- "E:/Dropbox/8-Projets Quanti/1-R_Projects/Data/ejhet_quanti_method"
   general_data_path <- "E:/Dropbox/8-Projets Quanti/1-R_Projects/Data/1-General_data"
 } else {
-  if (str_detect(getwd(), "Admin")) {
-    data_path <- "C:/Users/Admin/MEGA/data/jstor"
-    jstor_raw_data <- data_path # I'm supposing you're not doing the same for this data
-    wos_data_path <- "C:/Users/Admin/MEGA/data/wos"
-    general_data_path <- "C:/Users/Admin/MEGA/data/wos"
+  if (str_detect(getwd(), "github_p")) {
+    data_path <- "C:/cloud/data/ejhet_project"
+    jstor_raw_data <- "C:/cloud/data/jstor"
+    wos_data_path <- "C:/cloud/data/wos"
+    istex_data <- "C:/cloud/data/istex"
+    elsevier_data <- "C:/cloud/data/elsevier"
   } else {
     if (str_detect(getwd(), "github_w")) {
-      data_path <- "C:/Users/thomd/MEGA/data/jstor"
-      jstor_raw_data <- data_path
-      wos_data_path <- "C:/Users/thomd/MEGA/data/wos"
-      general_data_path <- "C:/Users/thomd/MEGA/data/wos"
+      data_path <- "C:/cloud/data/ejhet_project"
+      jstor_raw_data <- "C:/cloud/data/jstor"
+      wos_data_path <- "C:/cloud/data/wos"
+      istex_data <- "C:/cloud/data/istex"
+      elsevier_data <- "C:/cloud/data/elsevier"
     }
   }
 }
+
 
 image_path <- here::here("paper", "images")
 image_path_temp <- here::here("pictures")
