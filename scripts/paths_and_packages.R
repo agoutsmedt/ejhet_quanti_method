@@ -38,17 +38,24 @@ if (str_detect(getwd(), "goutsmed")) {
     data_path <- file.path(
       path.expand("~"),
       "Nextcloud",
+      "ejhet_project"
+    )
+    jstor_data_path <- file.path(
+      path.expand("~"),
+      "Nextcloud",
       "jstor"
     )
     jstor_raw_data <- file.path(path.expand("~"), "data", "jstor") # I'm storing the raw data in a different folder because it's heavy.
+
     wos_data_path <- file.path(
       path.expand("~"),
       "data",
       "wos"
     )
   } else {
-    data_path <- file.path(path.expand("~"), "data", "jstor")
-    jstor_raw_data <- data_path
+    data_path <- file.path(path.expand("~"), "data", "ejhet_project")
+    jstor_data_path <- file.path(path.expand("~"), "data", "jstor")
+    jstor_raw_data <- jstor_data_path
     wos_data_path <- file.path(path.expand("~"), "data", "wos")
   }
 } else if (str_detect(getwd(), "D:/Dropbox/8")) {
