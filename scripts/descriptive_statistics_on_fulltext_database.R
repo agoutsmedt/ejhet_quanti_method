@@ -21,7 +21,7 @@ gg <- metadata |>
 ggsave(
   plot = gg,
   file.path(image_path, "documents_distribution_fulltext_database.png"),
-  width = 8,
+  width = 12,
   height = 9
 )
 
@@ -60,6 +60,52 @@ gg <- metadata |>
 ggsave(
   plot = gg,
   file.path(image_path, "language_distribution_fulltext_database.png"),
-  width = 8,
+  width = 12,
+  height = 9
+)
+
+
+# language distribution by year 
+
+
+gg <- metadata |>
+  mutate(
+    language = str_extract(language, "^[^,]+"),
+    language = ifelse(
+      language %in% c("eng", "ger", "fre", "ita"),
+      language,
+      "other"
+    ),
+    language = recode(
+      language,
+      eng = "English",
+      ger = "German",
+      fre = "French",
+      ita = "Italian",
+      other = "Other"
+    )
+  ) |>
+  rename(year = publication_year) |>
+  count(year, language) |>
+  group_by(year) |>
+  mutate(pct = n / sum(n) * 100) |>
+  ungroup() |>
+  ggplot(aes(x = year, y = pct, fill = language)) +
+  geom_col(position = "fill") +
+  scale_fill_brewer(palette = "Set2") +
+  scale_y_continuous(labels = scales::percent_format(scale = 100)) +
+  labs(
+    x = NULL,
+    y = "Percentage of documents",
+    fill = NULL,
+  ) +
+  theme_light(base_size = 25)
+
+
+# save the plot 
+ggsave(
+  plot = gg,
+  file.path(image_path, "language_distribution_by_year_fulltext_database.png"),
+  width = 12,
   height = 9
 )

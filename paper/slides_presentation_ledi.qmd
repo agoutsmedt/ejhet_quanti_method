@@ -1,0 +1,413 @@
+---
+title: "A history of rationality in economics"
+subtitle: "A computational approach" 
+author: 
+  - name: "Thomas Delcey"
+    affiliation: "Université de Bourgogne"
+    email: "Thomas.delcey@ube.fr"
+  - name: "Aurélien Goutsmedt"
+    affiliation: "UC Louvain; ICHEC"
+    email: "aurelien.goutsmedt@uclouvain.be" 
+  - name: "Alexandre Truc"
+    affiliation: "CNRS, Université Côte d'Azur"
+    email: "Alexandre.truc@cnrs.fr"
+format: 
+  revealjs: 
+    theme: 
+      - custom_clean.scss
+    css: custom.css
+    transition: fade
+    slide-number: true
+    toc: false 
+    toc-depth: 1
+    slide-level: 2
+    embed-resources: true
+    view-distance: 100
+    progress: true
+    width: 1200
+    margin: 0.03
+    incremental: true
+    lightbox: auto
+    fig-align: center
+    cap-location: top
+    center: true
+---
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| include: false
+
+
+# move to the root directory of the project with "here::here()"
+source(here::here("scripts", "paths_and_packages.R"))
+
+pacman::p_load(
+  tidyverse,
+  tidytext,
+  knitr,
+  kableExtra,
+  arrow
+)
+
+```
+
+## Context 
+
+:::{.highlight-last}
+- **Special issue**: methods in the history of economic thought (HET) ;
+
+- **Objective**: write a methodological essay showing how quantitative tools can enrich history of economic thought ; 
+
+::: {.callout-warning .fragment appearance="simple"}
+Neither a proof of concept paper, nor a review of methods
+:::
+:::
+
+## Our contribution
+
+:::{.highlight-last}
+:::{.fragment .nonincremental}
+- Using textual methods to capture the evolving usages and meanings of rationality: 
+  - A long-standing concern for historians of economics ; 
+  - A complex and evolving concept ;
+:::
+
+:::{.fragment .nonincremental}
+- Build a method to:
+  - explore very large of corpora (millions of sentences) ;
+  - taking into account historical context ;
+  - discuss concretely the challenges at each step. 
+:::
+:::
+ 
+
+## From sources to corpus 
+
+:::{.highlight-last}
+- Our main source: JSTOR fulltext database (around 300 000 documents, 31 millions sentences) + elsevier and istex's fulltext + econlit's abstracts + wos' citation data. 
+
+::: {.callout-caution .fragment .nonincremental}
+### With textual data, it is often more challenging to build the data than to analyze it:
+
+- Access to the source. 
+- Filtering documents (book reviews). 
+- Cleaning texts (headers, acknowledgements, etc.).
+- Matching datasets. 
+- Handling large datasets. 
+:::
+:::
+
+## Corpus distribution 
+
+::: {#fig-distribution layout-ncol=2}
+
+![Année de publication](images/documents_distribution_fulltext_database.png){#fig-corpus_distribution width=90%}
+
+![Language](images/language_distribution_by_year_fulltext_database.png){#fig-language_distribution width=90%}
+
+Distribution of documents in the JSTOR fulltext database
+::: 
+
+
+## Descriptive exploration
+
+::: {#fig-exploration layout-ncol=2}
+
+![Term frequency](images/relative_freq_rationality_and_rational.png){#fig-relative_freq_rationality width=70%}
+
+![Neighbor words of "rational" and "rationality"](images/top_neighbor_words_both.png){#fig-top_neighbor_words width=80%}
+
+Exploration of the corpus with simple text analysis tools
+::: 
+
+
+## Which methods?
+
+::: {#fig-computation_methods layout-ncol=2}
+
+![A probabilistic topic model](images/re.png){#fig-topic_model width=70%}
+
+![Inference from topics](images/figure_9_gender_effect-1.png){#fig-inference_from_topics width=70%}
+
+Illustrations of probablistic topic model outputs in HET 
+
+:::
+
+
+
+## Representing a text 
+
+```{r}
+#| label: tbl-corpus_example2
+#| tbl-cap: "Exemple de corpus en format tidy"
+
+corpus <- tibble(id = c(1, 2, 3, "..."), text = c("I love markets", "Viva la revolucion", "In markets, we trust", "..."), is_funded_by_industry = c("yes", "no", "yes", "..."), year = c(1950, 1950, 1955, "..."), variable_4 = c("...", "...", "...", "..."))
+
+corpus %>%
+  kbl() %>%
+  kableExtra::kable_minimal() %>%
+  kableExtra::kable_styling(full_width = F, font_size = 35)
+```
+
+::: {.callout-caution appearance="simple" .fragment}
+For human eyes, it is easy to spot that first and third documents are semantically closer than second one. How a computer can spot it ? 
+:::
+
+
+## Bag-of-words 
+
+
+::: {.highlight-last}
+::: {.fragment .incremental}
+- The simplest method is to count the frequency of the chosen textual units (words, n-gram, etc.) in each document.
+::: 
+
+
+::: {.callout-tip .fragment .incremental}
+### Bag-of-words 
+- Given a corpus $C$ with $D$ documents. 
+- And a vocabulary $V$ termes, la liste des mots uniques du corpus. 
+- The bag-of-words representation of $C$ is a matrix $W$ of dimension $D \times V$.
+- Each entry $w_{d,v}$ is the number of occurrences of term $v$, $v \in \{1, \ldots, V\}$ in document $d$, $d \in \{1, \ldots, D\}$.
+::: 
+
+::: 
+
+## An example
+
+::: {.r-stack}
+::: {.fragment .fade-in-then-out}
+```{r}
+#| label: tbl-corpus_example3
+#| tbl-cap: "Exemple de corpus en format tidy"
+
+corpus <- tibble(id = c(1, 2, 3, "..."), text = c("I love markets", "Viva la revolucion", "In markets, we trust", "..."), is_funded_by_industry = c("yes", "no", "yes", "..."), year = c(1950, 1950, 1955, "..."), variable_4 = c("...", "...", "...", "..."))
+
+corpus %>%
+  kbl() %>%
+  kableExtra::kable_minimal() %>%
+  kableExtra::kable_styling(full_width = F, font_size = 25)
+```
+
+
+::: 
+
+::: {.fragment} 
+```{r}
+#| label: tbl-dtm_example1
+#| tbl-cap: "Exemple d'une matrice bag-of-words"
+
+tokens <- corpus |> 
+  tidytext::unnest_tokens(word, text) 
+
+
+dtm <- tokens |>
+  count(id, word) |>
+  pivot_wider(names_from = word, values_from = n, values_fill = 0) |>
+  arrange(id)
+
+dtm %>%
+  kbl() %>%
+  kableExtra::kable_minimal() %>%
+  kableExtra::kable_styling(full_width = F, font_size = 25) 
+``` 
+::: 
+::: 
+
+::: {.highlight-last}
+:::: {.columns}
+
+::: {.column width="50%"}
+::: {.callout-tip .fragment}
+### Avantages 
+- Simple to build and interpret.
+- Very good for text classification (topics model, lexicon, etc.).
+:::
+:::
+
+::: {.column width="50%"}
+::: {.callout-important .fragment}
+### Inconvénients
+- The matrix is very sparse and high-dimentional ($V \gg D$).
+- It ignores word order and variations in meaning (synonyms, polysemy, etc.).
+::: 
+::: 
+
+:::: 
+:::
+
+## Information loss 
+
+::: {.highlight-last}
+::: {.fragment}
+- Let's consider the sentences:
+  1. "People are rational."
+  2. "We assume _homo economicus_."
+  3. "Preferences are complete and transitive."
+  4. "Agents are profit-maximizers."
+::: 
+
+::: {.callout-caution appearance="simple" .fragment}
+- Sentences do not share any common words but have the same meanings. 
+- Ideally, we want vectors able to capture the meanings of texts. 
+::: 
+
+:::
+
+
+## World embeddings
+
+:::: {.columns}
+
+::: {.column width="50%"}
+![Thomas Mikolov, a pioneer of word embeddings](images/mikolov.png){#fig-mikolov width=70%}
+:::
+
+::: {.column width="50%"}
+- Vectors are trained on a predicting task: 
+  - Next token, masked tokens ;
+  - The vector values are the learned weights of a neural network.
+::: 
+
+:::: 
+
+## Contextual embeddings 
+
+:::: {.columns}
+::: {.column width="65%"}
+
+![A simplified representation of words embeddings in 2D](images/fake_semantic_space_words_in_2D.png){#fig-vector_space width=100%}
+:::
+
+::: {.column width="35%"}
+
+::: {.callout-tip appearance="simple"}
+- The distance between vectors reflects semantic similarity.
+- Distance metric: cosine similarity.
+::: 
+
+::: {.callout-note appearance="simple"}
+- First models: fixed embeddings (e.g., word2vec, GloVe).
+- LLMs: contextual embeddings (e.g., BERT, GPT, etc.).
+::: 
+
+::: 
+::::
+
+## Sentence embeddings 
+
+::: {.callout-note appearance="simple"}
+We use sentence-BERT, a fast LLM model that reprensents **sentences** as vectors and is optimized for semantic similarity tasks.
+::: 
+
+. . . 
+
+```{r}
+#| echo: false
+#| message: false 
+#| warning: false
+#| label: tbl-top_sentences
+#| tbl-cap: "Closest to 'Economic agents are supposed to be rational.'"
+
+# load data OUTPUT_FILE = top_5_sentences_to_fake_sentence.feather
+
+data <- arrow::read_feather(here::here(data_path, "top_5_sentences_to_fake_sentence.feather"))
+
+# ;2 "Basically, for Professor Hicks, as for Jevons and Marshall, economic decisions are made by an abstract calculating machine";3 "I find myself continuing to believe ... that, whatever the origin of the want, when it rises to consciousness, it is subject to a process which we call rational, when the human agent decides 
+sentence_clean <- "Basically, for Professor Hicks, as for Jevons and Marshall, economic decisions are made by an abstract calculating machine."
+
+data |> 
+  filter(rank < 4, year %in% c(1950, 1975, 2000)) |>
+  mutate(sentence = ifelse(str_detect(sentence, "^;"), sentence_clean, sentence)) |>
+  # kable the table
+  select(year, sentence, similarity) |>
+  mutate(similarity = round(similarity, 3)) |>
+  gt::gt() |>
+  gt::tab_options(table.font.size = 15)
+
+```
+
+
+
+## Our empirical strategy  
+
+::: {.highlight-last}
+::: {.fragment} 
+1. Compute a "representative vectors" for the concept of rationality.
+    1. Select all sentences containing the words "rational" or "rationality". 
+    1. Compute their sentence embeddings. 
+    1. We compute a moving average of those vectors over time. 
+::: 
+
+::: {.callout-warning .fragment appearance="minimal"}
+Output: a "representative vector" for each year. 
+::: 
+
+::: 
+
+## Our empirical strategy  
+
+::: {.highlight-last}
+::: {.fragment}
+2. Retrieve the most similar sentences in the corpus from this vector.
+    2. For each year, compute the cosine similarity between the "representative vector" and the 32M sentence embeddings in the corpus. 
+    2. Select the top 1% most similar sentences for each year. 
+:::
+
+::: {.callout-warning .fragment appearance="minimal"}
+Output: a set of sentences related to rationality for each year.
+::: 
+
+::: {.callout-important .fragment appearance="minimal"}
+Sentences do not necessarily contain the words "rational" or "rationality".
+::: 
+
+::: 
+
+
+## Our empirical strategy  
+
+::: {.highlight-last}
+::: {.fragment} 
+
+3. Group those sentences into clusters.
+    3. Group sentences by decade using k-means. 
+    3. Compute clusters centroids. 
+    3. Merge similar clusters across adjacent decades. 
+
+::: 
+
+::: {.callout-warning .fragment appearance="minimal"}
+Output: intertemporal clusters of sentences related to rationality.
+::: 
+
+::: 
+
+
+## The alluvial diagram of intertemporal clusters 
+
+![](images/intertemporal_clusters_alluvial.png){width=50% fig-align="center"}
+
+## Navigating our own results with an app 
+
+[https://0199205a-7b17-ab11-595d-8f12aae160dd.share.connect.posit.cloud/](https://0199205a-7b17-ab11-595d-8f12aae160dd.share.connect.posit.cloud/)
+
+## Conclusion
+
+:::{.highlight-last}
+- LLMs offers a tool to quantify conceptual relationship betweens texts. 
+
+:::{.fragment} 
+:::{.callout-caution}
+
+### But important challenges: 
+- Existing models are trained for understanding general language, not economic discourses.
+- Model are present-centric.
+- Computational ressources.
+- Data access (Elsevier, Taylor and Francis, Books, *etc*.).
+
+::: 
+:::
+:::
