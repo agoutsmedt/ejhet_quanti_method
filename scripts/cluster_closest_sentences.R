@@ -21,6 +21,19 @@ pacman::p_load(
 n_cores <- floor(parallel::detectCores() / 2.5)
 registerDoParallel(cores = n_cores)
 
+## Time window set up------------------
+# Generate decade breaks (1900-2020)
+decades <- c(1900, 1920, seq(1940, 2020, by = 10))
+
+# Create window labels (e.g., "1900-1909", "1910-1919")
+time_windows <- map2(
+  decades[-length(decades)],
+  decades[-1] - 1,
+  ~ c(.x, .y)
+) %>%
+  set_names(paste0(decades[-length(decades)], "-", decades[-1] - 1))
+
+
 ## Bert rational paragraph loading--------------------
 bert_df <- read_rds(here::here(
   data_path,
@@ -160,19 +173,6 @@ pc_global <- prcomp_irlba(
   center = TRUE,
   scale. = TRUE
 )
-
-## Time window set up------------------
-# Generate decade breaks (1900-2020)
-decades <- c(1900, 1920, seq(1940, 2020, by = 10))
-
-# Create window labels (e.g., "1900-1909", "1910-1919")
-time_windows <- map2(
-  decades[-length(decades)],
-  decades[-1] - 1,
-  ~ c(.x, .y)
-) %>%
-  set_names(paste0(decades[-length(decades)], "-", decades[-1] - 1))
-
 
 project_pc <- function(df, pc) {
   X <- do.call(rbind, df$embedding)
@@ -450,7 +450,7 @@ ggsave(
   dpi = 300
 )
 
-# Test clustering by network analysis and backbone
+# Test clustering by network analysis and backbone-----------------------
 p_load(backbone)
 cluster_similarity <- as.data.frame(cosine_sim) %>%
   mutate(cluster_A = 1:n()) |>
@@ -466,8 +466,8 @@ cluster_attributes <- tibble(
 
 # 1) Nodes: gather node attributes
 nodes <- cluster_similarity %>%
-  distinct(id = cluster_A) |>
-  left_join(cluster_attributes, by = c("id" = "cluster_id"))
+  distinct(cluster_id = cluster_A) |>
+  left_join(cluster_attributes, by = "cluster_id")
 
 # 2) Edges = average similarity across windows (undirected)
 edges <- cluster_similarity %>%
@@ -487,161 +487,27 @@ g <- tbl_graph(nodes = nodes, edges = edges, directed = FALSE) %>%
     community = group_leiden(
       objective_function = "modularity",
       n = 1000,
-      resolution = 2
+      resolution = 3
     ) %>%
       as.factor()
   )
 
-# 4) Plotsparsify()# 4) Plot (Fruchterman–Reingold)
-set.seed(42)
-graph_plot <- ggraph(g, layout = "fr") +
-  geom_edge_link(alpha = 0.2, show.legend = FALSE) +
-  geom_node_point(aes(color = community), size = 6, show.legend = FALSE) +
-  geom_node_text(aes(label = window), repel = TRUE, size = 3) +
-  scale_edge_width(range = c(0.2, 3)) +
-  scale_size_continuous(range = c(1, 25)) +
-  labs(edge_width = "Avg similarity") +
-  scale_color_see_d() +
-  theme_void()
-
-g |> as_tibble() |> count(community, window, sort = T) |> filter(n > 1)
-g |> as_tibble() |> count(community, sort = T)
-
-# 1. extract node table from g
-nodes_tbl <- g %>%
-  activate("nodes") %>%
-  as_tibble(.name_repair = "minimal") |>
-  rename(cluster_id = id) |>
-  mutate(x = as.integer(factor(window, levels = window_levels)))
-
-
-# 3. compute x (window order) and y (either PC1 scaled within global range or per-window spacing)
-window_levels <- names(time_windows)
-nodes_pos <- nodes_feats %>%
-  mutate(x = as.integer(factor(window, levels = window_levels)))
-
-# per-window equally spaced y to avoid overlap
-nodes_pos <- nodes_tbl %>%
-  group_by(window) %>%
-  arrange(desc(community), .by_group = TRUE) %>%
-  mutate(
-    n_in_window = n(),
-    y = ifelse(n_in_window == 1, 0, seq(-1, 1, length.out = n_in_window))
-  ) %>%
-  ungroup()
-
-# distribute nodes vertically within each (community, window) cell to avoid overlap
-# compute per-(community,x) offsets without calling seq() on a vector
-# compute required band per community (max nodes in any x for that community)
-comm_band <- nodes_pos %>%
-  mutate(community = factor(community, levels = comm_levels)) %>%
-  group_by(community, x) %>%
-  summarise(n_in_cell = n(), .groups = "drop") %>%
-  group_by(community) %>%
-  summarise(
-    max_in_column = max(n_in_cell, na.rm = TRUE),
-    .groups = "drop"
-  ) %>%
-  arrange(factor(community, levels = comm_levels)) %>%
-  mutate(
-    max_in_column = pmax(max_in_column, 1L),
-    pad = 0.5, # vertical padding between community bands
-    band = max_in_column + pad # total vertical band height for the community
-  ) %>%
-  mutate(
-    baseline = cumsum(lag(band, default = 0)) + band / 2 # center y for each community band
-  ) %>%
-  select(community, band, baseline)
-
-# assign nodes within their community/x band
-nodes_pos2 <- nodes_pos %>%
-  mutate(community = factor(community, levels = comm_levels)) %>%
-  left_join(comm_band, by = "community") %>%
-  group_by(community, x) %>%
-  arrange(window, cluster_id, .by_group = TRUE) %>%
-  mutate(
-    n_in_cell = n(),
-    # centered offsets inside the community band; works for n_in_cell == 1 as well
-    offset = (row_number() - 0.5) * band / n_in_cell - band / 2,
-    y = baseline + offset
-  ) %>%
-  ungroup() %>%
-  rename(id = cluster_id) %>%
-  select(id, x, y, community)
-
-# 1) feature columns in `centroids` (exclude meta cols)
-feat_cols <- setdiff(
-  names(centroids),
-  c(".cluster", "window", "cluster_original_id")
-)
-
-# 2) average centroid features per intertemporal community (new_cluster)
-comm_centroids <- centroids %>%
-  mutate(cluster_id = 1:n()) %>%
-  left_join(nodes_tbl %>% select(cluster_id, community), by = "cluster_id") %>%
-  group_by(community) %>%
-  summarise(
-    across(all_of(feat_cols), ~ mean(.x, na.rm = TRUE)),
-    .groups = "drop"
-  )
-
-# 3) hierarchical clustering on scaled community-centroid matrix
-mat <- comm_centroids %>% select(-community) %>% as.matrix()
-mat_scaled <- scale(mat) # scale so features comparable
-d <- dist(mat_scaled, method = "euclidean")
-hc <- hclust(d, method = "average")
-
-# 4) order communities along the dendrogram
-comm_levels <- comm_centroids$community[hc$order]
-
-# 5) build a smooth palette so adjacent communities are visually similar
-n_comm <- length(comm_levels)
-# base colors from scico, then interpolate to get n_comm distinct-but-smooth colors
-palette <- scico::scico(n_comm, palette = "roma")
-palette <- colorRampPalette(base_cols)(n_comm)
-names(palette) <- comm_levels
-
-# join positions into the graph nodes (match keys exactly)
-g2 <- g %>%
-  activate("nodes") %>%
-  left_join(nodes_pos2, by = c("id", "community"))
-
-# plot with manual layout
-time_timeplot <- ggraph(g2, layout = "manual", x = x, y = y) +
-  geom_edge_link(alpha = 0.30, show.legend = FALSE) +
-  geom_node_label(
-    aes(label = id, fill = community),
-    size = 5,
-    label.padding = unit(0.12, "lines"),
-    show.legend = FALSE
-  ) +
-  scale_fill_manual(values = palette, na.value = "grey70") +
-  scale_x_continuous(
-    breaks = seq_along(window_levels),
-    labels = window_levels,
-    expand = expansion(add = c(0.5, 0.5))
-  ) +
-  labs(x = "Time window") +
-  theme_minimal() +
-  theme(
-    panel.grid = element_blank(),
-    axis.title.y = element_blank(),
-    axis.text.y = element_blank(),
-    axis.ticks.y = element_blank(),
-    axis.line.y = element_blank(),
-    axis.line.x = element_line(color = "grey50"),
-    axis.ticks.x = element_line(color = "grey50"),
-    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = 9),
-    plot.margin = margin(10, 10, 40, 10)
-  )
-
-time_timeplot
+g |> as_tibble() |> count(community, sort = T) |> print(n = Inf)
+write_rds(g, file.path(data_path, "sentences_clusters_backbone_network.rds"))
 
 # Apply backbone-leiden communities to documents
+nodes_tbl <- g |> as_tibble()
+
 documents_partition <- documents_partition %>%
   mutate(cluster = as.character(cluster)) %>%
   left_join(
-    nodes_tbl %>% select(window, cluster, backbone_community = community),
+    nodes_tbl %>%
+      select(
+        window,
+        cluster,
+        backbone_community = community,
+        kmean_cluster_id = cluster_id
+      ),
     by = c("window", "cluster")
   )
 

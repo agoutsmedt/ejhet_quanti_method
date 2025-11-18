@@ -1,0 +1,1452 @@
+---
+title: "Analysing Sentences Backbone Communities"
+format: html
+editor: source
+toc: true
+toc-depth: 3
+date: today
+theme: cosmo
+fontsize: 13pt
+width: 1400
+fig-align: center
+fig-width: 8
+fig-height: 6
+code-fold: true
+code-summary: "Show the code"
+cache: true
+embed-resources: true
+lightbox: auto
+execute:
+  echo: true
+  warning: false
+  message: false
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r loading-data}
+#| output: false
+source(here::here("scripts", "paths_and_packages.R"))
+p_load(see, backbone, kableExtra, DT)
+
+# Loading Data
+bert_df <- readRDS(file.path(
+  data_path,
+  "closest_sentences_0.01_rationality_score_filtered_with_embeddings.rds"
+))
+setDT(bert_df, key = "sentence_id")
+bert_df <- bert_df[between(publication_year, 1900, 2019), ]
+
+metadata <- read_rds(file.path(
+  data_path,
+  "full_metadata_journals_cleaned.rds"
+)) %>%
+  .[
+    refined_sub_type == "research-article" & language == "eng",
+    .(id, is_part_of, title, creator, publication_year, jstor_url = url)
+  ] %>%
+  .[order(publication_year)]
+
+documents_cluster <- readRDS(file.path(
+  data_path,
+  "sentences_intertemporal_cluster.rds"
+)) %>%
+  left_join(select(bert_df, id, sentence, sentence_id, similarity)) %>%
+  left_join(metadata) %>%
+  arrange(sentence_id)
+
+rm(metadata)
+
+bert_df <- bert_df |>
+  left_join(
+    select(
+      documents_cluster,
+      sentence_id,
+      backbone_community,
+      window,
+      kmean_cluster_id
+    ),
+    by = "sentence_id"
+  )
+
+backbone_network <- read_rds(file.path(
+  data_path,
+  "sentences_clusters_backbone_network.rds"
+))
+
+list_clusters <- documents_cluster %>%
+  pull(backbone_community) %>%
+  unique() |>
+  sort()
+
+results <- readRDS(file.path(data_path, "clustering_rational_sentences.rds"))
+
+match_jstor_wos <- readRDS(here::here(data_path, "final_match.RDS")) %>%
+  filter(!is.na(id_match_final)) %>%
+  distinct(url_jstor = id_jstor, ID_Art = id_match_final) %>%
+  mutate(
+    id_jstor = str_extract(url_jstor, "\\/[0-9]+$") %>% str_remove(., "/"),
+    ID_Art = as.character(ID_Art)
+  ) %>%
+  distinct(ID_Art, .keep_all = TRUE)
+```
+
+```{r preparing-tfidf-kmean-cluster}
+# Naming clusters and tf-idf---------------------
+setDT(documents_cluster)
+unigrams <- documents_cluster[, .(
+  sentence_id,
+  sentence,
+  window,
+  kmean_cluster_id,
+  backbone_community
+)][, token := tokenizers::tokenize_words(sentence, lowercase = TRUE)][,
+  -("sentence")
+]
+bigrams <- documents_cluster[, .(
+  sentence_id,
+  sentence,
+  window,
+  kmean_cluster_id,
+  backbone_community
+)][, token := tokenizers::tokenize_ngrams(sentence, n = 2, lowercase = TRUE)][,
+  -("sentence")
+]
+tokens <- rbind(unigrams, bigrams)
+tokens <- tokens[,
+  .(token = unlist(token)),
+  by = .(kmean_cluster_id, backbone_community, window)
+]
+tokens <- tokens[nchar(token) >= 2, ]
+tokens <- tokens[, c("word_1", "word_2") := tstrsplit(token, " ")]
+
+stop_words <- tidytext::stop_words$word %>%
+  unique()
+tokens <- tokens[
+  # Remove any digits in either word
+  !grepl("[0-9]", word_1) &
+    (is.na(word_2) | !grepl("[0-9]", word_2)) &
+    # Remove stopwords in either word
+    !(word_1 %in% stop_words) &
+    (is.na(word_2) | !(word_2 %in% stop_words))
+]
+tokens <- tokens[, .(kmean_cluster_id, backbone_community, window, token)]
+tokens[, token := str_replace(token, " ", "_")]
+
+tokens_count_kmean_cluster <- compute_tf_idf(
+  tokens,
+  token_col = "token",
+  document_col = "kmean_cluster_id"
+)
+# Top tf-idf terms
+top_terms_kmean_cluster <- tokens_count_kmean_cluster[order(-tf_idf)][
+  absolute_tf > 20,
+  head(.SD, 15),
+  by = kmean_cluster_id
+]
+
+# Labels per decade
+labels_kmean_cluster <- tokens_count_kmean_cluster[order(-tf_idf)][
+  absolute_tf > 20,
+  head(.SD, 5),
+  by = kmean_cluster_id
+]
+labels_kmean_cluster <- labels_kmean_cluster[,
+  .(label_kmean_cluster = paste0(token, collapse = ", ")),
+  by = .(backbone_community, kmean_cluster_id)
+]
+labels_kmean_cluster[,
+  label_kmean_cluster := paste0(backbone_community, "_", kmean_cluster_id, ": ", label_kmean_cluster) # we save the backbonne community number to see difference in top terms depending on kmean cluster
+]
+
+documents_cluster <- merge(
+  documents_cluster,
+  labels_kmean_cluster,
+  all.x = TRUE,
+  by = c("backbone_community", "kmean_cluster_id")
+)
+```
+
+```{r preparing-tfidf-backbone-community}
+# The strategy here is to calculate tf-idf at the window level, and then to average, to avoid giving too much weight to more recent windows.
+tokens[,
+  new_variable := str_c(
+    backbone_community,
+    window,
+    sep = "--"
+  )
+]
+tokens_count_window <- compute_tf_idf(
+  tokens,
+  token_col = "token",
+  document_col = "new_variable"
+)
+
+tfidf_mean_community <- tokens_count_window[
+  absolute_tf > 20,
+  .(mean_tf_idf = mean(tf_idf)),
+  by = .(token, backbone_community)
+][order(-mean_tf_idf)]
+
+# Top tf-idf terms
+top_terms_cluster <- tfidf_mean_community[,
+  head(.SD, 20),
+  by = backbone_community
+]
+
+# Get top 4 tf-idf tokens per cluster
+labels_backbone_community <- tfidf_mean_community[,
+  head(.SD, 4),
+  by = backbone_community
+][, .(backbone_community, token)]
+labels_backbone_community <- labels_backbone_community[,
+  .(label_backbone_community = paste0(token, collapse = ", ")),
+  by = backbone_community
+]
+labels_backbone_community[,
+  label_backbone_community := paste0(
+    str_extract(backbone_community, "\\d+$"),
+    ": ",
+    label_backbone_community
+  )
+]
+
+documents_cluster <- merge(
+  documents_cluster,
+  labels_backbone_community,
+  all.x = TRUE,
+  by = "backbone_community"
+)
+```
+
+```{r adding-references}
+# Adding references
+sentences_art <- documents_cluster %>%
+  count(id, kmean_cluster_id, backbone_community) %>%
+  inner_join(
+    distinct(match_jstor_wos, id = id_jstor, ID_Art),
+    relationship = "many-to-many"
+  ) %>%
+  mutate(ID_Art = as.integer(ID_Art)) %>%
+  distinct(ID_Art, kmean_cluster_id, backbone_community, nb_sentence = n)
+
+refs <- open_dataset(
+  here::here(wos_data_path, "all_ref.parquet"),
+  format = "parquet"
+) %>%
+  filter(ID_Art %in% unique(sentences_art$ID_Art)) %>%
+  select(ID_Art, ItemID_Ref, Annee, Nom, Revue_Abbrege) %>%
+  collect()
+
+top_refs <- sentences_art %>%
+  left_join(refs, by = "ID_Art", relationship = "many-to-many") %>%
+  filter(ItemID_Ref != 0) %>%
+  group_by(kmean_cluster_id, backbone_community, ItemID_Ref, nb_sentence) %>%
+  summarise(absolute_cluster_cit = n(), .groups = "drop") %>%
+  mutate(weighted_cluster_cit = absolute_cluster_cit * nb_sentence) %>%
+  arrange(backbone_community, kmean_cluster_id, desc(weighted_cluster_cit)) %>%
+  group_by(backbone_community, kmean_cluster_id) %>%
+  slice_head(n = 20) %>%
+  ungroup() %>%
+  filter(weighted_cluster_cit > 1) %>%
+  left_join(
+    refs %>% distinct(ItemID_Ref, Nom, Annee, Revue_Abbrege),
+    by = "ItemID_Ref",
+    relationship = "many-to-many"
+  ) %>%
+  distinct(
+    backbone_community,
+    kmean_cluster_id,
+    ItemID_Ref,
+    absolute_cluster_cit,
+    weighted_cluster_cit,
+    .keep_all = TRUE
+  ) %>%
+  mutate(
+    absolute_cit = sum(absolute_cluster_cit),
+    all_sentences = sum(nb_sentence),
+    weighted_cit = absolute_cit * all_sentences,
+    .by = c(ItemID_Ref, backbone_community)
+  )
+
+top_refs_without_id <- sentences_art %>%
+  left_join(refs, by = "ID_Art", relationship = "many-to-many") %>%
+  filter(ItemID_Ref == 0 & Annee != 0 & Nom != "") %>%
+  group_by(backbone_community, kmean_cluster_id, Nom, Annee) %>%
+  mutate(
+    absolute_cluster_cit = n(),
+    weighted_cluster_cit = absolute_cluster_cit * nb_sentence
+  ) %>%
+  filter(weighted_cluster_cit > 1) %>%
+  distinct(ID_Art, backbone_community, kmean_cluster_id, .keep_all = TRUE) %>%
+  arrange(backbone_community, kmean_cluster_id, desc(weighted_cluster_cit)) %>%
+  group_by(backbone_community, kmean_cluster_id) %>%
+  slice_head(n = 20) %>%
+  ungroup() %>%
+  select(
+    backbone_community,
+    kmean_cluster_id,
+    Nom,
+    Annee,
+    Revue_Abbrege,
+    nb_sentence,
+    absolute_cluster_cit,
+    weighted_cluster_cit
+  ) %>%
+  distinct(
+    backbone_community,
+    kmean_cluster_id,
+    Nom,
+    Annee,
+    .keep_all = TRUE
+  ) %>%
+  mutate(
+    absolute_cit = sum(absolute_cluster_cit),
+    all_sentences = sum(nb_sentence),
+    weighted_cit = absolute_cit * all_sentences,
+    .by = c(Nom, Annee, Revue_Abbrege, backbone_community)
+  )
+
+rm(refs)
+```
+
+```{r top-sentences-rationality}
+# Here, we find the sentences the closest to "rational" and "rationality" per kmean cluster
+# We would then be able to extract the closest per backbone community later on
+top_sentences_rationality <- bert_df %>%
+  select(
+    id,
+    sentence_id,
+    sentence,
+    similarity,
+    publication_year,
+    window,
+    backbone_community,
+    kmean_cluster_id
+  ) %>%
+  group_by(kmean_cluster_id) %>%
+  slice_max(similarity, n = 20) %>%
+  ungroup() %>%
+  mutate(similarity = round(similarity, 3))
+```
+
+```{r top-sentences-kmean-centroid}
+# Here, we find the sentences the closest to the centroid of the k-mean cluster. This has been calculated
+# directly from the loop in clustering_sbert_closest_sentences.R and saved in documents_cluster
+top_sentences_kmean_cluster_centroid <- documents_cluster |>
+  slice_min(distance_to_centroid, n = 10, by = kmean_cluster_id) |>
+  select(
+    id,
+    sentence_id,
+    sentence,
+    distance_to_centroid,
+    publication_year,
+    window,
+    backbone_community,
+    kmean_cluster_id
+  )
+
+```
+
+```{r top-sentences-centroid}
+# Here, we want to find the closest sentences to the centroid of the backbone communities. This implies
+# calculating the centroid of each backbone community first, and then calculating cosine similarity between
+# each sentenc embeddings and the centroid.
+
+# Convert to data.table
+bert_df_for_mat <- copy(bert_df)
+
+# Expand bert_embedding_concat list into separate columns
+# Assume each embedding is length 3072
+bert_df_for_mat <- bert_df_for_mat[, as.data.table(do.call(rbind, embedding))]
+bert_df_for_mat$backbone_community <- bert_df$backbone_community
+
+# Calculate mean of each dimension by backbone_community
+cluster_centroids <- bert_df_for_mat[,
+  lapply(.SD, mean),
+  by = backbone_community
+]
+
+# Ensure embedding columns are correctly selected
+embedding_cols <- setdiff(names(bert_df_for_mat), "backbone_community")
+
+# Build paragraph matrix with sentence_id as row names
+# sentences_mat <- as.matrix(bert_df_for_mat[, ..embedding_cols])
+# rownames(sentences_mat) <- bert_df$sentence_id
+
+# Build centroid matrix with backbone_community as row names
+centroid_mat <- as.matrix(cluster_centroids[, ..embedding_cols])
+rownames(centroid_mat) <- cluster_centroids$backbone_community
+
+# Get the list of clusters
+clusters <- unique(bert_df_for_mat$backbone_community)
+bert_df_for_mat$sentence_id <- bert_df$sentence_id
+
+# Set how many top sentences you want
+top_n <- 20
+
+top_sentences_backbone_community_centroid <- map_dfr(
+  clusters,
+  function(cluster) {
+    # Filter sentences for this cluster
+    cluster_sentences <- bert_df_for_mat[backbone_community == cluster]
+
+    # Extract the centroid for this cluster
+    centroid_vec <- centroid_mat[cluster, , drop = FALSE]
+
+    # Calculate cosine similarity
+    cluster_mat <- as.matrix(cluster_sentences[, ..embedding_cols])
+    rownames(cluster_mat) <- cluster_sentences$sentence_id
+
+    sim_vec <- text2vec::sim2(
+      x = cluster_mat,
+      y = centroid_vec,
+      method = "cosine",
+      norm = "l2"
+    )[, 1]
+
+    # Get top N most similar sentences
+    top_idx <- order(sim_vec, decreasing = TRUE)[1:min(top_n, length(sim_vec))]
+
+    data.table(
+      backbone_community = cluster,
+      sentence_id = names(sim_vec)[top_idx],
+      similarity = sim_vec[top_idx],
+      rank = 1:length(top_idx)
+    )
+  }
+)
+top_sentences_backbone_community_centroid[, sentence_id := as.integer(sentence_id)]
+
+rm(bert_df, bert_df_for_mat)
+```
+
+```{r attributing-colors}
+set.seed(89)
+palette_colors <- c(see::see_colors()[1:14], 
+                    see::oi_colors()[1:7], 
+                    scico::scico(n = 6, palette = "roma")) %>% 
+  sample()
+
+nb_clusters <- documents_cluster %>% 
+  pull(backbone_community) %>% 
+  unique() %>% 
+  length
+if(nb_clusters > length(palette_colors)) cli_alert_danger("The number of clusters exceed the number of available colors in the palette. Please extend the palette.")
+cluster_colors <- palette_colors[1:nb_clusters]
+```
+
+# General Description of the Method
+
+We start from JSTOR economics articles, split them into sentences, and embed each sentence with Sentence-BERT. To target discourse about the future, we build year-specific “query” embeddings for *rational* and *rationality* using a 5-year sliding window, which limits present-day bias in meanings. For every year, we compute cosine similarity between each sentence and that year’s query vector and retain the top 1% most similar sentences. 
+
+Within each decade, we cluster the selected sentences with k-means and compute cluster centroids. We then form intertemporal clusters: we start from the matrix of cosine similarity between clusters centroids. Then, we use backbone statistical disparity function to find the most significant links between clusters. Finally, we build a network connecting k-mean clusters with these links and identify communities thanks to Leiden algorithm. 
+
+We label backbone community (the meta-clusters) and k-mean clusters with high-TF-IDF unigrams and bigrams and summarize them with indicators: centroid-closest sentences, “future(s)” exemplars, temporal distributions, and top contributing articles. The report is structured along backbone communities, but we also provide disaggregation by k-mean clusters within each backbone community.
+
+The next visualisations shows the overall network of kmean clusters connected by similarity links, coloured by backbone community.
+
+```{r preparing-network-plot}
+centroids <- map(1:length(results), ~ pluck(results, ., "centroids")) %>%
+  bind_rows %>%
+  mutate(cluster_original_id = 1:n())
+
+# Calculate cosine similarity between all centroids
+centroid_matrix <- centroids %>%
+  select(-.cluster, -window, -cluster_original_id) %>%
+  as.matrix()
+cosine_sim <- lsa::cosine(t(centroid_matrix))
+
+window_levels <- documents_cluster %>%
+  pull(window) %>%
+  unique() %>%
+  sort()
+
+# Finding proximity between backbone communities based on their centroids
+# extract node table from g
+nodes_tbl <- backbone_network %>%
+  activate("nodes") %>%
+  as_tibble(.name_repair = "minimal") |>
+  mutate(x = as.integer(factor(window, levels = window_levels)))
+
+# feature columns in `centroids` (exclude meta cols)
+feat_cols <- setdiff(
+  names(centroids),
+  c(".cluster", "window", "cluster_original_id")
+)
+
+# 2) average centroid features per intertemporal community (new_cluster)
+comm_centroids <- centroids %>%
+  mutate(cluster_id = 1:n()) %>%
+  left_join(nodes_tbl %>% select(cluster_id, community), by = "cluster_id") %>%
+  group_by(community) %>%
+  summarise(
+    across(all_of(feat_cols), ~ mean(.x, na.rm = TRUE)),
+    .groups = "drop"
+  )
+
+# 3) hierarchical clustering on scaled community-centroid matrix
+mat <- comm_centroids %>% select(-community) %>% as.matrix()
+mat_scaled <- scale(mat) # scale so features comparable
+d <- dist(mat_scaled, method = "euclidean")
+hc <- hclust(d, method = "average")
+
+# 4) order communities along the dendrogram
+comm_levels <- comm_centroids$community[hc$order]
+
+# 5) build a smooth palette so adjacent communities are visually similar
+names(cluster_colors) <- comm_levels
+```
+
+```{r plot-network}
+documents_cluster[, size_window := .N, by = window]
+documents_cluster[,
+  proportion_kmean_cluster := .N / size_window,
+  by = kmean_cluster_id
+]
+backbone_network <- backbone_network %>%
+  activate("nodes") %>%
+  left_join(
+    documents_cluster %>%
+      distinct(
+        cluster_id = kmean_cluster_id,
+        backbone_community,
+        label_kmean_cluster,
+        label_backbone_community,
+        proportion_kmean_cluster
+      ),
+    by = "cluster_id"
+  )
+
+backbone_network <- backbone_network %>%
+  activate("edges") %>%
+  mutate(
+    community_from = .N()[["community"]][from],
+    community_to = .N()[["community"]][to],
+    edge_community = if_else(
+      community_from == community_to,
+      community_from,
+      NA_character_
+    ),
+    edge_community = factor(edge_community, levels = comm_levels)
+  )
+
+# compute layout and community centroids
+set.seed(89)
+layout <- ggraph::create_layout(backbone_network, layout = "fr")
+
+community_average <- layout %>%
+  as_tibble() %>%
+  group_by(community) %>%
+  summarize(
+    x = mean(x, na.rm = TRUE),
+    y = mean(y, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  left_join(
+    layout %>% as_tibble() %>% distinct(community, label_backbone_community),
+    by = "community"
+  )
+
+# plot: edges coloured by edge_community when endpoints share same community, otherwise grey
+backbone_network_plot <- ggraph(layout
+) +
+  geom_edge_link(
+    aes(colour = edge_community),
+    alpha = 0.6,
+    width = 2,
+    show.legend = FALSE
+  ) +
+  geom_node_point(
+    aes(fill = community, size = proportion_kmean_cluster),
+    show.legend = FALSE,
+    shape = 21
+  ) +
+  geom_label(
+    data = community_average,
+    aes(
+      x = x,
+      y = y,
+      label = str_wrap(label_backbone_community, 30),
+      fill = community
+    ),
+    size = 3,
+    fontface = "bold",
+    alpha = 0.8,
+    show.legend = FALSE
+  ) +
+  scale_edge_width(range = c(0.2, 3)) +
+  scale_size_continuous(range = c(1, 25)) +
+  labs(edge_width = "Avg similarity") +
+  scale_edge_color_manual(values = cluster_colors, na.value = "grey80") +
+  scale_fill_manual(values = cluster_colors) +
+  theme_void()
+
+ggsave(
+  here("pictures", "backbone_communities_network.png"),
+  backbone_network_plot,
+  units = "cm",
+  width = 30,
+  height = 30,
+  dpi = 300
+)
+
+knitr::include_graphics(here("pictures", "backbone_communities_network.png"))
+```
+
+```{r interactive-network}
+p_load(ggiraph)
+
+set.seed(89)
+backbone_network_ggiraph_plot <- ggraph(layout) +
+  geom_edge_link(
+    aes(colour = edge_community),
+    alpha = 0.6,
+    width = 2,
+    show.legend = FALSE
+  ) +
+  # interactive node points: tooltip = label_kmean_cluster, data_id = cluster_id
+  geom_point_interactive(
+    aes(
+      x = x,
+      y = y,
+      fill = community,
+      size = proportion_kmean_cluster,
+      tooltip = str_c(
+        label_kmean_cluster,
+        "\nPeriod:",
+        window,
+        "\nProportion of sentences in window: ",
+        round(proportion_kmean_cluster * 100, 2),
+        "%"
+      ),
+      data_id = cluster_id
+    ),
+    show.legend = FALSE,
+    shape = 21
+  ) +
+  scale_size_continuous(range = c(1, 20)) +
+  labs(edge_width = "Avg similarity") +
+  scale_edge_color_manual(values = cluster_colors, na.value = "grey80") +
+  scale_fill_manual(values = cluster_colors) +
+  theme_void()
+
+# create interactive girafe object with sensible hover/tooltip styling
+girafe_obj <- ggiraph::girafe(
+  ggobj = backbone_network_ggiraph_plot,
+  width_svg = 16,
+  height_svg = 10,
+  options = list(
+    ggiraph::opts_selection(type = "single"),
+    ggiraph::opts_zoom(min = 1, max = 12), # wheel to zoom, drag to pan
+    ggiraph::opts_toolbar(position = "topright")
+  )
+)
+
+girafe_obj
+```
+
+The next visualisation takes the same nodes and edges but repositions the nodes in a temporal layout, with time on the x-axis and communities stacked on the y-axis. It allows to see how backbone communities evolve over time.
+
+```{r temporal-network}
+# per-window equally spaced y to avoid overlap
+nodes_pos <- nodes_tbl %>%
+  group_by(window) %>%
+  arrange(desc(community), .by_group = TRUE) %>%
+  mutate(
+    n_in_window = n(),
+    y = ifelse(n_in_window == 1, 0, seq(-1, 1, length.out = n_in_window))
+  ) %>%
+  ungroup()
+
+# distribute nodes vertically within each (community, window) cell to avoid overlap
+# compute per-(community,x) offsets without calling seq() on a vector
+# compute required band per community (max nodes in any x for that community)
+comm_band <- nodes_pos %>%
+  mutate(community = factor(community, levels = comm_levels)) %>%
+  group_by(community, x) %>%
+  summarise(n_in_cell = n(), .groups = "drop") %>%
+  group_by(community) %>%
+  summarise(
+    max_in_column = max(n_in_cell, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  arrange(community) %>%
+  mutate(
+    max_in_column = pmax(max_in_column, 1L),
+    pad = 0.7, # vertical padding between community bands
+    band = max_in_column + pad # total vertical band height for the community
+  ) %>%
+  mutate(
+    baseline = cumsum(lag(band, default = 0)) + band / 2 # center y for each community band
+  ) %>%
+  select(community, band, baseline)
+
+# assign nodes within their community/x band
+nodes_pos <- nodes_pos %>%
+  mutate(community = factor(community, levels = comm_levels)) %>%
+  left_join(comm_band, by = "community") %>%
+  group_by(community, x) %>%
+  arrange(window, cluster_id, .by_group = TRUE) %>%
+  mutate(
+    n_in_cell = n(),
+    # centered offsets inside the community band; works for n_in_cell == 1 as well
+    offset = (row_number() - 0.5) * band / n_in_cell - band / 2,
+    y = baseline + offset
+  ) %>%
+  ungroup() %>%
+  select(cluster_id, x, y, community)
+
+# join positions into the graph nodes (match keys exactly)
+temporal_backbone_network <- backbone_network %>%
+  activate("nodes") %>%
+  left_join(nodes_pos, by = c("cluster_id", "community"))
+
+# compute label positions for communities (uses comm_band and layout from above)
+community_label_positions <- comm_band %>%
+  left_join(
+    layout %>% as_tibble() %>% distinct(community, label_backbone_community),
+    by = "community"
+  ) %>%
+  arrange(match(community, comm_levels)) %>%
+  mutate(label = str_wrap(label_backbone_community, 40))
+
+temporal_network_plot <- ggraph(
+  temporal_backbone_network,
+  layout = "manual",
+  x = x,
+  y = y
+) +
+  geom_edge_link(
+    aes(colour = edge_community),
+    alpha = 0.5,
+    show.legend = FALSE,
+    width = 2
+  ) +
+  geom_label(
+    aes(x = x, y = y, label = cluster_id, fill = community, size = proportion_kmean_cluster),
+    label.padding = unit(0.12, "lines"),
+    show.legend = FALSE,
+    alpha = 0.9
+  ) +
+  scale_fill_manual(values = cluster_colors) +
+  scale_edge_color_manual(values = cluster_colors, na.value = "grey80") +
+  scale_x_continuous(
+    breaks = seq_along(window_levels),
+    labels = window_levels
+  ) +
+  # y axis showing community labels at their baseline positions
+  scale_y_continuous(
+    breaks = community_label_positions$baseline,
+    labels = community_label_positions$label,
+    expand = expansion(add = c(1, 0.8))
+  ) +
+  scale_size_continuous(range = c(3, 10)) +
+  labs(x = NULL, y = NULL) +
+  theme_minimal() +
+  theme(
+    panel.grid = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.y = element_text(size = 8, hjust = 1),
+    axis.ticks.y = element_line(color = "grey50"),
+    axis.line.y = element_line(color = "grey50"),
+    axis.line.x = element_line(color = "grey50"),
+    axis.ticks.x = element_line(color = "grey50"),
+    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = 9)
+  )
+
+ggsave(
+  here("pictures", "temporal_network_plot.png"),
+  temporal_network_plot,
+  units = "cm",
+  width = 30,
+  height = 30,
+  dpi = 300
+)
+
+```
+
+```{r interactive-temporal-network}
+temporal_network_ggiraph_plot <- ggraph(
+  temporal_backbone_network,
+  layout = "manual",
+  x = x,
+  y = y
+) +
+  geom_edge_link(
+    aes(colour = edge_community),
+    alpha = 0.5,
+    show.legend = FALSE
+  ) +
+  geom_point_interactive(
+    aes(
+      x = x,
+      y = y,
+      fill = community,
+      size = proportion_kmean_cluster,
+      tooltip = str_c(
+        label_kmean_cluster,
+        "\nPeriod:",
+        window,
+        "\nProportion of sentences in window: ",
+        round(proportion_kmean_cluster * 100, 2),
+        "%"
+      ),
+      data_id = cluster_id
+    ),
+    show.legend = FALSE,
+    shape = 21,
+    alpha = 0.9
+  ) +
+  scale_fill_manual(values = cluster_colors) +
+  scale_edge_color_manual(values = cluster_colors, na.value = "grey80") +
+  scale_x_continuous(
+    breaks = seq_along(window_levels),
+    labels = window_levels
+  ) +
+  # y axis showing community labels at their baseline positions
+  scale_y_continuous(
+    breaks = community_label_positions$baseline,
+    labels = community_label_positions$label,
+    expand = expansion(add = c(0.9, 0.9))
+  ) +
+  scale_size_continuous(range = c(2, 15)) +
+  labs(x = NULL, y = NULL) +
+  theme_minimal() +
+  theme(
+    panel.grid = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.y = element_text(size = 10, hjust = 1),
+    axis.ticks.y = element_line(color = "grey50"),
+    axis.line.y = element_line(color = "grey50"),
+    axis.line.x = element_line(color = "grey50"),
+    axis.ticks.x = element_line(color = "grey50"),
+    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = 9)
+  )
+
+# create interactive girafe object with sensible hover/tooltip styling
+girafe_obj_time <- ggiraph::girafe(
+  ggobj = temporal_network_ggiraph_plot,
+  width_svg = 16,
+  height_svg = 10,
+  options = list(
+    ggiraph::opts_selection(type = "single"),
+    opts_tooltip(use_fill = TRUE),
+    ggiraph::opts_zoom(min = 1, max = 12), # wheel to zoom, drag to pan
+    ggiraph::opts_toolbar(position = "topright")
+  )
+)
+
+girafe_obj_time
+
+```
+
+## Description of the clusters: a reader’s guide {#sec-description}
+
+A series of indicators are produced for each clusters. Here are some explanations on how to read them.
+
+### Header summary
+::: {.callout-note}
+**What this shows**: size, time span, and main sources of the cluster.  
+**How to read**:  
+- **Sentences and share**: number of sentences in this cluster and its share of all analysed sentences.  
+- **Period**: first and last window where this cluster appears.  
+- **Recurring authors/journals**: most frequent contributors by sentence count.  
+**Notes**: counts are sentence-level. Long papers can contribute many sentences.
+:::
+
+### Top TF-IDF terms describing the community
+::: {.callout-tip}
+**What this shows**: words or two-word phrases most specific to this intertemporal backbone community over the full period, in comparison to all other backbone communities.  
+**How to read**: higher TF-IDF = greater within-cluster distinctiveness. Compare terms within this table.  
+**Use**: quick topic fingerprint.  
+**Caution**: This is not an "absolute" TF-IDF: to take into account the fact that more recent periods have more sentences, we average TF-IDF calculated at the window level.
+:::
+
+### Top TF-IDF terms by kmean cluster
+::: {.callout-tip}
+**What this shows**: the kmean cluster’s distinctive vocabulary.  
+**How to read**: compare kmean clusters within the same backbone community to see terms that appear or fade.  
+**Use**: detect shifts in focus, methods, or cases across time, as well as diversity within a backbone community.
+:::
+
+### Distribution of sentences over time
+::: {.callout-note}
+**What this shows**: yearly counts of sentences in this cluster.  
+**How to read**: bars = activity level. Peaks = years with more writing on this theme.  
+**Caution**: absolute counts, not shares. Later years may have more total publishing.
+:::
+
+### Closest sentences from "rationality" and "rational" embeddings within the backbone community
+::: {.callout-note}
+**What this shows**: sentences that have the highest cosine similarity with the "rational"/"rationality" embeddings  
+**How to read**: examples of how this community talks about the future.  
+**Caution**: ranked by the proximity with "rational"/"rationality" embeddings, not by the proximity with the centroid of the cluster (i.e. the average point in the cluster).
+:::
+
+### Closest sentences to the backbone community centroid
+::: {.callout-note}
+**What this shows**: sentences most representative of the backbone community's core meaning.  
+**How to read**: scan to grasp the cluster’s center. These sentences help to grasp what's the cluster is about, but not necessarily how it talks about the future.
+**Caution**: this has been calculated by averaging the embeddings of all sentences in the backbone community, and then finding the sentences closest to this centroid. May be biased towards more recent periods when the community grew over time.
+:::
+
+### Closest sentences to the kmean cluster centroids
+::: {.callout-tip}
+**What this shows**: centroid-closest sentences split by window.  
+**How to read**: compare phrasing across clusters to see stability or change, as well as diversity in the community.
+**Caution**: this has been calculated by calculating the distance of each sentence to the centroid of its kmean cluster. Here, we look at the lowest values (low distance) rather than highest values (high similarity).
+:::
+
+### Top articles (most sentences) of the backbone community
+::: {.callout-note}
+**What this shows**: works contributing the most sentences to this cluster.  
+**Columns**: **Number sentences** and **Work Similarity**.  
+— **Number sentences**: volume contributed by the work.  
+— **Word Similarity**: mean of the cosine similarity to "rationality"/"rational" for that work’s sentences in this cluster.  
+**How to read**: Most representative articles of the cluster. Worth clicking on the link to see more about what the article is about. Often a good way to understand how it talks about rationality.
+:::
+
+### Top articles (most sentences) of each kmean cluster
+::: {.callout-note}
+**What this shows**: same as above, but split by kmean cluster.  
+**How to read**: see which articles contribute to which kmean clusters within the backbone community
+:::
+
+### Most cited references in the backbone community
+::: {.callout-note}
+**What this shows**: the references most often cited by the articles that contribute sentences to this community.
+
+**Columns**  
+- **First Author / Year / Journal**: metadata from the reference list.  
+- **Citation by article**: number of *distinct articles in this cluster* that cite the reference.  
+- **Citation by sentence**: **Citation by article** weighted by how many sentences those citing articles contribute to the cluster (higher = the reference is cited by more central articles in this cluster).
+
+**How to read**: prefer **Citation by sentence** to identify anchors of the cluster; use **Citation by article** to see breadth of citing articles.
+
+**Caveats**  
+- The second table lists references *without stable IDs*. This helps recovering books but may be inaccurate.  
+- Weighting captures cluster centrality of the *citing articles*, not the number of in-text mentions.  
+- Abbreviated journal names may vary.
+:::
+
+### Most cited references in each kmean clusters
+::: {.callout-tip}
+**What this shows**: decade-level leaders by the same two indicators.
+**How to read**: compare decades and clusters in same decate to see which references anchor the community at different times.
+:::
+
+### Column legend
+- **Sentence**: quoted sentence.  
+- **Title**: clickable article title.  
+- **Year**: publication year.  
+- **Journal**: outlet.  
+- **Authors**: as listed.  
+- **Words Similarity**: cosine similarity to the embeddings of "rational"/"rationality".  
+- **Centroid Similarity**: cosine similarity to the cluster's centroid.  
+- **Distance to centroid**: distance to the kmean cluster's centroid.
+- **Number sentences**: sentences from that work in this cluster.  
+
+### General cautions
+- Similarity values lie in \[0,1]. Near-top differences can still matter.  
+- TF-IDF is comparative within this dataset.  
+- All counts reflect the top-1% sentences set used here.
+
+
+# Description of the Clusters
+
+```{r template}
+#| results: 'asis'
+
+for (cluster in list_clusters) {
+  cluster_data <- documents_cluster %>%
+    filter(backbone_community == !!cluster) %>%
+    mutate(title = glue("<a href='{jstor_url}' target='_blank'>{title}</a>"))
+  cluster_name <- cluster_data %>%
+    pull(label_backbone_community) %>%
+    unique
+
+  # extracting the first year and last year of the community
+  window <- c(
+    first(unique(cluster_data$window)) %>% str_extract("^\\d{4}"),
+    last(unique(cluster_data$window)) %>% str_extract("\\d{4}$")
+  )
+
+  ################ Beginning of the template ######################
+  cat(sprintf("  \n## Intertemporal cluster _%s_ \n\n", cluster_name))
+
+  ############# General Info ##################
+  cat(paste0(
+    "  \nThe cluster gathers ",
+    length(unique(cluster_data$sentence_id)),
+    " sentences from our corpus. It represents ",
+    round(
+      length(unique(cluster_data$sentence_id)) /
+        length(unique(documents_cluster$sentence_id)) *
+        100,
+      2
+    ),
+    "% of all the sentences selected over the whole period.\n"
+  ))
+
+  cat(paste0(
+    "\nThe community exists from ",
+    window[1],
+    " to ",
+    window[2],
+    ". \n\n"
+  ))
+
+  recurring_authors <- cluster_data %>%
+    select(creator, id) %>%
+    unnest(creator) %>%
+    add_count(creator, name = "nb_sentences") %>%
+    distinct(creator, id, nb_sentences) %>%
+    add_count(creator, name = "nb_articles") %>%
+    distinct(creator, nb_sentences, nb_articles) %>%
+    slice_max(order_by = nb_sentences, n = 10)
+  cat(paste0(
+    "The most recurring authors are ",
+    paste0(
+      recurring_authors$creator,
+      " (",
+      recurring_authors$nb_sentences,
+      " sentences; ",
+      recurring_authors$nb_articles,
+      " articles)",
+      collapse = ", "
+    ),
+    ".\n\n"
+  ))
+
+  recurring_journals <- cluster_data %>%
+    select(is_part_of, id) %>%
+    add_count(is_part_of, name = "nb_sentences") %>%
+    distinct(is_part_of, id, nb_sentences) %>%
+    add_count(is_part_of, name = "nb_articles") %>%
+    distinct(is_part_of, nb_sentences, nb_articles) %>%
+    slice_max(order_by = nb_sentences, n = 5)
+  cat(paste0(
+    "The most recurring journals are ",
+    paste0(
+      recurring_journals$is_part_of,
+      " (",
+      recurring_journals$nb_sentences,
+      " sentences; ",
+      recurring_journals$nb_articles,
+      " articles)",
+      collapse = ", "
+    ),
+    ".\n\n"
+  ))
+
+  ############# TF-IDF ##################
+  cat("\n### Top TF-IDF terms describing the community\n\n")
+  # Extracting top terms in general and for window
+  top_terms_cluster %>%
+    filter(backbone_community == !!cluster) %>%
+    select(token, mean_tf_idf) %>%
+    kbl(col.names = c("Token", "TF-IDF")) %>%
+    kable_styling(
+      bootstrap_options = c("striped", "condensed"),
+      font_size = 15
+    ) %>%
+    print()
+
+  if (length(unique(cluster_data$window)) > 1) {
+    cat(
+      "\n### Top TF-IDF terms describing the different k-means clusters\n\n"
+    )
+
+    for (kmean in unique(cluster_data$kmean_cluster_id)) {
+      cat(
+        glue(
+          "#### Top terms {cluster_data[kmean_cluster_id == kmean,]$label_kmean_cluster |> unique()} ({cluster_data[kmean_cluster_id == kmean,]$window |> unique()})\n\n"
+        ),
+        sep = ""
+      )
+
+      top_terms_kmean_cluster %>%
+        filter(kmean_cluster_id == kmean) %>%
+        select(token, tf_idf) %>%
+        kbl(col.names = c("Token", "TF-IDF")) %>%
+        kable_styling(
+          bootstrap_options = c("striped", "condensed"),
+          font_size = 11
+        ) %>%
+        print()
+    }
+  }
+
+  ############# Distribution sentences ##################
+  cat("\n### Distribution of sentences over time \n\n")
+
+  plot(
+    cluster_data %>%
+      count(publication_year) %>%
+      ggplot(aes(x = publication_year, y = n)) +
+      geom_bar(stat = "identity") +
+      scale_x_continuous(expand = c(0.01, 0), n.breaks = 10) +
+      scale_y_continuous(expand = c(0.01, 0)) +
+      theme_light(base_size = 20) +
+      labs(y = "Number of sentences", x = NULL, title = NULL)
+  )
+
+  ####### Top Sentences ###################
+  top_sentences_rationality_filtered <- top_sentences_rationality %>%
+    filter(backbone_community == !!cluster) %>%
+    left_join(select(
+      cluster_data,
+      title,
+      is_part_of,
+      creator,
+      jstor_url,
+      sentence_id
+    )) %>%
+    mutate(title = glue("<a href='{jstor_url}' target='_blank'>{title}</a>"))
+
+  top_sentences_kmean_cluster_centroid_filtered <- top_sentences_kmean_cluster_centroid %>%
+    filter(backbone_community == !!cluster) %>%
+    left_join(
+      select(
+        cluster_data,
+        title,
+        is_part_of,
+        creator,
+        sentence_id,
+        jstor_url
+      ),
+      by = "sentence_id"
+    ) %>%
+    mutate(title = glue("<a href='{jstor_url}' target='_blank'>{title}</a>"))
+
+  top_sentences_backbone_community_centroid_filtered <- top_sentences_backbone_community_centroid %>%
+    filter(backbone_community == !!cluster) %>%
+    left_join(
+      select(
+        cluster_data,
+        title,
+        publication_year,
+        is_part_of,
+        creator,
+        sentence_id,
+        sentence,
+        jstor_url
+      ),
+      by = "sentence_id"
+    ) %>%
+    mutate(title = glue("<a href='{jstor_url}' target='_blank'>{title}</a>"))
+
+  ############# Top sentences rationality ##################
+  cat("\n\n")
+  cat(
+    "\n### Closest sentence from 'rational' and 'rationality' of the backbone community\n\n"
+  )
+
+  top_sentences_rationality_filtered %>%
+    slice_max(similarity, n = 20, by = backbone_community) %>%
+    select(
+      sentence,
+      title,
+      publication_year,
+      is_part_of,
+      creator,
+      similarity
+    ) %>%
+    kbl(
+      escape = FALSE,
+      col.names = c(
+        "Sentence",
+        "Title",
+        "Year",
+        "Journal",
+        "Authors",
+        "Words Similarity"
+      )
+    ) %>%
+    kable_styling(
+      bootstrap_options = c("striped", "condensed"),
+      font_size = 12
+    ) %>%
+    column_spec(2, "3.5cm") %>%
+    print()
+
+  ############# Top sentences centroid ##################
+  cat("\n### Closest sentences of the backbone community's centroid\n\n")
+
+  top_sentences_backbone_community_centroid_filtered %>%
+    slice_max(similarity, n = 15) %>%
+    select(
+      sentence,
+      title,
+      publication_year,
+      is_part_of,
+      creator,
+      similarity
+    ) %>%
+    kbl(
+      escape = FALSE,
+      col.names = c(
+        "Sentence",
+        "Title",
+        "Year",
+        "Journal",
+        "Authors",
+        "Centroid Similarity"
+      )
+    ) %>%
+    kable_styling(
+      bootstrap_options = c("striped", "condensed"),
+      font_size = 13
+    ) %>%
+    column_spec(2, "3.5cm") %>%
+    print()
+
+  if (length(unique(cluster_data$kmean_cluster_id)) > 1) {
+    cat(
+      "\n### Closest sentences of each kmean cluster's centroid composing the backbone community\n\n"
+    )
+
+    for (kmean in unique(cluster_data$kmean_cluster_id)) {
+      cat(
+        glue(
+          "#### Top terms {cluster_data[kmean_cluster_id == kmean,]$label_kmean_cluster |> unique()} ({cluster_data[kmean_cluster_id == kmean,]$window |> unique()})\n\n"
+        ),
+        sep = ""
+      )
+
+      top_sentences_kmean_cluster_centroid_filtered %>%
+        filter(kmean_cluster_id == !!kmean) %>%
+        slice_min(distance_to_centroid, n = 5) %>%
+        select(
+          sentence,
+          title,
+          publication_year,
+          is_part_of,
+          creator,
+          distance_to_centroid
+        ) %>%
+        kbl(
+          escape = FALSE,
+          col.names = c(
+            "Sentence",
+            "Title",
+            "Year",
+            "Journal",
+            "Authors",
+            "Distance to Centroid"
+          )
+        ) %>%
+        kable_styling(
+          bootstrap_options = c("striped", "condensed"),
+          font_size = 12
+        ) %>%
+        column_spec(2, "3.5cm") %>%
+        print()
+    }
+  }
+
+  ############# Top articles ##################
+  cat("\n### Top articles (most sentences) of the backbone cluster\n\n")
+  # Extracting top terms in general and for window
+  cluster_data %>%
+    mutate(
+      mean_similarity = mean(similarity) %>% round(3),
+      n = n(),
+      .by = id
+    ) %>%
+    distinct(
+      title,
+      publication_year,
+      is_part_of,
+      creator,
+      n,
+      mean_similarity
+    ) %>%
+    slice_max(n, n = 15, with_ties = FALSE) %>%
+    kbl(
+      escape = FALSE,
+      col.names = c(
+        "Title",
+        "Year",
+        "Journal",
+        "Authors",
+        "Number sentences",
+        "Words Similarity"
+      )
+    ) %>%
+    kable_styling(
+      bootstrap_options = c("striped", "condensed"),
+      font_size = 13
+    ) %>%
+    print()
+
+  if (length(unique(cluster_data$kmean_cluster_id)) > 1) {
+    cat(
+      "\n### Top articles (most sentences) of the cluster for each time window{.panel-tabset}\n\n"
+    )
+
+    for (kmean in unique(cluster_data$kmean_cluster_id)) {
+      cat(
+        glue(
+          "#### Top articles for {cluster_data[kmean_cluster_id == kmean,]$label_kmean_cluster |> unique()} ({cluster_data[kmean_cluster_id == kmean,]$window |> unique()})\n\n"
+        ),
+        sep = ""
+      )
+
+      cluster_data %>%
+        filter(kmean_cluster_id == !!kmean) %>%
+        mutate(
+          mean_similarity = mean(similarity) %>% round(3),
+          n = n(),
+          .by = id
+        ) %>%
+        distinct(
+          title,
+          publication_year,
+          is_part_of,
+          creator,
+          n,
+          mean_similarity
+        ) %>%
+        slice_max(n, n = 10, with_ties = FALSE) %>%
+        kbl(
+          escape = FALSE,
+          col.names = c(
+            "Title",
+            "Year",
+            "Journal",
+            "Authors",
+            "Number sentences",
+            "Words Similarity"
+          )
+        ) %>%
+        kable_styling(
+          bootstrap_options = c("striped", "condensed"),
+          font_size = 13
+        ) %>%
+        print()
+    }
+  }
+
+  ############## Top References ##################
+  cat("\n### Most cited references in the backbone community\n\n")
+
+  top_refs %>%
+    filter(backbone_community == cluster) %>%
+    distinct(Nom, Annee, Revue_Abbrege, absolute_cit, weighted_cit) %>%
+    filter(absolute_cit > 1) |>
+    slice_max(weighted_cit, n = 15, with_ties = FALSE) %>%
+    kbl(
+      escape = FALSE,
+      col.names = c(
+        "First Author",
+        "Year",
+        "Journal",
+        "Citation by article",
+        "Citation by sentence"
+      )
+    ) %>%
+    kable_styling(
+      bootstrap_options = c("striped", "condensed"),
+      font_size = 12
+    ) %>%
+    print()
+
+  top_refs_without_id %>%
+    filter(backbone_community == cluster) %>%
+    distinct(Nom, Annee, Revue_Abbrege, absolute_cit, weighted_cit) %>%
+    filter(absolute_cit > 1) |>
+    slice_max(weighted_cit, n = 15, with_ties = FALSE) %>%
+    kbl(
+      escape = FALSE,
+      col.names = c(
+        "First Author",
+        "Year",
+        "Journal",
+        "Citation by article",
+        "Citation by sentence"
+      )
+    ) %>%
+    kable_styling(
+      bootstrap_options = c("striped", "condensed"),
+      font_size = 12
+    ) %>%
+    print()
+
+  if (length(unique(cluster_data$kmean_cluster_id)) > 1) {
+    cat("\n### Most cited references per kmean clusters\n\n")
+
+    for (kmean in unique(cluster_data$kmean_cluster_id)) {
+      top_ref_cluster <- top_refs %>%
+        filter(backbone_community == cluster, kmean_cluster_id == kmean) %>%
+        distinct(
+          Nom,
+          Annee,
+          Revue_Abbrege,
+          absolute_cluster_cit,
+          weighted_cluster_cit
+        ) %>%
+        slice_max(weighted_cluster_cit, n = 10, with_ties = FALSE)
+
+      top_ref_without_id_cluster <- top_refs_without_id %>%
+        filter(backbone_community == cluster, kmean_cluster_id == kmean) %>%
+        distinct(
+          Nom,
+          Annee,
+          Revue_Abbrege,
+          absolute_cluster_cit,
+          weighted_cluster_cit
+        ) %>%
+        slice_max(weighted_cluster_cit, n = 10, with_ties = FALSE)
+
+      if (nrow(top_ref_cluster) != 0 | nrow(top_ref_without_id_cluster) != 0) {
+        cat(
+          glue(
+            "#### Top references {cluster_data[kmean_cluster_id == kmean,]$label_kmean_cluster |> unique()} ({cluster_data[kmean_cluster_id == kmean,]$window |> unique()})\n\n"
+          ),
+          sep = ""
+        )
+        if (nrow(top_ref_cluster) > 0) {
+          top_ref_cluster %>%
+            kbl(
+              escape = FALSE,
+              col.names = c(
+                "First Author",
+                "Year",
+                "Journal",
+                "Citation by article",
+                "Citation by sentence"
+              )
+            ) %>%
+            kable_styling(
+              bootstrap_options = c("striped", "condensed"),
+              font_size = 12
+            ) %>%
+            print()
+        }
+
+        if (nrow(top_ref_without_id_cluster) > 0) {
+          top_ref_without_id_cluster %>%
+            kbl(
+              escape = FALSE,
+              col.names = c(
+                "First Author",
+                "Year",
+                "Journal",
+                "Citation by article",
+                "Citation by sentence"
+              )
+            ) %>%
+            kable_styling(
+              bootstrap_options = c("striped", "condensed"),
+              font_size = 12
+            ) %>%
+            print()
+        }
+      }
+    }
+  }
+}
+```
+

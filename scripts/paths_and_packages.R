@@ -28,7 +28,8 @@ p_load(
   #  DescTools,
   jsonlite,
   progress,
-  tictoc
+  tictoc,
+  scico # nice color palettes
 )
 
 #original text path stored in google drive
@@ -37,21 +38,24 @@ if (str_detect(getwd(), "goutsmed")) {
     data_path <- file.path(
       path.expand("~"),
       "Nextcloud",
-      "Research",
-      "data",
+      "ejhet_project"
+    )
+    jstor_data_path <- file.path(
+      path.expand("~"),
+      "Nextcloud",
       "jstor"
     )
     jstor_raw_data <- file.path(path.expand("~"), "data", "jstor") # I'm storing the raw data in a different folder because it's heavy.
+
     wos_data_path <- file.path(
       path.expand("~"),
-      "Nextcloud",
-      "Research",
       "data",
       "wos"
     )
   } else {
-    data_path <- file.path(path.expand("~"), "data", "jstor")
-    jstor_raw_data <- data_path
+    data_path <- file.path(path.expand("~"), "data", "ejhet_project")
+    jstor_data_path <- file.path(path.expand("~"), "data", "jstor")
+    jstor_raw_data <- jstor_data_path
     wos_data_path <- file.path(path.expand("~"), "data", "wos")
   }
 } else if (str_detect(getwd(), "D:/Dropbox/8")) {
@@ -62,19 +66,22 @@ if (str_detect(getwd(), "goutsmed")) {
   general_data_path <- "E:/Dropbox/8-Projets Quanti/1-R_Projects/Data/1-General_data"
 } else {
   if (str_detect(getwd(), "github_p")) {
-    data_path <- "C:/Users/Admin/MEGA/data/jstor"
-    jstor_raw_data <- data_path # I'm supposing you're not doing the same for this data
-    wos_data_path <- "C:/Users/Admin/MEGA/data/wos"
-    general_data_path <- "C:/Users/Admin/MEGA/data/wos"
+    data_path <- "C:/cloud/data/ejhet_project"
+    jstor_raw_data <- "C:/cloud/data/jstor"
+    wos_data_path <- "C:/cloud/data/wos"
+    istex_data <- "C:/cloud/data/istex"
+    elsevier_data <- "C:/cloud/data/elsevier"
   } else {
     if (str_detect(getwd(), "github_w")) {
-      data_path <- "C:/cloud/data/jstor"
-      jstor_raw_data <- data_path
+      data_path <- "C:/cloud/data/ejhet_project"
+      jstor_raw_data <- "C:/cloud/data/jstor"
       wos_data_path <- "C:/cloud/data/wos"
-      general_data_path <- "C:/cloud/data/wos"
+      istex_data <- "C:/cloud/data/istex"
+      elsevier_data <- "C:/cloud/data/elsevier"
     }
   }
 }
+
 
 image_path <- here::here("paper", "images")
 image_path_temp <- here::here("pictures")
