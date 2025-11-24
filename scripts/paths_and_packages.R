@@ -71,6 +71,7 @@ if (str_detect(getwd(), "goutsmed")) {
     wos_data_path <- "C:/cloud/data/wos"
     istex_data <- "C:/cloud/data/istex"
     elsevier_data <- "C:/cloud/data/elsevier"
+    embeddings_data <- "C:/cloud/data/econ_embeddings"
   } else {
     if (str_detect(getwd(), "github_w")) {
       data_path <- "C:/cloud/data/ejhet_project"
@@ -78,6 +79,7 @@ if (str_detect(getwd(), "goutsmed")) {
       wos_data_path <- "C:/cloud/data/wos"
       istex_data <- "C:/cloud/data/istex"
       elsevier_data <- "C:/cloud/data/elsevier"
+      embeddings_data <- "C:/cloud/data/econ_embeddings"
     }
   }
 }

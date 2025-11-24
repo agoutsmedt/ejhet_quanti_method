@@ -30,22 +30,53 @@ source(here::here("scripts", "paths_and_packages.R"))
 p_load(see, backbone, kableExtra, DT)
 
 # Loading Data
-bert_df <- readRDS(file.path(
+bert_df <- arrow::read_feather(file.path(
   data_path,
-  "closest_sentences_0.01_rationality_score_filtered_with_embeddings.rds"
+  "top1pct_sentences_by_year.feather"
 ))
-setDT(bert_df, key = "sentence_id")
-bert_df <- bert_df[between(publication_year, 1900, 2019), ]
 
-metadata <- read_rds(file.path(
-  data_path,
-  "full_metadata_journals_cleaned.rds"
-)) %>%
-  .[
-    refined_sub_type == "research-article" & language == "eng",
-    .(id, is_part_of, title, creator, publication_year, jstor_url = url)
-  ] %>%
-  .[order(publication_year)]
+setDT(bert_df, key = "sentence_id")
+bert_df <- bert_df[between(year, 1900, 2010), ]
+
+metadata_jstor <- read_rds(file.path(
+  jstor_raw_data,
+  "jstor_constellate_merged_metadata.rds"
+))
+
+# keep only relevant lines, columns and rename them for consistency
+metadata_jstor <- metadata_jstor %>%
+  filter(refined_sub_type == "research-article" & languages == "eng") %>%
+  select(url, is_part_of, title, creators_string, publication_year) %>%
+  rename(
+    year = publication_year,
+    id = url,
+    journal = is_part_of,
+    authors = creators_string
+  ) %>%
+  arrange(year)
+
+# same for scopus metadata
+metadata_scopus <- read_rds(file.path(
+  elsevier_data,
+  "scopus_economics_articles.rds"
+))
+
+metadata_scopus <- metadata_scopus %>%
+  filter(full_text == TRUE & subtype_description == "Article") %>%
+  select(
+    scopus_id,
+    dc_title,
+    dc_creator,
+    prism_publication_name,
+    prism_cover_date
+  ) %>%
+  rename(
+    id = scopus_id,
+    title = dc_title,
+    authors = dc_creator,
+    journal = prism_publication_name,
+    year = prism_cover_date
+  ) 
 
 documents_cluster <- readRDS(file.path(
   data_path,

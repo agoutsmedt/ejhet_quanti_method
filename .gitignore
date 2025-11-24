@@ -17,3 +17,5 @@ scripts/analysing_sentences_cluster_files
 renv/
 rsconnect/
 .secrets
+groq_api_key.txt
+openai_api_key.txt

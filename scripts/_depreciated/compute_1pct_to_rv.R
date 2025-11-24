@@ -6,10 +6,16 @@ source(file.path("scripts", "paths_and_packages.R"))
 # Ensure text2vec is available (for cosine similarity)
 p_load(text2vec)
 
+# load feather file
+df2 <- arrow::read_feather(here::here(
+  data_path,
+  "top1pct_sentences_by_year.feather"
+))
+
 # Load per-year representative vectors (list-column: embedding_by_year_centered)
 representative_vectors <- read_feather(here::here(
   data_path,
-  "representative_vectors_window_5.feather"
+  "rv_moving_average_by_year.feather"
 ))
 
 # Load sentences to delete
@@ -18,11 +24,14 @@ sentences_to_delete <- read_feather(here::here(
   "sentences_to_delete.feather"
 ))
 
+# keep only relevant columns for freeing memory
+sentences_to_delete <- sentences_to_delete %>%
+  select(year, id, sentence_id)
 
 # --- CONFIG -------------------------------------------------------------------
 # Directory that holds per-year sentence embeddings as Feather files:
 #   expected names: sentence_embeddings_<YEAR>.feather
-emb_dir <- here::here(jstor_raw_data, "sentences_embeddings")
+emb_dir <- here::here(embeddings_data)
 
 # Optional: list the files in the embeddings directory (not used below)
 sentence_files <- list.files(emb_dir)
@@ -33,7 +42,7 @@ existing_sentence_file <- list.files(data_path) %>%
   .[str_detect(
     .,
     "^closest_sentences_\\d+\\.\\d+_filtered_rationality_score_window_5\\.rds$"
-  )] # NOTE: stricter regex
+  )]
 
 if (length(existing_sentence_file) > 0) {
   list_sentences <- readRDS(here::here(data_path, existing_sentence_file))
