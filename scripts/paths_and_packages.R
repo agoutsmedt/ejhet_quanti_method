@@ -52,11 +52,20 @@ if (str_detect(getwd(), "goutsmed")) {
       "data",
       "wos"
     )
+
+    elsevier_data_path <- file.path(
+      path.expand("~"),
+      "Nextcloud",
+      "Research",
+      "data",
+      "elsevier"
+    )
   } else {
     data_path <- file.path(path.expand("~"), "data", "ejhet_project")
     jstor_data_path <- file.path(path.expand("~"), "data", "jstor")
     jstor_raw_data <- jstor_data_path
     wos_data_path <- file.path(path.expand("~"), "data", "wos")
+    elsevier_data_path <- file.path(path.expand("~"), "data", "elsevier")
   }
 } else if (str_detect(getwd(), "D:/Dropbox/8")) {
   data_path <- "D:/Dropbox/8-Projets Quanti/1-R_Projects/Data/ejhet_quanti_method"
