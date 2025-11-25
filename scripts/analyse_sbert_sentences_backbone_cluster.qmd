@@ -13,7 +13,7 @@ fig-width: 8
 fig-height: 6
 code-fold: true
 code-summary: "Show the code"
-cache: true
+cache: false
 embed-resources: true
 lightbox: auto
 execute:
@@ -1280,7 +1280,7 @@ for (cluster in list_clusters) {
         pull(HDBSCAN_cluster)
       cat(
         glue(
-          "#### Top terms {cluster_data[cluster_id == id_of_cluster,]$label_hdbscan_cluster |> unique()} ({time_window})\n\n"
+          "#### Top terms {cluster_data[cluster_id == hdbscan,]$label_hdbscan_cluster |> unique()} ({time_window})\n\n"
         ),
         sep = ""
       )
@@ -1366,7 +1366,7 @@ for (cluster in list_clusters) {
         pull(HDBSCAN_cluster)
       cat(
         glue(
-          "#### Top articles for {cluster_data[cluster_id == id_of_cluster,]$label_hdbscan_cluster |> unique()} ({time_window})\n\n"
+          "#### Top articles for {cluster_data[cluster_id == hdbscan,]$label_hdbscan_cluster |> unique()} ({time_window})\n\n"
         ),
         sep = ""
       )
@@ -1462,12 +1462,6 @@ for (cluster in list_clusters) {
       hdbscan <- hdbscan_clusters %>%
         filter(cluster_id == hdbscan_id) %>%
         pull(HDBSCAN_cluster)
-      cat(
-        glue(
-          "#### Most cited references for {cluster_data[cluster_id == id_of_cluster,]$label_hdbscan_cluster |> unique()} ({time_window})\n\n"
-        ),
-        sep = ""
-      )
 
       top_ref_cluster <- top_refs %>%
         filter(window == time_window, HDBSCAN_cluster == hdbscan) %>%
@@ -1494,7 +1488,7 @@ for (cluster in list_clusters) {
       if (nrow(top_ref_cluster) != 0 | nrow(top_ref_without_id_cluster) != 0) {
         cat(
           glue(
-            "#### Most cited references for {cluster_data[cluster_id == id_of_cluster,]$label_hdbscan_cluster |> unique()} ({time_window})\n\n"
+            "#### Most cited references for {cluster_data[cluster_id == hdbscan,]$label_hdbscan_cluster |> unique()} ({time_window})\n\n"
           ),
           sep = ""
         )
