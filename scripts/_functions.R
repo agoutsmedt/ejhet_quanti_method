@@ -3174,7 +3174,7 @@ extract_ngrams <- function(
       token := tokenizers::tokenize_ngrams(
         get(text_col),
         n = as.integer(n),
-        lowercase = TRUE
+        lowercase = TRUE,
       )
     ]
 
@@ -3197,20 +3197,35 @@ extract_ngrams <- function(
   # Filter out tokens that are too short
   tokens <- tokens[nchar(token) >= as.integer(min_nchar), ]
 
-  # Split multi-word tokens into component words for per-word checks (stopwords / digits)
-  tokens[, words := strsplit(token, " ", fixed = TRUE)]
+  # faster vectorised splitting (stringi is much quicker than base strsplit)
+  word_columns <- stringr::str_c("word_", seq_len(max(ng_range)))
+  tokens[, (word_columns) := tstrsplit(token, " ", fixed = TRUE)]
 
-  # has_digit: TRUE if any component word contains a digit
+  # detect digits in any component word (NA -> FALSE)
   tokens[,
-    has_digit := vapply(words, function(ws) any(grepl("[0-9]", ws)), logical(1))
+    has_digit := Reduce(
+      `|`,
+      lapply(.SD, function(x) {
+        xi <- as.character(x)
+        !is.na(xi) & grepl("[0-9]", xi)
+      })
+    ),
+    .SDcols = word_columns
   ]
 
-  # has_stop: TRUE if any component word is in the stop_words set
+  # detect stop words in any component word (stop_words assumed lower-case)
   tokens[,
-    has_stop := vapply(words, function(ws) any(ws %in% stop_words), logical(1))
+    has_stop := Reduce(
+      `|`,
+      lapply(.SD, function(x) {
+        xi <- as.character(x)
+        !is.na(xi) & (xi %in% stop_words)
+      })
+    ),
+    .SDcols = word_columns
   ]
 
-  # Keep only tokens that do not contain digits and do not contain stop words
+  # Keep only tokens without digits and without stop words
   tokens <- tokens[!has_digit & !has_stop]
 
   # Keep only the requested output columns; replace spaces with underscores in multi-word tokens
@@ -3360,6 +3375,25 @@ compute_tf_idf <- function(
     stop("Input must contain token column: ", token_col, call. = FALSE)
   }
 
+  # Capture original classes / metadata for document columns so we can restore types later
+  orig_classes <- vapply(
+    document_col,
+    function(col) {
+      cl <- class(df[[col]])[1L]
+      if (is.null(cl)) "character" else cl
+    },
+    character(1),
+    USE.NAMES = TRUE
+  )
+  orig_levels <- lapply(document_col, function(col) {
+    if (is.factor(df[[col]])) levels(df[[col]]) else NULL
+  })
+  names(orig_levels) <- document_col
+  orig_tzone <- lapply(document_col, function(col) {
+    if (inherits(df[[col]], "POSIXt")) attr(df[[col]], "tzone") else NULL
+  })
+  names(orig_tzone) <- document_col
+
   # Validate weight column if provided
   if (!is.null(weight_col)) {
     weight_col <- as.character(weight_col)
@@ -3394,13 +3428,13 @@ compute_tf_idf <- function(
     i <- i + 1L
   }
 
+  # Build composite key from the original values coerced to character for safe concatenation.
   if (length(document_col) == 1L) {
-    # If single document column, create the temp key as a copy for uniform downstream code
+    # keep a character representation in doc_key but remember original class to restore later
     df[, (doc_key) := as.character(.SD[[1]]), .SDcols = document_col]
   } else {
-    # Multiple columns: paste together with a separator unlikely to appear in values
     df[,
-      (doc_key) := do.call(paste, c(.SD, sep = "\r")),
+      (doc_key) := do.call(paste, c(lapply(.SD, as.character), sep = "\r")),
       .SDcols = document_col
     ]
   }
@@ -3413,12 +3447,10 @@ compute_tf_idf <- function(
     token_was_renamed <- FALSE
   }
 
-  # corpus_tf: total weighted frequency of token across all documents
+  # corpus_tf: total (unweighted) count of appearances of token across all rows
   df[, corpus_tf := .N, by = "token"]
 
   # Compute per-document total weight (nb_doc_word) and per token-document weighted sum
-  # - nb_doc_word: total weight per document (composite)
-  # - token_doc_weight: weighted count of the token within the document
   doc_totals <- df[, .(nb_doc_word = sum(.weight)), by = doc_key]
   token_doc <- df[,
     .(token_doc_weight = sum(.weight)),
@@ -3456,26 +3488,65 @@ compute_tf_idf <- function(
     data.table::setnames(token_doc, "token", token_col)
   }
 
-  # If original document_col was a single column, rename the composite back to that name.
+  # Restore original document columns with original types
   if (length(document_col) == 1L) {
-    data.table::setnames(token_doc, doc_key, document_col)
+    # single column: convert doc_key back to original class
+    col <- document_col[1]
+    typ <- orig_classes[col]
+    if (typ == "integer") {
+      token_doc[, (col) := as.integer(get(doc_key))]
+    } else if (typ %in% c("numeric", "double")) {
+      token_doc[, (col) := as.numeric(get(doc_key))]
+    } else if (typ == "logical") {
+      token_doc[, (col) := as.logical(get(doc_key))]
+    } else if (typ == "factor") {
+      token_doc[, (col) := factor(get(doc_key), levels = orig_levels[[col]])]
+    } else if (typ == "Date") {
+      token_doc[, (col) := as.Date(get(doc_key))]
+    } else if (typ %in% c("POSIXct", "POSIXt")) {
+      tz <- orig_tzone[[col]]
+      token_doc[, (col) := as.POSIXct(get(doc_key), tz = tz)]
+    } else {
+      # fallback: character
+      token_doc[, (col) := as.character(get(doc_key))]
+    }
+    token_doc[, (doc_key) := NULL]
   } else {
-    # Split composite helper column back into original document columns before returning.
-    # Use the same separator that was used to create the composite key.
+    # multiple columns: split then coerce each to its original class
     token_doc[,
       (document_col) := data.table::tstrsplit(get(doc_key), "\r", fixed = TRUE)
     ]
     token_doc[, (doc_key) := NULL]
+
+    for (col in document_col) {
+      typ <- orig_classes[col]
+      if (typ == "integer") {
+        token_doc[, (col) := as.integer(get(col))]
+      } else if (typ %in% c("numeric", "double")) {
+        token_doc[, (col) := as.numeric(get(col))]
+      } else if (typ == "logical") {
+        token_doc[, (col) := as.logical(get(col))]
+      } else if (typ == "factor") {
+        token_doc[, (col) := factor(get(col), levels = orig_levels[[col]])]
+      } else if (typ == "Date") {
+        token_doc[, (col) := as.Date(get(col))]
+      } else if (typ %in% c("POSIXct", "POSIXt")) {
+        tz <- orig_tzone[[col]]
+        token_doc[, (col) := as.POSIXct(get(col), tz = tz)]
+      } else {
+        token_doc[, (col) := as.character(get(col))]
+      }
+    }
   }
 
   # Remove helper weight column from result if present
   token_doc[, c("token_doc_weight") := NULL]
 
   if (!is.null(weight_col)) {
-    setnames(token_doc, "tf", "weighted_tf")
+    data.table::setnames(token_doc, "tf", "weighted_tf")
   }
 
-  # Return the data.table
+  # Return the data.table with restored column types
   token_doc[]
 }
 
