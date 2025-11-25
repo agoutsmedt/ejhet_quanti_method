@@ -142,30 +142,41 @@ General statistics of the JSTOR full-text database
 
 ```{r}
 #| label: tbl-example-comparison
-#| tbl-cap: "The three closest sentences to the synthetic sentence for selected years."
-#| echo: false 
+#| tbl-cap: "The three closest sentences to representative vectors of rationality for selected years."
+#| echo: false
 #| warning: false
 #| message: false
 
-
-data <- read_feather(here::here(data_path, "top_5_sentences_to_fake_sentence.feather"))
+data <- read_feather(here::here(
+  data_path,
+  "illustrative_table_closest_sentences_to_rv.feather"
+))
 
 data <- data %>%
-  select(year, sentence, similarity) %>%
-  filter(year %in% c(1925, 1950, 1975, 2000, 2015)) |> 
-  mutate(similarity = round(similarity, 3)) |> 
-  group_by(year) |>
-  slice_head(n = 3) 
+  filter(year %in% c(1925, 1950, 1975, 2000, 2015)) %>%
+  mutate(similarity_rv = round(similarity_rv, 3)) %>% 
+  group_by(year) %>%
+  slice_head(n = 3) %>%
+  ungroup() %>%
+  select(year, sentence, similarity_rv) 
 
-kbl(data, 
-      format = "latex",   
-      col.names = c("Year", "Sentence", "Cosine"), 
-      booktabs = TRUE, 
-      align = c("c", "l", "c")) %>%
+kbl(
+  data,
+  format = "latex",
+  col.names = c("Year", "Sentence", "Cosine similarity"),
+  booktabs = TRUE,
+  escape = FALSE, 
+  align = c("c", "l", "c")
+) %>%
   kable_styling(font_size = 7) %>%
-  column_spec(1, width = "1cm") %>%
+  column_spec(1, width = "1.2cm") %>%
   column_spec(2, width = "10cm") %>%
-  column_spec(3, width = "1cm") 
+  column_spec(3, width = "1.2cm") %>% 
+  # add notes 
+  footnote(
+    general = "Cosine similarities from the representative vectors; three nearest sentences per selected year.",
+    threeparttable = TRUE 
+  )
 
 ```
 
@@ -176,65 +187,6 @@ kbl(data,
 
 ::: {.landscape}
 ![Alluvial plot of clusters of sentences about rationality](images/intertemporal_clusters_alluvial.png){#fig-llm-alluvial}
-::: 
-
-
-::: landscape
-```{r}
-#| label: tbl-example-cluster
-#| tbl-cap: "The three closest sentences from two selected clusters (1980s and 1990s)."
-#| echo: false
-#| warning: false
-#| message: false
-
-# helper to keep LaTeX happy (quotes/dashes) and squash whitespace
-clean_tex <- function(x){
-  x |>
-    str_squish() |>
-    str_replace_all("—|–", "--") |>
-    str_replace_all("“|”", '"') |>
-    str_replace_all("’", "'")
-}
-
-# ── OPTION A: hardcode your 6 rows (quick demo) ────────────────────────────────
-tab2 <- tribble(
-  ~decade, ~sentence, ~similarity, ~title, ~year, ~journal, ~authors,
-  "1980s", "INTRODUCTION The burgeoning literature employing or alluding to the concept of rational expectations in time-dependent economic processes is strangely vague regarding possible mechanisms by which the economic agents could actually achieve the hypothesized “rationality.”", 0.856, "Rational Expectations and Learning from Experience", 1979, "The Quarterly Journal of Economics", "Stephen J. DeCanio",
-  "1980s", "Perhaps the justification for this paper is that both critics and some practitioners of the rational expectations approach seem unaware of these implications.", 0.838, "Rational Expectations and Economic Thought", 1979, "Journal of Economic Literature", "Brian Kantor",
-  "1980s", "A rational agent draws on an information set larger than historical prices, and expectations are rational if they depend upon the same things that economic theory suggests determines the variable.", 0.837, "A Semi-Strong Form Evaluation of the Efficiency of the Hog Futures Market", 1979, "American Journal of Agricultural Economics", "Raymond M. Leuthold, Peter A. Hartmann",
-  "1990s", "This article will criticize rational expectations models for several different reasons.", 0.877, "What Is so Natural about the Natural Rate of Unemployment?", 1981, "Journal of Economic Issues", "Robert Cherry",
-  "1990s", "In this article we concentrate on the role of the rational expectations hypothesis in the debate.", 0.874, "THE CONTROVERSY OVER RATIONAL EXPECTATIONS", 1981, "National Institute Economic Review", "David G. Mayes",
-  "1990s", "For the purposes of this discussion, it will be assumed that economic agents form rational expectations.", 0.873, "The Market for Innovations and Short-Run Technological Change: Evidence from Egypt", 1988, "Economic Development and Cultural Change", "John M. Antle, Charles C. Crissman"
-) |>
-  mutate(
-    sentence   = clean_tex(sentence),
-    title      = clean_tex(title),
-    journal    = clean_tex(journal),
-    authors    = clean_tex(authors),
-    similarity = round(similarity, 3)
-  )
-
-# order columns and render
-out <- tab2 %>%
-  select(
-    Sentence = sentence, Similarity = similarity, Title = title,
-    Year = year, Journal = journal, Authors = authors, decade
-  )
-
-kbl(out %>% select(-decade),
-    format = "latex", booktabs = TRUE, escape = TRUE,
-    align = c("l","c","l","c","l","l")) %>%
-  kable_styling(font_size = 7) %>%
-  column_spec(1, width = "8cm") %>%   # Sentence
-  column_spec(3, width = "5cm") %>%   # Title
-  column_spec(5, width = "3.5cm") %>% # Journal
-  column_spec(6, width = "3.5cm") %>% # Authors
-  pack_rows(index = table(out$decade)) %>%
-  footnote(
-    general = "Cosine similarities from the representative vectors; three nearest sentences per selected cluster/decade.",
-    threeparttable = TRUE
-  )
-``` 
 ::: 
 
 
