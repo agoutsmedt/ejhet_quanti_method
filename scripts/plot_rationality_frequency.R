@@ -10,7 +10,7 @@ df <- arrow::read_parquet(file.path(
 ))
 
 # check the columns types
-df <- df |>
+df <- df %>%
   mutate(
     year = as.integer(year),
     token = as.character(token)
@@ -51,13 +51,14 @@ plot_unigram(df = df, token_query = "colonies")
 
 # plot and save a search query of "rationality" and "rational" in a same graph
 
-df_filtered <- df |>
-  mutate(token_lower = str_to_lower(token)) |>
-  filter(token_lower %in% c("rationality", "rational"))
+df_filtered <- df %>%
+  mutate(token_lower = str_to_lower(token)) %>%
+  filter(token_lower %in% c("rationality", "rational")) %>%
+  filter(year %in% c(1900:2010))
 
 # positions de labels = fin de série, alignées sur la courbe loess (pas les points bruyants)
-label_pos <- df_filtered |>
-  group_by(token_lower) |>
+label_pos <- df_filtered %>%
+  group_by(token_lower) %>%
   summarise(
     x = max(year, na.rm = TRUE),
     y = {
@@ -99,8 +100,8 @@ p <- ggplot(
   ) +
   ggsci::scale_color_npg() +
   scale_x_continuous(
-    breaks = seq(1880, max(df$year, na.rm = TRUE), by = 20),
-    limits = c(1880, max(df$year, na.rm = TRUE) + 10) # marge pour les labels
+    breaks = seq(1900, max(df_filtered$year, na.rm = TRUE), by = 20),
+    limits = c(1900, max(df_filtered$year, na.rm = TRUE) + 10) # marge pour les labels
   ) +
   theme_light(base_size = 20) +
   theme(legend.position = "none", plot.margin = margin(5.5, 30, 5.5, 5.5)) +
