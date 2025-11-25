@@ -30,13 +30,13 @@ source(here::here("scripts", "paths_and_packages.R"))
 p_load(see, backbone, kableExtra, DT)
 
 # Loading Data
-bert_df <- arrow::read_feather(file.path(
-  data_path,
-  "top1pct_sentences_by_year.feather"
-))
+# bert_df <- arrow::read_feather(file.path(
+#   data_path,
+#   "top1pct_sentences_by_year.feather"
+# ))
 
-setDT(bert_df, key = "sentence_id")
-bert_df <- bert_df[between(year, 1900, 2010), ]
+# setDT(bert_df, key = "sentence_id")
+# bert_df <- bert_df[between(year, 1900, 2010), ]
 
 metadata_jstor <- read_rds(file.path(
   jstor_raw_data,
@@ -76,83 +76,74 @@ metadata_scopus <- metadata_scopus %>%
     authors = dc_creator,
     journal = prism_publication_name,
     year = prism_cover_date
-  ) 
+  ) %>%
+  mutate(year = as.integer(str_sub(year, 1, 4)))
 
-documents_cluster <- readRDS(file.path(
+metadata <- bind_rows(metadata_jstor, metadata_scopus)
+
+
+sentences <- arrow::read_feather(file.path(
   data_path,
-  "sentences_intertemporal_cluster.rds"
-)) %>%
-  left_join(select(bert_df, id, sentence, sentence_id, similarity)) %>%
-  left_join(metadata) %>%
+  "sentences_intertemporal_cluster.feather"
+))
+
+sentences <- sentences %>%
+  filter(between(year, 1900, 2010)) %>%
+  left_join(metadata, by = "id") %>%
   arrange(sentence_id)
 
-rm(metadata)
-
-bert_df <- bert_df |>
-  left_join(
-    select(
-      documents_cluster,
-      sentence_id,
-      backbone_community,
-      window,
-      kmean_cluster_id
-    ),
-    by = "sentence_id"
-  )
+rm(metadata, metadata_jstor, metadata_scopus)
 
 backbone_network <- read_rds(file.path(
   data_path,
-  "sentences_clusters_backbone_network.rds"
+  "backbone_network_of_sentences_clusters.rds"
 ))
 
-list_clusters <- documents_cluster %>%
+list_clusters <- sentences %>%
   pull(backbone_community) %>%
   unique() |>
   sort()
 
-results <- readRDS(file.path(data_path, "clustering_rational_sentences.rds"))
-
-match_jstor_wos <- readRDS(here::here(data_path, "final_match.RDS")) %>%
-  filter(!is.na(id_match_final)) %>%
-  distinct(url_jstor = id_jstor, ID_Art = id_match_final) %>%
-  mutate(
-    id_jstor = str_extract(url_jstor, "\\/[0-9]+$") %>% str_remove(., "/"),
-    ID_Art = as.character(ID_Art)
-  ) %>%
-  distinct(ID_Art, .keep_all = TRUE)
 ```
 
 ```{r preparing-tfidf-kmean-cluster}
 # Naming clusters and tf-idf---------------------
-setDT(documents_cluster)
-unigrams <- documents_cluster[, .(
+setDT(sentences)
+
+unigrams <- sentences[, .(
   sentence_id,
   sentence,
   window,
-  kmean_cluster_id,
+  HDBSCAN_cluster,
   backbone_community
 )][, token := tokenizers::tokenize_words(sentence, lowercase = TRUE)][,
   -("sentence")
 ]
-bigrams <- documents_cluster[, .(
+
+bigrams <- sentences[, .(
   sentence_id,
   sentence,
   window,
-  kmean_cluster_id,
+  HDBSCAN_cluster,
   backbone_community
 )][, token := tokenizers::tokenize_ngrams(sentence, n = 2, lowercase = TRUE)][,
   -("sentence")
 ]
+
+
 tokens <- rbind(unigrams, bigrams)
 tokens <- tokens[,
   .(token = unlist(token)),
-  by = .(kmean_cluster_id, backbone_community, window)
+  by = .(HDBSCAN_cluster, backbone_community, window)
 ]
+
+
 tokens <- tokens[nchar(token) >= 2, ]
 tokens <- tokens[, c("word_1", "word_2") := tstrsplit(token, " ")]
 
 stop_words <- tidytext::stop_words$word %>%
   unique()
+
 tokens <- tokens[
   # Remove any digits in either word
   !grepl("[0-9]", word_1) &
@@ -161,40 +152,66 @@ tokens <- tokens[
     !(word_1 %in% stop_words) &
     (is.na(word_2) | !(word_2 %in% stop_words))
 ]
-tokens <- tokens[, .(kmean_cluster_id, backbone_community, window, token)]
+
+tokens <- tokens[, .(
+  bigrams <- sentences[, .(
+    sentence_id,
+    sentence,
+    window,
+    HDBSCAN_cluster,
+    backbone_community
+  )][,
+    token := tokenizers::tokenize_ngrams(sentence, n = 2, lowercase = TRUE)
+  ][,
+    -("sentence")
+  ],
+  backbone_community,
+  window,
+  token
+)]
+
 tokens[, token := str_replace(token, " ", "_")]
 
-tokens_count_kmean_cluster <- compute_tf_idf(
+tokens_count_hdbscan_cluster <- compute_tf_idf(
   tokens,
   token_col = "token",
-  document_col = "kmean_cluster_id"
+  document_col = "HDBSCAN_cluster"
 )
+
 # Top tf-idf terms
-top_terms_kmean_cluster <- tokens_count_kmean_cluster[order(-tf_idf)][
-  absolute_tf > 20,
+top_terms_hdbscan_cluster <- tokens_count_hdbscan_cluster[order(-tf_idf)][
+  corpus_tf > 20,
   head(.SD, 15),
-  by = kmean_cluster_id
+  by = HDBSCAN_cluster
 ]
 
 # Labels per decade
-labels_kmean_cluster <- tokens_count_kmean_cluster[order(-tf_idf)][
-  absolute_tf > 20,
+labels_hdbscan_cluster <- tokens_count_hdbscan_cluster[order(-tf_idf)][
+  corpus_tf > 20,
   head(.SD, 5),
-  by = kmean_cluster_id
+  by = HDBSCAN_cluster
 ]
-labels_kmean_cluster <- labels_kmean_cluster[,
-  .(label_kmean_cluster = paste0(token, collapse = ", ")),
-  by = .(backbone_community, kmean_cluster_id)
+
+labels_hdbscan_cluster <- labels_hdbscan_cluster[,
+  .(label_hdbscan_cluster = paste0(token, collapse = ", ")),
+  by = .(backbone_community, HDBSCAN_cluster)
 ]
-labels_kmean_cluster[,
-  label_kmean_cluster := paste0(backbone_community, "_", kmean_cluster_id, ": ", label_kmean_cluster) # we save the backbonne community number to see difference in top terms depending on kmean cluster
+
+labels_hdbscan_cluster[,
+  label_kmean_cluster := paste0(
+    backbone_community,
+    "_",
+    HDBSCAN_cluster,
+    ": ",
+    labels_hdbscan_cluster
+  ) # we save the backbonne community number to see difference in top terms depending on kmean cluster
 ]
 
 documents_cluster <- merge(
   documents_cluster,
   labels_kmean_cluster,
   all.x = TRUE,
-  by = c("backbone_community", "kmean_cluster_id")
+  by = c("backbone_community", "HDBSCAN_cluster")
 )
 ```
 

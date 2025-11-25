@@ -197,3 +197,8 @@ p = (
         fill="Cluster",
     )
 )
+
+
+image_path = os.path.join(os.getcwd(), "paper", "images", "hdbscan_cluster_distribution_over_time.png")
+
+p.save(image_path, dpi=300, width=10, height=6)

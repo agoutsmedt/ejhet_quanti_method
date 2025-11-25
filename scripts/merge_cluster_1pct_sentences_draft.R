@@ -10,7 +10,8 @@ pacman::p_load(
   purrr,
   stringr,
   ggplot2,
-  arrow
+  arrow,
+  backbone
 )
 
 # ---------------------------------------------------------
@@ -55,40 +56,42 @@ norms <- sqrt(rowSums(centroid_matrix^2))
 cosine_sim <- cosine_sim / outer(norms, norms)
 
 # ---------------------------------------------------------
-# 5. clustering by network analysis and backbone
+# 5. BUILD CLUSTER SIMILARITY NETWORK
 # ---------------------------------------------------------
 
-p_load(backbone)
 cluster_similarity <- as.data.frame(cosine_sim) %>%
+  # transform matrix to long format
   mutate(cluster_A = 1:n()) |>
   pivot_longer(-cluster_A, names_to = "cluster_B", values_to = "similarity") %>%
   mutate(cluster_B = str_remove(cluster_B, "V") |> as.integer()) %>%
+  # Remove self-similarity
   filter(cluster_A != cluster_B)
 
 cluster_attributes <- tibble(
   window = centroids$window,
-  cluster = centroids$.cluster
-) |>
+  cluster = centroids$cluster
+) %>%
   mutate(cluster_id = 1:n())
 
 # 1) Nodes: gather node attributes
 nodes <- cluster_similarity %>%
-  distinct(cluster_id = cluster_A) |>
+  distinct(cluster_id = cluster_A) %>%
   left_join(cluster_attributes, by = "cluster_id")
 
 # 2) Edges = average similarity across windows (undirected)
 edges <- cluster_similarity %>%
   transmute(from = cluster_A, to = cluster_B, w = similarity) %>%
+  # we now remove duplicate edges by averaging
   mutate(a = pmin(from, to), b = pmax(from, to)) %>%
   group_by(a, b) %>%
   summarise(weight = mean(w, na.rm = TRUE), .groups = "drop") %>%
   rename(from = a, to = b) %>%
-  filter(from != to, is.finite(weight)) %>%
-  filter(weight > 0) # keep positive similarity; adjust threshold if needed
+  # remove self-loops and non-finite weights if any
+  filter(from != to, is.finite(weight))
 
 # 3) Graph
 g <- tbl_graph(nodes = nodes, edges = edges, directed = FALSE) %>%
-  backbone_from_weighted(model = "disparity") %>%
+  backbone::backbone_from_weighted(model = "disparity", alpha = 0.3) %>%
   as_tbl_graph() %>%
   mutate(
     community = group_leiden(
@@ -99,26 +102,27 @@ g <- tbl_graph(nodes = nodes, edges = edges, directed = FALSE) %>%
       as.factor()
   )
 
-g |> as_tibble() |> count(community, sort = T) |> print(n = Inf)
-write_rds(g, file.path(data_path, "sentences_clusters_backbone_network.rds"))
+g |> as_tibble() %>% count(community, sort = T) %>% print(n = Inf)
+write_rds(g, file.path(data_path, "backbone_network_of_sentences_clusters.rds"))
+
+
+# --------------------------------------------
+# 6. BUILD TABLES FOR FURTHER ANALYSES
+# --------------------------------------------
 
 # Apply backbone-leiden communities to documents
-nodes_tbl <- g |> as_tibble()
+nodes_tbl <- g %>%
+  as_tibble() %>%
+  select(cluster_id, window, cluster, backbone_community = community)
 
-documents_partition <- documents_partition %>%
-  mutate(cluster = as.character(cluster)) %>%
+documents_partition <- sentence_clusterized %>%
   left_join(
-    nodes_tbl %>%
-      select(
-        window,
-        cluster,
-        backbone_community = community,
-        kmean_cluster_id = cluster_id
-      ),
+    nodes_tbl,
     by = c("window", "cluster")
-  )
+  ) %>%
+  rename(HDBSCAN_cluster = cluster)
 
-saveRDS(
+arrow::write_feather(
   documents_partition,
-  file.path(data_path, "sentences_intertemporal_cluster.rds")
+  file.path(data_path, "sentences_intertemporal_cluster.feather")
 )
