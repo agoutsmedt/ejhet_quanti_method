@@ -3,8 +3,11 @@ source(file.path("scripts", "paths_and_packages.R"))
 
 library(scales) # pour breaks/labels si besoin
 
-REL_FREQ_PARQUET <- "relative_freq_merged_by_year.parquet"
-df <- read_parquet(file.path(data_path, REL_FREQ_PARQUET))
+
+df <- arrow::read_parquet(file.path(
+  embeddings_data,
+  "vocab_embeddings.parquet"
+))
 
 # check the columns types
 df <- df |>
@@ -44,7 +47,7 @@ plot_unigram <- function(df, token_query) {
 }
 
 # Exemple
-plot_unigram(df = df, token_query = "rationality")
+plot_unigram(df = df, token_query = "colonies")
 
 # plot and save a search query of "rationality" and "rational" in a same graph
 
@@ -118,4 +121,3 @@ ggsave(
   width = 8,
   height = 5
 )
-
