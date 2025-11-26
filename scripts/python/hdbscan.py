@@ -58,15 +58,43 @@ feather.write_feather(df, os.path.join(paths.ejhet_project_data_path, "closest_s
 # load if needed
 # df = feather.read_feather(os.path.join(paths.ejhet_project_data_path, "closest_sentences_0.01_rationality_score_filtered_with_umap.feather"))
 
-windows = [
-    (1900, 1919),
-    (1920, 1939),
-    (1940, 1949),
-    *[(y, y + 9) for y in range(1950, 2020, 10)],
-]
+# Merge two first decades 
+windows = [(1900, 1919)]
+# puis décennies normales jusqu'à 2009
+windows += [(y, y + 9) for y in range(1920, 2010, 10)]
 
 # Format: list of dict windows
 windows = [{"start": s, "end": e, "label": f"{s}-{e}"} for s, e in windows]
+
+# count rows by decade in df 
+for window in windows:
+    count = len(df[(df["year"] >= window["start"]) & (df["year"] <= window["end"])])
+    print(f"Window {window['label']}: {count} sentences")
+
+
+# plot number of sentences per window
+window_counts = [
+    {
+        "window": window["label"],
+        "count": len(df[(df["year"] >= window["start"]) & (df["year"] <= window["end"])]),
+    }
+    for window in windows
+]
+
+window_counts_df = pd.DataFrame(window_counts)
+p0 = (
+    plotnine.ggplot(window_counts_df)
+    + plotnine.aes(x="window", y="count")
+    + plotnine.geom_bar(stat="identity", fill="#2c7fb8")
+    + plotnine.theme_light(base_size=14)
+    + plotnine.theme(axis_text_x=plotnine.element_text(rotation=45, hjust=1))
+    + plotnine.labs(
+        title="Number of Sentences per Time Window",
+        x="Time Window",
+        y="Number of Sentences",
+    )
+)
+
 
 
 # ---------------------------------------------------------
@@ -74,7 +102,7 @@ windows = [{"start": s, "end": e, "label": f"{s}-{e}"} for s, e in windows]
 # ---------------------------------------------------------
 def run_hdbscan_window(dfw):
     um = np.vstack(dfw["umap"].values)
-    emb = np.vstack(dfw["embedding"].values)  # <-- SBERT embeddings (768d)
+    emb = np.vstack(dfw["embedding"].values)  
 
     n = len(dfw)
     min_cluster_size = max(20, int(0.01 * n))
@@ -202,3 +230,34 @@ p = (
 image_path = os.path.join(os.getcwd(), "paper", "images", "hdbscan_cluster_distribution_over_time.png")
 
 p.save(image_path, dpi=300, width=10, height=6)
+
+
+# ---------------------------------------------------------
+# 8 NUMBER OF CLUSTERS PER TIME WINDOW
+# ---------------------------------------------------------
+
+num_clusters_per_window = (
+    all_clusters_df[all_clusters_df["cluster"] != -1]
+    .groupby("window")["cluster"]
+    .nunique()
+    .reset_index()
+    .rename(columns={"cluster": "num_clusters"})
+)
+
+# plot
+p2 = (
+    plotnine.ggplot(num_clusters_per_window)
+    + plotnine.aes(x="window", y="num_clusters")
+    + plotnine.geom_bar(stat="identity", fill="#2c7fb8")
+    + plotnine.theme_light(base_size=14)
+    + plotnine.theme(axis_text_x=plotnine.element_text(rotation=45, hjust=1))
+    + plotnine.labs(
+        title="Number of Clusters per Time Window",
+        x="Time Window",
+        y="Number of Clusters",
+    )
+)
+
+image_path2 = os.path.join(os.getcwd(), "paper", "images", "hdbscan_number_of_clusters_per_window.png")
+p2.save(image_path2, dpi=300, width=10, height=6)
+

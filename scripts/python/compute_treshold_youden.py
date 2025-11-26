@@ -9,7 +9,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from plotnine import ggplot, aes, geom_histogram, facet_wrap, labs, theme_minimal
 
 import paths
-from scripts.python.function import detect_noise_category
+from scripts.python.function import regex_guess
 
 
 # ======================================================
@@ -55,7 +55,7 @@ for fname in tqdm(files, desc="Balanced sampling"):
     gc.collect()
 
     # detect categories
-    cats = [detect_noise_category(s) for s in sentences]
+    cats = [regex_guess(s) for s in sentences]
 
     # ========== noisy (take all) ==========
     for cat in CATS:

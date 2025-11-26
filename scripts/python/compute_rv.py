@@ -63,9 +63,9 @@ for year in tqdm(all_years, desc="Yearly mean vectors"):
         df["embedding"] = df["embedding"].apply(np.array)
         df["source"] = detect_source(fp)
 
-        # filtrage seulement pour istex/jstor (tu dis que c'est sûr)
+        # filtrage seulement pour istex/jstor 
         if df["source"].iloc[0] in ["istex", "jstor"]:
-            df["key"] = list(zip(df["id"], df["paragraph"]))
+            df["key"] = list(zip(df["id"], df["sentence_id"]))
             df = df[~df["key"].isin(delete_keys)]
             df = df.drop(columns="key")
 
@@ -97,7 +97,7 @@ df_yearly = pd.DataFrame(year_records)
 df_yearly.to_feather(output_yearly)
 
 
-# ----- PASSAGE 2 : MOYENNE MOBILE CENTRÉE ----- 
+# ----- PASSAGE 2 : MOYENNE MOBILE CENTRÉE NON PONDÉRÉE -----
 
 WINDOW_SIZE = 5
 

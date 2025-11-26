@@ -10,8 +10,6 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 import paths
 
-import plotnine
-
 
 # ======================================================
 # 1) LOAD RV (representative vectors)
@@ -82,11 +80,13 @@ for year in tqdm(years, desc="Processing years"):
         df["embedding"] = df["embedding"].apply(np.array)
 
         # -------- REMOVE FLAGGED SENTENCES 
-        df["key"] = list(zip(df["id"], df["sentence_id"]))
-        df = df[~df["key"].isin(delete_keys)].drop(columns="key")
-
-        if len(df) == 0:
-            continue
+        source = ("istex" if "istex_vectors" in fp else
+                  "jstor" if "jstor_vectors" in fp else
+                  "elsevier")
+        
+        if source in ["istex", "jstor"]:
+            df["key"] = list(zip(df["id"], df["sentence_id"])) 
+            df = df[~df["key"].isin(delete_keys)].drop(columns="key")
 
         # -------- SIMILARITY sentence ↔ RV
         X = np.vstack(df["embedding"].values)
@@ -95,9 +95,7 @@ for year in tqdm(years, desc="Processing years"):
         df["similarity_rv"] = scores
 
         # store relevant columns
-        sentence_rows.append(
-            df[["id", "sentence_id", "sentence", "year", "similarity_rv"]]
-        )
+        sentence_rows.append(df[["id", "sentence_id", "sentence", "year", "similarity_rv"]])
 
         del df, X, scores
         gc.collect()

@@ -36,20 +36,21 @@ p_load(patchwork)
 # `dimension` index so we can pivot into a matrix (rows = year, cols = dimension).
 rep_vectors_by_year <- read_feather(here::here(
   data_path,
-  "representative_vectors_window_5.feather"
+  "rv_average_by_year.feather"
 )) |>
   dplyr::filter(between(year, 1900, 2009)) |>
-  dplyr::select(year, embedding_by_year) |>
-  tidyr::unnest(embedding_by_year) |>
+  dplyr::select(year, vec) |>
+  tidyr::unnest(vec) |>
   dplyr::mutate(dimension = row_number(), .by = year)
 
 ##: Build a numeric matrix (year x embedding dimension)
 # xtabs pivots long -> wide; as.matrix converts it to a plain numeric matrix
 # expected by downstream functions.
 rep_mat <- xtabs(
-  formula = embedding_by_year ~ year + dimension,
+  formula = vec ~ year + dimension,
   data = rep_vectors_by_year
 )
+
 rep_mat <- as.matrix(rep_mat)
 
 #: Compute proto-distance (PRT) drift ---------
@@ -83,10 +84,10 @@ ggsave(
 #: APD on top 1% closest sentences to "rationality" ---------
 # Load a precomputed RDS with the top-1% closest sentences (to a query) and
 # their embeddings. We restrict to the analysis years and compute APD by year.
-top1pct_bert_df <- read_rds(file.path(
+top1pct_bert_df <- arrow:read_feather(file.path(
   data_path,
-  "closest_sentences_0.01_rationality_score_filtered_with_embeddings.rds"
-)) |>
+  "closest_sentences_0.01_rationality_score_filtered_with_embeddings.feather"
+)) %>%
   dplyr::filter(between(publication_year, 1900, 2009))
 
 apd_sentence_matrix <- compute_apd_by_years(

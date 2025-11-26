@@ -56,11 +56,9 @@ centroids = {
     for _, row in centroids_df.iterrows()
 }
 
-thresholds_df = pd.read_parquet(os.path.join(paths.ejhet_project_data_path, "youden_j_thresholds.parquet")
-)
-thresholds = {
-    row["cat"]: float(row["best_threshold"]) for _, row in thresholds_df.iterrows()
-}
+thresholds_df = pd.read_parquet(os.path.join(paths.ejhet_project_data_path, "youden_j_thresholds.parquet"))
+
+thresholds = {row["cat"]: float(row["best_threshold"]) for _, row in thresholds_df.iterrows()}
 
 # ---------------------------
 # COLLECT NOISY SENTENCES
@@ -77,9 +75,12 @@ for fname in tqdm(files, desc="Detecting noisy sentences"):
     df["embedding"] = df["embedding"].apply(np.array)
 
     df_removed = get_flagged_sentences(df, centroids, thresholds)
-    
+    # Remove embedding column to save memory
+    df_removed = df_removed.drop(columns=["embedding"])
+
     del df
     gc.collect()
+
     
     # Add source 
     df_removed["source"] = source 
@@ -92,19 +93,15 @@ for fname in tqdm(files, desc="Detecting noisy sentences"):
 
 df_deleted_all = pd.concat(records, ignore_index=True)
 
-# remove embedding column before saving
-df_deleted_all = df_deleted_all.drop(columns=["embedding", "embedding_error", "flagged"])
-
 # rename columns for clarity
 df_deleted_all = df_deleted_all.rename(
     columns={
         "best_cat": "noise_category_detected",
-        "distance_to_centroid": "score",
-
+        "score" : "similarity_to_noise_centroid"
     }
 )
 
+# save to feather
 df_deleted_all.to_feather(OUTPUT_FILE)
 
-print(f"Saved noisy sentences → {OUTPUT_FILE}")
 

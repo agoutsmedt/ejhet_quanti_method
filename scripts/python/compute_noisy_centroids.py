@@ -8,7 +8,7 @@ import pandas as pd
 from tqdm import tqdm
 
 import paths
-from scripts.python.function import detect_noise_category
+from scripts.python.function import regex_guess
 
 # ======================================================
 # Online Centroid class
@@ -64,7 +64,7 @@ for fname in tqdm(files, desc="Computing noisy centroids"):
     gc.collect()
 
     # assign regex categories
-    cats = [detect_noise_category(s) for s in sentences]
+    cats = [regex_guess(s) for s in sentences]
 
     # collect noisy embeddings per category
     buckets = {cat: [] for cat in CATS}

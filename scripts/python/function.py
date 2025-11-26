@@ -62,17 +62,20 @@ def get_flagged_sentences(df, centroids, thresholds):
     # matrix des centroides
     centroid_matrix = np.vstack([centroids[c] for c in CATS])
 
-    # cosine similarity vers TOUS les centroides
+    # cosine similarity entre les embeddings et l'ensemble des centroids pour chaque cats (shape = n_sentences x n_cats)
     scores = cosine_similarity(X, centroid_matrix)
 
-    # best cat = celle avec score max
+    # on garde la cat avec le score (la colonne car axis=1) le plus élevé
     best_idx = scores.argmax(axis=1)
+    
+    # on ajoute les infos au df (same length que df = n_sentences)
     df["best_cat"] = [CATS[i] for i in best_idx]
     df["score"] = scores.max(axis=1)
 
-    # lookup du threshold correspondant
+    # for each row, get the threshold corresponding to the best_cat
     df["threshold"] = df["best_cat"].map(thresholds)
 
+    # add a flagged column==True if score >= threshold
     df["flagged"] = df["score"] >= df["threshold"]
 
     df_removed = df[df["flagged"]].copy()
