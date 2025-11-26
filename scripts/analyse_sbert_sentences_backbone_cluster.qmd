@@ -77,14 +77,20 @@ metadata_scopus <- read_rds(file.path(
 metadata <- bind_rows(metadata_jstor, metadata_scopus) |>
   filter(!is.na(year) & !is.na(title))
 
-sentences <- arrow::read_feather(file.path(
+sentences_dataset <- open_dataset(file.path(
   data_path,
   "sentences_intertemporal_cluster.feather"
-)) %>%
+),
+  format = "feather"
+)
+
+sentences <- sentences_dataset %>%
   filter(between(year, 1900, 2009)) %>%
   select(-year) %>%
-  inner_join(metadata, by = "id") %>%
+  collect() %>% 
+inner_join(metadata, by = "id") %>%
   arrange(id, sentence_id)
+
 setDT(sentences)
 
 rm(metadata, metadata_jstor, metadata_scopus)
@@ -1018,7 +1024,7 @@ for (cluster in list_clusters) {
     nrow(distinct(cluster_data, sentence_id, id)),
     " sentences from our corpus. It represents ",
     round(
-      nrow(distinct(cluster_data, id, sentences_id)) /
+      nrow(distinct(cluster_data, id, sentence_id)) /
         nrow(distinct(sentences, id, sentence_id)) *
         100,
       2
