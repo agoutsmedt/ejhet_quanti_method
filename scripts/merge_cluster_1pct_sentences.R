@@ -126,3 +126,8 @@ arrow::write_feather(
   documents_partition,
   file.path(data_path, "sentences_intertemporal_cluster.feather")
 )
+
+
+test <- arrow::read_feather(
+  file.path(data_path, "sentences_intertemporal_cluster.feather")
+)

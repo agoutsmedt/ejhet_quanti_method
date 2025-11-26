@@ -1018,7 +1018,7 @@ for (cluster in list_clusters) {
     nrow(distinct(cluster_data, sentence_id, id)),
     " sentences from our corpus. It represents ",
     round(
-      nrow(distinct(cluster_data, id, sentences_id)) /
+      nrow(distinct(cluster_data, id, sentence_id)) /
         nrow(distinct(sentences, id, sentence_id)) *
         100,
       2

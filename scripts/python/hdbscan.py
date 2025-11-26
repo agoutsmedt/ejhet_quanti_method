@@ -107,7 +107,7 @@ def run_hdbscan_window(dfw):
 
     n = len(dfw)
     min_cluster_size = max(20, int(0.01 * n))
-    min_samples = max(10, int(0.005 * n))
+    min_samples = 1
 
     clusterer = hdbscan.HDBSCAN(
         min_cluster_size=min_cluster_size,
