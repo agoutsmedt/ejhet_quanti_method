@@ -11,6 +11,7 @@ import paths
 from tqdm import tqdm
 from sklearn.metrics.pairwise import cosine_similarity
 
+import gc 
 
 # --------------------------- LOAD DATA  --------------------------- #
 
@@ -33,6 +34,9 @@ df_delete = feather.read_feather(DELETE_FILE)
 # create lookup set
 delete_keys = set(zip(df_delete["id"], df_delete["sentence_id"]))
 
+# remove df to free memory
+del df_delete
+gc.collect()
 
 # --------------------------- COMPUTE AVERAGE VECTOR FOR EACH DOCUMENT --------------------------- #
 
@@ -50,9 +54,8 @@ def detect_source(path):
 
 
 # keep only files in range 1900-2020
-files = [f for f in files if extract_year(f) and 1900 <= extract_year(f) <= 2010]
+files = [f for f in files if extract_year(f) and 1900 <= extract_year(f) <= 1999]
 
-    
 df_average_vectors_by_id = []
 
 for file in tqdm(files):
@@ -67,10 +70,9 @@ for file in tqdm(files):
     df["source"] = detect_source(file)
 
     if df["source"].iloc[0] in ["istex", "jstor"]:
-        df["key"] = list(zip(df["id"], df["paragraph"]))
+        df["key"] = list(zip(df["id"], df["sentence_id"]))
         df = df[~df["key"].isin(delete_keys)]
         df = df.drop(columns="key")
-
 
     # Compute average vector for each document
     df = df.groupby(["id", "year", "source"])["embedding"].apply(lambda x: np.mean(np.vstack(x), axis=0)).reset_index()
