@@ -82,6 +82,7 @@ window_counts = [
 ]
 
 window_counts_df = pd.DataFrame(window_counts)
+
 p0 = (
     plotnine.ggplot(window_counts_df)
     + plotnine.aes(x="window", y="count")
@@ -112,7 +113,7 @@ def run_hdbscan_window(dfw):
         min_cluster_size=min_cluster_size,
         min_samples=min_samples,
         metric="euclidean",
-        cluster_selection_method="eom",
+        cluster_selection_method="leaf",
     )
 
     labels = clusterer.fit_predict(um)
@@ -198,28 +199,28 @@ feather.write_feather(top_sentences, save_path)
 # 7 DISTRIBUTION OF EACH CLUSTER OVER TIME (including noise)
 # ---------------------------------------------------------
 
-cluster_time_distribution = (
-    all_clusters_df.groupby(["window", "cluster"], as_index=False)
+# load if needed
+# all_clusters_df = feather.read_feather(os.path.join(paths.ejhet_project_data_path, "hdbscan_all_sentences_with_clusters.feather"))
+
+# create "noise" column if cluster == -1, else cluster 
+all_clusters_df["is_noise"] = all_clusters_df["cluster"].apply(lambda x: "noise" if x == -1 else "real_cluster")
+
+# count distribution of cluster_str over time windows
+cluster_distribution = (
+    all_clusters_df.groupby(["window", "is_noise"])
     .size()
-    .rename(columns={"size": "count"})
+    .reset_index(name="count")
 )
 
-# rename cluster -1 to "noise" and other as "cluster" 
-cluster_time_distribution["cluster"] = cluster_time_distribution["cluster"].apply(
-    lambda x: "noise" if x == -1 else "cluster"
-)
-
-
-# plot 
-
+# plot
 p = (
-    plotnine.ggplot(cluster_time_distribution)
-    + plotnine.aes(x="window", y="count", fill="factor(cluster)")
+    plotnine.ggplot(cluster_distribution)
+    + plotnine.aes(x="window", y="count", fill="is_noise")
     + plotnine.geom_bar(stat="identity", position="dodge")
-    + plotnine.theme_light(base_size=14) 
+    + plotnine.theme_light(base_size=14)
     + plotnine.theme(axis_text_x=plotnine.element_text(rotation=45, hjust=1))
     + plotnine.labs(
-        title="Distribution of Clusters Over Time Windows",
+        title="HDBSCAN Cluster Distribution Over Time",
         x="Time Window",
         y="Number of Sentences",
         fill="Cluster",
