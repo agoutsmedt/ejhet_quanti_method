@@ -13,7 +13,7 @@ fig-width: 8
 fig-height: 6
 code-fold: true
 code-summary: "Show the code"
-cache: false
+cache: true
 embed-resources: true
 lightbox: auto
 execute:
@@ -77,138 +77,35 @@ metadata_scopus <- read_rds(file.path(
 metadata <- bind_rows(metadata_jstor, metadata_scopus) |>
   filter(!is.na(year) & !is.na(title))
 
-sentences_dataset <- open_dataset(file.path(
-  data_path,
-  "sentences_intertemporal_cluster.feather"
-),
+sentences_dataset <- open_dataset(
+  file.path(
+    data_path,
+    "sentences_intertemporal_cluster.feather"
+  ),
   format = "feather"
 )
 
 sentences <- sentences_dataset %>%
   filter(between(year, 1900, 2009)) %>%
-  select(-year) %>%
-  collect() %>% 
-inner_join(metadata, by = "id") %>%
+  select(
+    id,
+    sentence_id,
+    cluster_id,
+    HDBSCAN_cluster,
+    window,
+    backbone_community,
+    sentence,
+    similarity_rv,
+    embedding
+  ) %>%
+  collect() %>%
+  inner_join(metadata, by = "id") %>%
   arrange(id, sentence_id)
-
 setDT(sentences)
 
 rm(metadata, metadata_jstor, metadata_scopus)
+gc()
 
-backbone_network <- read_rds(file.path(
-  data_path,
-  "backbone_network_of_sentences_clusters.rds"
-)) |>
-  filter(window != "2010-2019") # we don't have sentences from 2010 onward
-
-list_clusters <- sentences %>%
-  pull(backbone_community) %>%
-  unique() |>
-  sort()
-
-```
-
-```{r preparing-tfidf-kmean-cluster}
-tokens <- extract_ngrams(
-  sentences[, .(
-    sentence,
-    window,
-    HDBSCAN_cluster,
-    backbone_community
-  )],
-  ngrams = 2L,
-  grouping_cols = c(
-    "HDBSCAN_cluster",
-    "backbone_community",
-    "window"
-  ),
-  text_col = "sentence",
-)
-
-tokens_count_hdbscan_cluster <- compute_tf_idf(
-  tokens,
-  token_col = "token",
-  document_col = c("backbone_community", "HDBSCAN_cluster", "window")
-)
-
-# Top tf-idf terms
-top_terms_hdbscan_cluster <- tokens_count_hdbscan_cluster[order(-tf_idf)][
-  corpus_tf > 20,
-  head(.SD, 15),
-  by = .(backbone_community, HDBSCAN_cluster, window)
-]
-
-# Labels per decade
-labels_hdbscan_cluster <- tokens_count_hdbscan_cluster[order(-tf_idf)][
-  corpus_tf > 20,
-  head(.SD, 5),
-  by = .(backbone_community, HDBSCAN_cluster, window)
-]
-
-labels_hdbscan_cluster <- labels_hdbscan_cluster[,
-  .(label_hdbscan_cluster = paste0(token, collapse = ", ")),
-  by = .(backbone_community, HDBSCAN_cluster, window)
-]
-
-labels_hdbscan_cluster[,
-  label_hdbscan_cluster := paste0(
-    backbone_community,
-    "_",
-    HDBSCAN_cluster,
-    "_",
-    window,
-    ": ",
-    label_hdbscan_cluster
-  ) # we save the backbonne community number to see difference in top terms depending on kmean cluster
-]
-
-sentences <- merge(
-  sentences,
-  labels_hdbscan_cluster,
-  all.x = TRUE,
-  by = c("backbone_community", "HDBSCAN_cluster", "window")
-)
-```
-
-```{r preparing-tfidf-backbone-community}
-tfidf_mean_community <- tokens_count_hdbscan_cluster[
-  corpus_tf > 50,
-  .(mean_tf_idf = mean(tf_idf)),
-  by = .(token, backbone_community)
-][order(-mean_tf_idf)]
-
-# Top tf-idf terms
-top_terms_cluster <- tfidf_mean_community[,
-  head(.SD, 20),
-  by = backbone_community
-]
-
-# Get top 4 tf-idf tokens per cluster
-labels_backbone_community <- tfidf_mean_community[,
-  head(.SD, 4),
-  by = backbone_community
-][, .(backbone_community, token)]
-labels_backbone_community <- labels_backbone_community[,
-  .(label_backbone_community = paste0(token, collapse = ", ")),
-  by = backbone_community
-]
-labels_backbone_community[,
-  label_backbone_community := paste0(
-    str_extract(backbone_community, "\\d+$"),
-    ": ",
-    label_backbone_community
-  )
-]
-
-sentences <- merge(
-  sentences,
-  labels_backbone_community,
-  all.x = TRUE,
-  by = "backbone_community"
-)
-```
-
-```{r adding-references}
 # Adding references
 sentences_art <- sentences[
   !is.na(ID_Art),
@@ -226,6 +123,20 @@ refs <- data_ref %>%
   distinct(ID_Art, ItemID_Ref, Annee, Nom, Revue_Abbrege) %>%
   collect()
 
+backbone_network <- read_rds(file.path(
+  data_path,
+  "backbone_network_of_sentences_clusters.rds"
+)) |>
+  filter(window != "2010-2019") # we don't have sentences from 2010 onward
+
+list_clusters <- sentences %>%
+  pull(backbone_community) %>%
+  unique() |>
+  sort()
+
+```
+
+```{r creating-references}
 top_refs <- sentences_art %>%
   left_join(refs, by = "ID_Art", relationship = "many-to-many") %>%
   filter(ItemID_Ref != 0) %>%
@@ -323,6 +234,108 @@ top_refs_without_id <- sentences_art %>%
 rm(refs)
 ```
 
+```{r preparing-tfidf-kmean-cluster}
+tokens <- extract_ngrams(
+  sentences[, .(
+    sentence,
+    window,
+    HDBSCAN_cluster,
+    backbone_community
+  )],
+  ngrams = 2L,
+  grouping_cols = c(
+    "HDBSCAN_cluster",
+    "backbone_community",
+    "window"
+  ),
+  text_col = "sentence",
+)
+
+tokens_count_hdbscan_cluster <- compute_tf_idf(
+  tokens,
+  token_col = "token",
+  document_col = c("backbone_community", "HDBSCAN_cluster", "window")
+)
+
+# Top tf-idf terms
+top_terms_hdbscan_cluster <- tokens_count_hdbscan_cluster[order(-tf_idf)][
+  corpus_tf > 20,
+  head(.SD, 15),
+  by = .(backbone_community, HDBSCAN_cluster, window)
+]
+
+# Labels per decade
+labels_hdbscan_cluster <- tokens_count_hdbscan_cluster[order(-tf_idf)][
+  corpus_tf > 20,
+  head(.SD, 5),
+  by = .(backbone_community, HDBSCAN_cluster, window)
+]
+
+labels_hdbscan_cluster <- labels_hdbscan_cluster[,
+  .(label_hdbscan_cluster = paste0(token, collapse = ", ")),
+  by = .(backbone_community, HDBSCAN_cluster, window)
+]
+
+labels_hdbscan_cluster[,
+  label_hdbscan_cluster := paste0(
+    backbone_community,
+    "_",
+    HDBSCAN_cluster,
+    "_",
+    window,
+    ": ",
+    label_hdbscan_cluster
+  ) # we save the backbonne community number to see difference in top terms depending on kmean cluster
+]
+
+sentences <- merge(
+  sentences,
+  labels_hdbscan_cluster,
+  all.x = TRUE,
+  by = c("backbone_community", "HDBSCAN_cluster", "window")
+)
+
+rm(tokens)
+```
+
+```{r preparing-tfidf-backbone-community}
+tfidf_mean_community <- tokens_count_hdbscan_cluster[
+  corpus_tf > 50,
+  .(mean_tf_idf = mean(tf_idf)),
+  by = .(token, backbone_community)
+][order(-mean_tf_idf)]
+
+# Top tf-idf terms
+top_terms_cluster <- tfidf_mean_community[,
+  head(.SD, 20),
+  by = backbone_community
+]
+
+# Get top 4 tf-idf tokens per cluster
+labels_backbone_community <- tfidf_mean_community[,
+  head(.SD, 4),
+  by = backbone_community
+][, .(backbone_community, token)]
+labels_backbone_community <- labels_backbone_community[,
+  .(label_backbone_community = paste0(token, collapse = ", ")),
+  by = backbone_community
+]
+labels_backbone_community[,
+  label_backbone_community := paste0(
+    str_extract(backbone_community, "\\d+$"),
+    ": ",
+    label_backbone_community
+  )
+]
+
+sentences <- merge(
+  sentences,
+  labels_backbone_community,
+  all.x = TRUE,
+  by = "backbone_community"
+)
+```
+
 ```{r top-sentences-rationality}
 # Here, we find the sentences the closest to "rational" and "rationality" per kmean cluster
 # We would then be able to extract the closest per backbone community later on
@@ -343,13 +356,33 @@ top_sentences_rationality <- sentences %>%
   mutate(similarity = round(similarity, 3))
 ```
 
-```{r top-sentences-kmean-centroid}
-# Here, we find the sentences the closest to the centroid of the hdbscan cluster.
-# The embedding of the sentence is in embedding; the centroid of the cluster is in centroid. We just need to calculate the distance for each row:
-sentences[,
+```{r top-sentences-hdbscan-centroid}
+# compute centroid (mean embedding) per backbone_community and attach to sentences,
+# then compute cosine similarity of each sentence to its backbone centroid
+
+# 1) centroid per community: bind embeddings into a matrix then colMeans
+hdbscan_centroids <- sentences[,
+  {
+    m <- do.call(rbind, embedding) # matrix: rows = sentences in group
+    list(hdbscan_centroid = list(colMeans(m))) # store centroid as a list-column
+  },
+  by = HDBSCAN_cluster
+]
+
+# 2) merge centroids back into sentences (preserve sentence_id order)
+similarities <- merge(
+  sentences[, .(id, sentence_id, HDBSCAN_cluster, embedding)],
+  hdbscan_centroids,
+  by = "HDBSCAN_cluster",
+  all.x = TRUE
+)
+setorder(similarities, id, sentence_id)
+
+# 3) cosine similarity between each sentence embedding and its community centroid
+similarities[,
   similarity_hdbscan_centroid := map2_dbl(
     embedding,
-    centroid,
+    hdbscan_centroid,
     ~ {
       num <- sum(.x * .y)
       den <- sqrt(sum(.x * .x)) * sqrt(sum(.y * .y))
@@ -359,9 +392,21 @@ sentences[,
 ]
 
 # optional: round similarity for display
-sentences[,
+similarities[,
   similarity_hdbscan_centroid := round(similarity_hdbscan_centroid, 3)
 ]
+
+# Merging back to sentences
+sentences <- merge(
+  sentences,
+  similarities[, .(
+    id,
+    sentence_id,
+    similarity_hdbscan_centroid
+  )],
+  by = c("id", "sentence_id"),
+  all.x = TRUE
+)
 
 # Select the top 20 sentences for each backbone community
 top_sentences_hdbscan_cluster_centroid <- sentences[, .(
@@ -380,14 +425,17 @@ top_sentences_hdbscan_cluster_centroid <- top_sentences_hdbscan_cluster_centroid
   by = .(backbone_community, HDBSCAN_cluster, window)
 ]
 
+rm(similarities, hdbscan_centroids)
+gc()
+
 ```
 
-```{r top-sentences-centroid}
+```{r top-sentences-backbone-centroid}
 # compute centroid (mean embedding) per backbone_community and attach to sentences,
 # then compute cosine similarity of each sentence to its backbone centroid
 
 # 1) centroid per community: bind embeddings into a matrix then colMeans
-community_centroids <- sentences[,
+backbone_centroids <- sentences[,
   {
     m <- do.call(rbind, embedding) # matrix: rows = sentences in group
     list(backbone_centroid = list(colMeans(m))) # store centroid as a list-column
@@ -396,19 +444,19 @@ community_centroids <- sentences[,
 ]
 
 # 2) merge centroids back into sentences (preserve sentence_id order)
-sentences <- merge(
-  sentences,
-  community_centroids,
+similarities <- merge(
+  sentences[, .(id, sentence_id, backbone_community, embedding)],
+  backbone_centroids,
   by = "backbone_community",
   all.x = TRUE
 )
-setorder(sentences, id, sentence_id)
+setorder(similarities, id, sentence_id)
 
 # 3) cosine similarity between each sentence embedding and its community centroid
-sentences[,
-  backbone_centroid_similarity := map2_dbl(
+similarities[,
+  similarity_backbone_centroid := map2_dbl(
     embedding,
-    centroid,
+    backbone_centroid,
     ~ {
       num <- sum(.x * .y)
       den <- sqrt(sum(.x * .x)) * sqrt(sum(.y * .y))
@@ -418,9 +466,21 @@ sentences[,
 ]
 
 # optional: round similarity for display
-sentences[,
-  backbone_centroid_similarity := round(backbone_centroid_similarity, 3)
+similarities[,
+  similarity_backbone_centroid := round(similarity_backbone_centroid, 3)
 ]
+
+# 4) Merging back to sentences
+sentences <- merge(
+  sentences,
+  similarities[, .(
+    id,
+    sentence_id,
+    similarity_backbone_centroid
+  )],
+  by = c("id", "sentence_id"),
+  all.x = TRUE
+)
 
 # Select the top 20 sentences for each backbone community
 top_sentences_backbone_community_centroid <- sentences[, .(
@@ -428,14 +488,17 @@ top_sentences_backbone_community_centroid <- sentences[, .(
   sentence_id,
   sentence,
   backbone_community,
-  backbone_centroid_similarity
+  similarity_backbone_centroid
 )]
 top_sentences_backbone_community_centroid <- top_sentences_backbone_community_centroid[order(
-  -backbone_centroid_similarity
+  -similarity_backbone_centroid
 )][,
   head(.SD, 20),
   by = backbone_community
 ]
+
+rm(similarities)
+gc()
 
 ```
 
@@ -465,55 +528,15 @@ The next visualisations shows the overall network of kmean clusters connected by
 
 ```{r preparing-network-plot}
 # # Extract one centroid per HDBSCAN_cluster with data.table
-# hdb_centroids <- sentences[,
-#   .(
-#     centroid = list(colMeans(do.call(rbind, centroid)))
-#   ),
-#   by = .(cluster_id)
-# ]
-
-# # Build centroid matrix (rows = clusters)
-# centroid_matrix <- do.call(rbind, hdb_centroids$centroid) |> as.matrix()
-# rownames(centroid_matrix) <- hdb_centroids$cluster_id
-
-# # Cosine similarity between HDBSCAN_cluster centroids
-# hdb_cosine_sim <- lsa::cosine(t(centroid_matrix))
-# colnames(hdb_cosine_sim) <- rownames(
-#   hdb_cosine_sim
-# ) <- hdb_centroids$cluster_id
-
 window_levels <- sentences %>%
   pull(window) %>%
   unique() %>%
   sort()
 
-# Finding proximity between backbone communities based on their centroids
-# # extract node table from g
-# nodes_tbl <- backbone_network %>%
-#   activate("nodes") %>%
-#   as_tibble(.name_repair = "minimal") |>
-#   mutate(x = as.integer(factor(window, levels = window_levels)))
-
-# # feature columns in `centroids` (exclude meta cols)
-# feat_cols <- setdiff(
-#   names(centroids),
-#   c(".cluster", "window", "cluster_original_id")
-# )
-
-# # 2) average centroid features per intertemporal community (new_cluster)
-# comm_centroids <- centroids %>%
-#   mutate(cluster_id = 1:n()) %>%
-#   left_join(nodes_tbl %>% select(cluster_id, community), by = "cluster_id") %>%
-#   group_by(community) %>%
-#   summarise(
-#     across(all_of(feat_cols), ~ mean(.x, na.rm = TRUE)),
-#     .groups = "drop"
-#   )
-
 # 3) hierarchical clustering on scaled community-centroid matrix
 backbone_centroid_matrix <- do.call(
   rbind,
-  community_centroids$backbone_centroid
+  backbone_centroids$backbone_centroid
 ) |>
   as.matrix()
 mat_scaled <- scale(backbone_centroid_matrix) # scale so features comparable
@@ -521,10 +544,12 @@ d <- dist(mat_scaled, method = "euclidean")
 hc <- hclust(d, method = "average")
 
 # 4) order communities along the dendrogram
-comm_levels <- community_centroids$backbone_community[hc$order]
+comm_levels <- backbone_centroids$backbone_community[hc$order]
 
 # 5) build a smooth palette so adjacent communities are visually similar
 names(cluster_colors) <- comm_levels
+
+rm(backbone_centroids, backbone_centroid_matrix, mat_scaled, d, hc)
 ```
 
 ```{r plot-network}
@@ -1231,14 +1256,14 @@ for (cluster in list_clusters) {
   cat("\n### Closest sentences of the backbone community's centroid\n\n")
 
   top_sentences_backbone_community_centroid_filtered %>%
-    slice_max(backbone_centroid_similarity, n = 15) %>%
+    slice_max(similarity_backbone_centroid, n = 15) %>%
     select(
       sentence,
       title,
       year,
       journal,
       authors,
-      backbone_centroid_similarity
+      similarity_backbone_centroid
     ) %>%
     kbl(
       escape = FALSE,
