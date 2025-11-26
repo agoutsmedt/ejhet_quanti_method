@@ -27,28 +27,17 @@ editor_options:
 ```{r loading-data}
 #| output: false
 source(here::here("scripts", "paths_and_packages.R"))
-p_load(see, backbone, kableExtra, DT)
-
-# Loading Data
-# bert_df <- arrow::read_feather(file.path(
-#   data_path,
-#   "top1pct_sentences_by_year.feather"
-# ))
-
-# setDT(bert_df, key = "sentence_id")
-# bert_df <- bert_df[between(year, 1900, 2010), ]
+p_load(see, kableExtra, DT)
 
 metadata_jstor <- read_rds(file.path(
   jstor_data_path,
   "jstor_constellate_merged_metadata.rds"
-))
-
-# keep only relevant lines, columns and rename them for consistency
-metadata_jstor <- metadata_jstor %>%
+)) %>%
   filter(
     refined_sub_type == "research-article",
     languages == "eng",
-    publication_year < 2010
+    publication_year < 2010,
+    to_keep,
   ) %>%
   select(
     id = url,
@@ -65,9 +54,7 @@ metadata_jstor <- metadata_jstor %>%
 metadata_scopus <- read_rds(file.path(
   elsevier_data_path,
   "scopus_economics_articles.rds"
-))
-
-metadata_scopus <- metadata_scopus %>%
+)) %>%
   mutate(
     year = as.integer(str_sub(prism_cover_date, 1, 4)),
     url = str_c("https://doi.org/", prism_doi)
@@ -87,7 +74,7 @@ metadata_scopus <- metadata_scopus %>%
     ID_Art = id_wos_matched
   )
 
-metadata <- bind_rows(metadata_jstor, metadata_scopus) |> 
+metadata <- bind_rows(metadata_jstor, metadata_scopus) |>
   filter(!is.na(year) & !is.na(title))
 
 sentences <- arrow::read_feather(file.path(
@@ -96,7 +83,7 @@ sentences <- arrow::read_feather(file.path(
 )) %>%
   filter(between(year, 1900, 2009)) %>%
   select(-year) %>%
-  left_join(metadata, by = "id") %>%
+  inner_join(metadata, by = "id") %>%
   arrange(id, sentence_id)
 setDT(sentences)
 
@@ -105,7 +92,7 @@ rm(metadata, metadata_jstor, metadata_scopus)
 backbone_network <- read_rds(file.path(
   data_path,
   "backbone_network_of_sentences_clusters.rds"
-)) |> 
+)) |>
   filter(window != "2010-2019") # we don't have sentences from 2010 onward
 
 list_clusters <- sentences %>%
@@ -1031,7 +1018,7 @@ for (cluster in list_clusters) {
     nrow(distinct(cluster_data, sentence_id, id)),
     " sentences from our corpus. It represents ",
     round(
-      nrow(distinct(cluster_data, sentence_id, id)) /
+      nrow(distinct(cluster_data, id, sentences_id)) /
         nrow(distinct(sentences, id, sentence_id)) *
         100,
       2
