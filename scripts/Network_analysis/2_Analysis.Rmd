@@ -60,7 +60,7 @@ knitr::opts_knit$set(root.dir = data_path)
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
 time_window_var <- 8
-length_cl_var <- 2
+length_cl_var <- 1
 share_cl_max_var <- 0.05
 year_high <- 2010
 year_low <- 1960

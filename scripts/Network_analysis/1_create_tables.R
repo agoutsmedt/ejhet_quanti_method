@@ -79,7 +79,7 @@ layout_fa2_javaV3 <- function(
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
 time_window_var <- 8
-length_cl_var <- 2
+length_cl_var <- 1
 share_cl_max_var <- 0.05
 year_high <- 2010
 year_low <- 1960
@@ -397,7 +397,7 @@ tf_idf <- networkflow::extract_tfidf(
 #### AI name cluster ####
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 cluster_list <- alluv_dt[
-  share_cluster_alluv >= 0.1,
+  length_cluster >= length_cl_var & share_cluster_max >= share_cl_max_var,
   .N,
   dynamic_cluster_leiden
 ][, dynamic_cluster_leiden]
