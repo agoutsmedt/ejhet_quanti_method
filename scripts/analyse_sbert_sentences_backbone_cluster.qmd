@@ -366,14 +366,14 @@ hdbscan_centroids <- sentences[,
     m <- do.call(rbind, embedding) # matrix: rows = sentences in group
     list(hdbscan_centroid = list(colMeans(m))) # store centroid as a list-column
   },
-  by = HDBSCAN_cluster
+  by = .(HDBSCAN_cluster, backbone_community) 
 ]
 
 # 2) merge centroids back into sentences (preserve sentence_id order)
 similarities <- merge(
-  sentences[, .(id, sentence_id, HDBSCAN_cluster, embedding)],
+  sentences[, .(id, sentence_id, HDBSCAN_cluster, backbone_community, embedding)],
   hdbscan_centroids,
-  by = "HDBSCAN_cluster",
+  by = c("HDBSCAN_cluster", "backbone_community"),
   all.x = TRUE
 )
 setorder(similarities, id, sentence_id)
@@ -425,7 +425,7 @@ top_sentences_hdbscan_cluster_centroid <- top_sentences_hdbscan_cluster_centroid
   by = .(backbone_community, HDBSCAN_cluster, window)
 ]
 
-rm(similarities, hdbscan_centroids)
+rm(similarities)
 gc()
 
 ```
@@ -435,9 +435,9 @@ gc()
 # then compute cosine similarity of each sentence to its backbone centroid
 
 # 1) centroid per community: bind embeddings into a matrix then colMeans
-backbone_centroids <- sentences[,
+backbone_centroids <- hdbscan_centroids[,
   {
-    m <- do.call(rbind, embedding) # matrix: rows = sentences in group
+    m <- do.call(rbind, hdbscan_centroid) # matrix: rows = sentences in group
     list(backbone_centroid = list(colMeans(m))) # store centroid as a list-column
   },
   by = backbone_community
@@ -497,21 +497,22 @@ top_sentences_backbone_community_centroid <- top_sentences_backbone_community_ce
   by = backbone_community
 ]
 
-rm(similarities)
+rm(similarities, hdbscan_centroids)
 gc()
 
 ```
 
 ```{r attributing-colors}
 set.seed(89)
-palette_colors <- c(see::see_colors()[1:14], 
-                    see::oi_colors()[1:7], 
-                    scico::scico(n = 6, palette = "roma"))
+# palette_colors <- c(see::see_colors()[1:14], 
+#                     see::oi_colors()[1:7], 
+#                     scico::scico(n = 6, palette = "roma"))
 
 nb_clusters <- sentences %>% 
   pull(backbone_community) %>% 
   unique() %>% 
   length
+palette_colors <- scico::scico(n = nb_clusters, palette = "roma")
 if(nb_clusters > length(palette_colors)) cli_alert_danger("The number of clusters exceed the number of available colors in the palette. Please extend the palette.")
 cluster_colors <- palette_colors[1:nb_clusters]
 ```
@@ -539,19 +540,78 @@ backbone_centroid_matrix <- do.call(
   backbone_centroids$backbone_centroid
 ) |>
   as.matrix()
-mat_scaled <- scale(backbone_centroid_matrix) # scale so features comparable
-d <- dist(mat_scaled, method = "euclidean")
-hc <- hclust(d, method = "average")
+mat_scaled <- scale(backbone_centroid_matrix)
+
+# cosine similarity on rows of the scaled matrix
+row_norms <- sqrt(rowSums(mat_scaled^2))
+row_norms[row_norms == 0] <- NA_real_ # avoid division by zero
+sim_mat <- (mat_scaled %*% t(mat_scaled)) / (row_norms %o% row_norms)
+
+# hierarchical clustering on dissimilarity (1 - cosine similarity)
+d <- as.dist(1 - sim_mat)
+hc <- hclust(d, method = "centroid")
+# order communities along dendrogram and relabel matrix (first with ids)
+ordered_idx <- hc$order
 
 # 4) order communities along the dendrogram
-comm_levels <- backbone_centroids$backbone_community[hc$order]
+comm_levels <- backbone_centroids$backbone_community[ordered_idx]
 
 # 5) build a smooth palette so adjacent communities are visually similar
 names(cluster_colors) <- comm_levels
+```
+
+```{r backbone-heatmap}
+backbone_names <- sentences %>%
+  distinct(backbone_community, label_backbone_community)
+
+mat_sim_ordered <- sim_mat[ordered_idx, ordered_idx]
+communities_ordered <- backbone_centroids$backbone_community[ordered_idx]
+rownames(mat_sim_ordered) <- colnames(mat_sim_ordered) <- communities_ordered
+
+# create wrapped character labels and substitute into matrix names
+wrapped_map <- backbone_names$label_backbone_community
+names(wrapped_map) <- backbone_names$backbone_community
+wrapped_map <- stringr::str_wrap(wrapped_map, 30)
+
+rownames(mat_sim_ordered) <- wrapped_map[rownames(mat_sim_ordered)]
+colnames(mat_sim_ordered) <- wrapped_map[colnames(mat_sim_ordered)]
+
+# prepare long table for ggplot
+sim_df <- as.data.frame(mat_sim_ordered)
+sim_df$Var1 <- rownames(sim_df)
+sim_long <- reshape2::melt(
+  sim_df,
+  id.vars = "Var1",
+  variable.name = "Var2",
+  value.name = "similarity"
+)
+sim_long$Var1 <- factor(sim_long$Var1, levels = rev(rownames(mat_sim_ordered)))
+sim_long$Var2 <- factor(sim_long$Var2, levels = colnames(mat_sim_ordered))
+
+# heatmap plot (returned as object) with wrapped labels on axes
+heatmap_plot <- ggplot(sim_long, aes(x = Var2, y = Var1, fill = similarity)) +
+  geom_raster(show.legend = FALSE) +
+  scale_fill_scico(palette = "lajolla", direction = -1) +
+  theme_minimal(base_size = 12) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.title = element_blank(),
+    panel.grid = element_blank()
+  )
+
+ggsave(
+  here("pictures", "backbone_communities_heatmap.png"),
+  heatmap_plot,
+  units = "cm",
+  width = 30,
+  height = 30,
+  dpi = 300
+)
+
+knitr::include_graphics(here("pictures", "backbone_communities_heatmap.png"))
 
 rm(backbone_centroids, backbone_centroid_matrix, mat_scaled, d, hc)
 ```
-
 ```{r plot-network}
 sentences[, size_window := .N, by = window]
 sentences[,
@@ -1140,8 +1200,7 @@ for (cluster in list_clusters) {
       cat(
         glue(
           "\n#### Top terms {cluster_data[cluster_id == hdbscan_id,]$label_hdbscan_cluster |> unique()} ({time_window})\n\n"
-        ),
-        sep = ""
+        )
       )
 
       top_terms_hdbscan_cluster %>%
@@ -1300,8 +1359,7 @@ for (cluster in list_clusters) {
       cat(
         glue(
           "\n#### Closes sentences {cluster_data[cluster_id == hdbscan,]$label_hdbscan_cluster |> unique()} ({time_window})\n\n"
-        ),
-        sep = ""
+        )
       )
 
       top_sentences_hdbscan_cluster_centroid_filtered %>%
@@ -1383,11 +1441,11 @@ for (cluster in list_clusters) {
       hdbscan <- hdbscan_clusters %>%
         filter(cluster_id == hdbscan_id) %>%
         pull(HDBSCAN_cluster)
+
       cat(
         glue(
           "\n#### Top articles for {cluster_data[cluster_id == hdbscan,]$label_hdbscan_cluster |> unique()} ({time_window})\n\n"
-        ),
-        sep = ""
+        )
       )
 
       cluster_data %>%
@@ -1508,8 +1566,7 @@ for (cluster in list_clusters) {
         cat(
           glue(
             "\n#### Most cited references for {cluster_data[cluster_id == hdbscan,]$label_hdbscan_cluster |> unique()} ({time_window})\n\n"
-          ),
-          sep = ""
+          )
         )
         if (nrow(top_ref_cluster) > 0) {
           top_ref_cluster %>%
