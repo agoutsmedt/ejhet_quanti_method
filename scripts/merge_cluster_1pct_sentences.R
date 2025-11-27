@@ -5,12 +5,6 @@
 
 source(file.path("scripts", "paths_and_packages.R"))
 pacman::p_load(
-  dplyr,
-  tidyr,
-  purrr,
-  stringr,
-  ggplot2,
-  arrow,
   backbone
 )
 
@@ -18,13 +12,17 @@ pacman::p_load(
 # 1. LOAD CLUSTERIZED SENTENCES
 # ---------------------------------------------------------
 
-sentence_clusterized <- arrow::read_feather(
-  file.path(data_path, "hdbscan_all_sentences_with_clusters.feather")
+sentence_dataset <- arrow::open_dataset(
+  file.path(
+    data_path,
+    "hdbscan_all_sentences_with_clusters_min_sample_1.feather"
+  ),
+  format = "feather"
 )
 
-# Remove noise clusters
-sentence_clusterized <- sentence_clusterized %>%
-  filter(!is_noise)
+sentence_clusterized <- sentence_dataset %>%
+  filter(!is_noise) %>% # Remove noise clusters
+  collect()
 
 # ---------------------------------------------------------
 # 2. EXTRACT CENTROIDS (one per window x cluster)
@@ -67,6 +65,18 @@ cluster_similarity <- as.data.frame(cosine_sim) %>%
   # Remove self-similarity
   filter(cluster_A != cluster_B)
 
+# Check similarity distribution
+cluster_similarity %>%
+  ggplot(aes(x = similarity)) +
+  geom_histogram(bins = 100) +
+  theme_minimal() +
+  labs(
+    title = "Distribution of cosine similarities between cluster centroids",
+    x = "Cosine Similarity",
+    y = "Count"
+  )
+
+# Preparing network -------------
 cluster_attributes <- tibble(
   window = centroids$window,
   cluster = centroids$cluster
@@ -90,21 +100,21 @@ edges <- cluster_similarity %>%
   filter(from != to, is.finite(weight))
 
 # 3) Graph
+set.seed(89)
 g <- tbl_graph(nodes = nodes, edges = edges, directed = FALSE) %>%
-  backbone::backbone_from_weighted(model = "disparity", alpha = 0.3) %>%
+  backbone::backbone_from_weighted(model = "lans", alpha = 0.05) %>%
   as_tbl_graph() %>%
   mutate(
     community = group_leiden(
       objective_function = "modularity",
       n = 1000,
-      resolution = 3
+      resolution = 4
     ) %>%
       as.factor()
   )
 
 g |> as_tibble() %>% count(community, sort = T) %>% print(n = Inf)
 write_rds(g, file.path(data_path, "backbone_network_of_sentences_clusters.rds"))
-
 
 # --------------------------------------------
 # 6. BUILD TABLES FOR FURTHER ANALYSES
@@ -124,10 +134,5 @@ documents_partition <- sentence_clusterized %>%
 
 arrow::write_feather(
   documents_partition,
-  file.path(data_path, "sentences_intertemporal_cluster.feather")
-)
-
-
-test <- arrow::read_feather(
   file.path(data_path, "sentences_intertemporal_cluster.feather")
 )

@@ -1139,7 +1139,7 @@ for (cluster in list_clusters) {
 
       cat(
         glue(
-          "#### Top terms {cluster_data[cluster_id == hdbscan_id,]$label_hdbscan_cluster |> unique()} ({time_window})\n\n"
+          "\n#### Top terms {cluster_data[cluster_id == hdbscan_id,]$label_hdbscan_cluster |> unique()} ({time_window})\n\n"
         ),
         sep = ""
       )
@@ -1296,9 +1296,10 @@ for (cluster in list_clusters) {
       hdbscan <- hdbscan_clusters %>%
         filter(cluster_id == hdbscan_id) %>%
         pull(HDBSCAN_cluster)
+      
       cat(
         glue(
-          "#### Top terms {cluster_data[cluster_id == hdbscan,]$label_hdbscan_cluster |> unique()} ({time_window})\n\n"
+          "\n#### Closes sentences {cluster_data[cluster_id == hdbscan,]$label_hdbscan_cluster |> unique()} ({time_window})\n\n"
         ),
         sep = ""
       )
@@ -1384,7 +1385,7 @@ for (cluster in list_clusters) {
         pull(HDBSCAN_cluster)
       cat(
         glue(
-          "#### Top articles for {cluster_data[cluster_id == hdbscan,]$label_hdbscan_cluster |> unique()} ({time_window})\n\n"
+          "\n#### Top articles for {cluster_data[cluster_id == hdbscan,]$label_hdbscan_cluster |> unique()} ({time_window})\n\n"
         ),
         sep = ""
       )
@@ -1506,7 +1507,7 @@ for (cluster in list_clusters) {
       if (nrow(top_ref_cluster) != 0 | nrow(top_ref_without_id_cluster) != 0) {
         cat(
           glue(
-            "#### Most cited references for {cluster_data[cluster_id == hdbscan,]$label_hdbscan_cluster |> unique()} ({time_window})\n\n"
+            "\n#### Most cited references for {cluster_data[cluster_id == hdbscan,]$label_hdbscan_cluster |> unique()} ({time_window})\n\n"
           ),
           sep = ""
         )
