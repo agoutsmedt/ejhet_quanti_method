@@ -3,19 +3,62 @@
 source(file.path("scripts", "paths_and_packages.R"))
 
 # load fulltext metadata
-metadata <- read_rds(file.path(data_path, "full_metadata_journals_cleaned.rds"))
+metadata_jstor <- read_rds(file.path(
+  jstor_data_path,
+  "jstor_constellate_merged_metadata.rds"
+)) %>%
+  filter(
+    refined_sub_type == "research-article",
+    publication_year < 2010,
+    to_keep,
+  ) %>%
+  select(
+    id = url,
+    journal = is_part_of,
+    title,
+    authors = creators_string,
+    year = publication_year,
+    ID_Art = id_wos_matched,
+    languages
+  ) %>%
+  mutate(url = str_c("https://", id)) |>
+  arrange(year)
 
+# same for scopus metadata
+metadata_scopus <- read_rds(file.path(
+  elsevier_data_path,
+  "scopus_economics_articles.rds"
+)) %>%
+  mutate(
+    year = as.integer(str_sub(prism_cover_date, 1, 4)),
+    url = str_c("https://doi.org/", prism_doi)
+  ) %>%
+  filter(
+    full_text == TRUE,
+    subtype_description == "Article",
+    year < 2010
+  ) %>%
+  select(
+    id = scopus_id,
+    title = dc_title,
+    authors = dc_creator,
+    journal = prism_publication_name,
+    year,
+    url,
+    ID_Art = id_wos_matched
+  ) %>%
+  mutate(languages = "eng")
+
+metadata <- bind_rows(metadata_jstor, metadata_scopus) |>
+  filter(!is.na(year) & !is.na(title)) %>%
+  filter(year %in% c(1900:2009))
 # plot distribution overtime of articles
 
-gg <- metadata |>
-  rename(year = publication_year) |>
-  count(year) |>
-  ggplot(aes(x = year)) +
-  geom_point(aes(y = n)) +
-  labs(
-    x = NULL,
-    y = "Number of documents"
-  ) +
+gg <- metadata %>%
+  count(year) %>%
+  ggplot(aes(x = year, y = n)) +
+  geom_col(fill = "grey70", colour = "black", width = 0.8) +
+  labs(x = NULL, y = "Number of documents") +
   theme_light(base_size = 25)
 
 ggsave(
@@ -25,18 +68,19 @@ ggsave(
   height = 9
 )
 
-# plot distribution of language
+
+# language distribution by year
 
 gg <- metadata |>
   mutate(
-    language = str_extract(language, "^[^,]+"),
-    language = ifelse(
-      language %in% c("eng", "ger", "fre", "ita"),
-      language,
+    languages = str_extract(languages, "^[^,]+"),
+    languages = ifelse(
+      languages %in% c("eng", "ger", "fre", "ita"),
+      languages,
       "other"
     ),
-    language = recode(
-      language,
+    languages = recode(
+      languages,
       eng = "English",
       ger = "German",
       fre = "French",
@@ -44,53 +88,11 @@ gg <- metadata |>
       other = "Other"
     )
   ) |>
-  count(language) |>
-  mutate(pct = n / sum(n) * 100) |>
-  ggplot(aes(x = reorder(language, pct, decreasing = TRUE), y = pct)) +
-  geom_col() +
-  # y axis in percentage
-  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
-  labs(
-    x = NULL,
-    y = "Percentage of documents"
-  ) +
-  theme_light(base_size = 25)
-
-# save the plot
-ggsave(
-  plot = gg,
-  file.path(image_path, "language_distribution_fulltext_database.png"),
-  width = 12,
-  height = 9
-)
-
-
-# language distribution by year 
-
-
-gg <- metadata |>
-  mutate(
-    language = str_extract(language, "^[^,]+"),
-    language = ifelse(
-      language %in% c("eng", "ger", "fre", "ita"),
-      language,
-      "other"
-    ),
-    language = recode(
-      language,
-      eng = "English",
-      ger = "German",
-      fre = "French",
-      ita = "Italian",
-      other = "Other"
-    )
-  ) |>
-  rename(year = publication_year) |>
-  count(year, language) |>
+  count(year, languages) |>
   group_by(year) |>
   mutate(pct = n / sum(n) * 100) |>
   ungroup() |>
-  ggplot(aes(x = year, y = pct, fill = language)) +
+  ggplot(aes(x = year, y = pct, fill = languages)) +
   geom_col(position = "fill") +
   scale_fill_brewer(palette = "Set2") +
   scale_y_continuous(labels = scales::percent_format(scale = 100)) +
@@ -102,7 +104,7 @@ gg <- metadata |>
   theme_light(base_size = 25)
 
 
-# save the plot 
+# save the plot
 ggsave(
   plot = gg,
   file.path(image_path, "language_distribution_by_year_fulltext_database.png"),

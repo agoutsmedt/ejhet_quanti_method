@@ -112,6 +112,7 @@ def run_hdbscan_window(dfw):
     clusterer = hdbscan.HDBSCAN(
         min_cluster_size=min_cluster_size,
         min_samples=min_samples,
+        cluster_selection_epsilon = 0.0,
         metric="euclidean",
         cluster_selection_method="leaf",
     )
@@ -167,7 +168,10 @@ for window in tqdm(windows, desc="Processing windows"):
 all_clusters_df = pd.concat([df["df"] for df in dfs]).reset_index(drop=True)
 
 # save 
-save_path = os.path.join(paths.ejhet_project_data_path, "hdbscan_all_sentences_with_clusters.feather")
+save_path = os.path.join(
+    paths.ejhet_project_data_path,
+    "hdbscan_all_sentences_with_clusters_min_sample_1.feather",
+)
 feather.write_feather(all_clusters_df, save_path)
 
 # ---------------------------------------------------------
@@ -192,7 +196,7 @@ top_sentences = top_sentences.sort_values(
 
 # final concatenated dataframe
 
-save_path = os.path.join(paths.ejhet_project_data_path, "hdbscan_top_sentences_per_window.feather")
+save_path = os.path.join(paths.ejhet_project_data_path, "hdbscan_top_sentences_per_window_min_sample_1.feather")
 feather.write_feather(top_sentences, save_path)
 
 # ---------------------------------------------------------

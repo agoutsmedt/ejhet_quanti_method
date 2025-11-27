@@ -72,7 +72,12 @@ label_pos <- df_filtered %>%
 
 p <- ggplot(
   df_filtered,
-  aes(x = as.integer(year), y = relative_freq, color = token_lower)
+  aes(
+    x = as.integer(year),
+    y = relative_freq,
+    color = token_lower,
+    shape = token_lower
+  )
 ) +
   geom_point(alpha = 0.35) +
   geom_smooth(method = "loess", se = FALSE, linewidth = 1) +
@@ -103,7 +108,7 @@ p <- ggplot(
     breaks = seq(1900, max(df_filtered$year, na.rm = TRUE), by = 20),
     limits = c(1900, max(df_filtered$year, na.rm = TRUE) + 10) # marge pour les labels
   ) +
-  theme_light(base_size = 20) +
+  theme_light(base_size = 25) +
   theme(legend.position = "none", plot.margin = margin(5.5, 30, 5.5, 5.5)) +
   coord_cartesian(clip = "off") # autorise le débordement des labels à droite
 
@@ -113,12 +118,6 @@ print(p)
 
 ggsave(
   file.path(image_path, "relative_freq_rationality_and_rational.png"),
-  width = 8,
+  width = 12,
   height = 9
-)
-
-ggsave(
-  file.path(image_path, "relative_freq_rationality_and_rational_2.png"),
-  width = 8,
-  height = 5
 )
