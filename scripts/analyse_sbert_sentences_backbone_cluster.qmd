@@ -74,8 +74,14 @@ metadata_scopus <- read_rds(file.path(
     ID_Art = id_wos_matched
   )
 
+nb_sentences <- read_feather(file.path(
+  data_path,
+  "n_sentences_per_id_after_cleaning.feather"
+))
+
 metadata <- bind_rows(metadata_jstor, metadata_scopus) |>
-  filter(!is.na(year) & !is.na(title))
+  filter(!is.na(year) & !is.na(title)) %>% 
+  left_join(nb_sentences, by = "id")
 
 sentences_dataset <- open_dataset(
   file.path(
@@ -1131,11 +1137,13 @@ for (cluster in list_clusters) {
     select(authors, id) %>%
     separate_longer_delim(authors, delim = ", ") %>%
     # unnest(authors) %>%
+    filter(authors != "\\s?Jr.") %>%
     add_count(authors, name = "nb_sentences") %>%
     distinct(authors, id, nb_sentences) %>%
     add_count(authors, name = "nb_articles") %>%
     distinct(authors, nb_sentences, nb_articles) %>%
     slice_max(order_by = nb_sentences, n = 15)
+
   cat(paste0(
     "The most recurring authors are ",
     paste0(
@@ -1356,7 +1364,7 @@ for (cluster in list_clusters) {
       hdbscan <- hdbscan_clusters %>%
         filter(cluster_id == hdbscan_id) %>%
         pull(HDBSCAN_cluster)
-      
+
       cat(
         glue(
           "\n#### Closes sentences {cluster_data[cluster_id == hdbscan_id,]$label_hdbscan_cluster |> unique()} ({time_window})\n\n"
@@ -1401,6 +1409,7 @@ for (cluster in list_clusters) {
     mutate(
       mean_similarity = mean(similarity_rv) %>% round(3),
       n = n(),
+      weighted_n = if_else(!is.na(n_sentences), n() / n_sentences, NA_real_),
       .by = id
     ) %>%
     distinct(
@@ -1409,6 +1418,7 @@ for (cluster in list_clusters) {
       journal,
       authors,
       n,
+      weighted_n,
       mean_similarity
     ) |>
     slice_max(n, n = 15, with_ties = FALSE) %>%
@@ -1420,6 +1430,7 @@ for (cluster in list_clusters) {
         "Journal",
         "Authors",
         "Number sentences",
+        "Proportion sentences",
         "Words Similarity"
       )
     ) %>%
@@ -1454,6 +1465,11 @@ for (cluster in list_clusters) {
         mutate(
           mean_similarity = mean(similarity_rv) %>% round(3),
           n = n(),
+          weighted_n = if_else(
+            !is.na(n_sentences),
+            n() / n_sentences,
+            NA_real_
+          ),
           .by = id
         ) %>%
         distinct(
@@ -1462,6 +1478,7 @@ for (cluster in list_clusters) {
           journal,
           authors,
           n,
+          weighted_n,
           mean_similarity
         ) %>%
         slice_max(n, n = 10, with_ties = FALSE) %>%
@@ -1473,6 +1490,7 @@ for (cluster in list_clusters) {
             "Journal",
             "Authors",
             "Number sentences",
+            "Proportion sentences",
             "Words Similarity"
           )
         ) %>%
