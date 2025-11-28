@@ -21,7 +21,7 @@ sentence_dataset <- arrow::open_dataset(
 )
 
 sentence_clusterized <- sentence_dataset %>%
-  filter(!is_noise) %>% # Remove noise clusters
+  filter(is_noise == "real_cluster") %>% # Remove noise clusters
   collect()
 
 # ---------------------------------------------------------

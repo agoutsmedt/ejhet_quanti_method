@@ -66,35 +66,35 @@ windows += [(y, y + 9) for y in range(1920, 2010, 10)]
 # Format: list of dict windows
 windows = [{"start": s, "end": e, "label": f"{s}-{e}"} for s, e in windows]
 
-# count rows by decade in df 
-for window in windows:
-    count = len(df[(df["year"] >= window["start"]) & (df["year"] <= window["end"])])
-    print(f"Window {window['label']}: {count} sentences")
+# # count rows by decade in df 
+# for window in windows:
+#     count = len(df[(df["year"] >= window["start"]) & (df["year"] <= window["end"])])
+#     print(f"Window {window['label']}: {count} sentences")
 
 
-# plot number of sentences per window
-window_counts = [
-    {
-        "window": window["label"],
-        "count": len(df[(df["year"] >= window["start"]) & (df["year"] <= window["end"])]),
-    }
-    for window in windows
-]
+# # plot number of sentences per window
+# window_counts = [
+#     {
+#         "window": window["label"],
+#         "count": len(df[(df["year"] >= window["start"]) & (df["year"] <= window["end"])]),
+#     }
+#     for window in windows
+# ]
 
-window_counts_df = pd.DataFrame(window_counts)
+# window_counts_df = pd.DataFrame(window_counts)
 
-p0 = (
-    plotnine.ggplot(window_counts_df)
-    + plotnine.aes(x="window", y="count")
-    + plotnine.geom_bar(stat="identity", fill="#2c7fb8")
-    + plotnine.theme_light(base_size=14)
-    + plotnine.theme(axis_text_x=plotnine.element_text(rotation=45, hjust=1))
-    + plotnine.labs(
-        title="Number of Sentences per Time Window",
-        x="Time Window",
-        y="Number of Sentences",
-    )
-)
+# p0 = (
+#     plotnine.ggplot(window_counts_df)
+#     + plotnine.aes(x="window", y="count")
+#     + plotnine.geom_bar(stat="identity", fill="#2c7fb8")
+#     + plotnine.theme_light(base_size=14)
+#     + plotnine.theme(axis_text_x=plotnine.element_text(rotation=45, hjust=1))
+#     + plotnine.labs(
+#         title="Number of Sentences per Time Window",
+#         x="Time Window",
+#         y="Number of Sentences",
+#     )
+# )
 
 
 
@@ -166,12 +166,10 @@ for window in tqdm(windows, desc="Processing windows"):
 # bind all results if needed and add centroid 
 
 all_clusters_df = pd.concat([df["df"] for df in dfs]).reset_index(drop=True)
+all_clusters_df["is_noise"] = all_clusters_df["cluster"].apply(lambda x: "noise" if x == -1 else "real_cluster")
 
 # save 
-save_path = os.path.join(
-    paths.ejhet_project_data_path,
-    "hdbscan_all_sentences_with_clusters_min_sample_1.feather",
-)
+save_path = os.path.join(paths.ejhet_project_data_path, "hdbscan_all_sentences_with_clusters_min_sample_1.feather")
 feather.write_feather(all_clusters_df, save_path)
 
 # ---------------------------------------------------------
@@ -189,9 +187,7 @@ top_sentences = (
 col_order = ["window", "year", "sentence_id", "sentence", "cluster", "prob", "is_noise", "centroid", "umap"]
 top_sentences = top_sentences[col_order]
 
-top_sentences = top_sentences.sort_values(
-    ["window", "cluster", "prob"], ascending=[True, True, False]
-).reset_index(drop=True) 
+top_sentences = top_sentences.sort_values(["window", "cluster", "prob"], ascending=[True, True, False]).reset_index(drop=True) 
 
 
 # final concatenated dataframe
@@ -232,10 +228,6 @@ p = (
 )
 
 
-image_path = os.path.join(os.getcwd(), "paper", "images", "hdbscan_cluster_distribution_over_time.png")
-
-p.save(image_path, dpi=300, width=10, height=6)
-
 
 # ---------------------------------------------------------
 # 8 NUMBER OF CLUSTERS PER TIME WINDOW
@@ -262,7 +254,4 @@ p2 = (
         y="Number of Clusters",
     )
 )
-
-image_path2 = os.path.join(os.getcwd(), "paper", "images", "hdbscan_number_of_clusters_per_window.png")
-p2.save(image_path2, dpi=300, width=10, height=6)
 
