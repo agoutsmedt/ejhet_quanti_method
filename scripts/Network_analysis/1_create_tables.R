@@ -79,7 +79,7 @@ layout_fa2_javaV3 <- function(
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
 time_window_var <- 8
-length_cl_var <- 1
+length_cl_var <- 2
 share_cl_max_var <- 0.05
 year_high <- 2010
 year_low <- 1960
