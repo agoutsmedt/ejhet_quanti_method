@@ -74,8 +74,14 @@ metadata_scopus <- read_rds(file.path(
     ID_Art = id_wos_matched
   )
 
+nb_sentences <- read_feather(file.path(
+  data_path,
+  "n_sentences_per_id_after_cleaning.feather"
+))
+
 metadata <- bind_rows(metadata_jstor, metadata_scopus) |>
-  filter(!is.na(year) & !is.na(title))
+  filter(!is.na(year) & !is.na(title)) %>% 
+  left_join(nb_sentences, by = "id")
 
 sentences_dataset <- open_dataset(
   file.path(
@@ -234,7 +240,7 @@ top_refs_without_id <- sentences_art %>%
 rm(refs)
 ```
 
-```{r preparing-tfidf-kmean-cluster}
+```{r preparing-tfidf-hdbscan-cluster}
 tokens <- extract_ngrams(
   sentences[, .(
     sentence,
@@ -285,7 +291,7 @@ labels_hdbscan_cluster[,
     window,
     ": ",
     label_hdbscan_cluster
-  ) # we save the backbonne community number to see difference in top terms depending on kmean cluster
+  ) # we save the backbonne community number to see difference in top terms depending on hdbscan cluster
 ]
 
 sentences <- merge(
@@ -337,7 +343,7 @@ sentences <- merge(
 ```
 
 ```{r top-sentences-rationality}
-# Here, we find the sentences the closest to "rational" and "rationality" per kmean cluster
+# Here, we find the sentences the closest to "rational" and "rationality" per hdbscan cluster
 # We would then be able to extract the closest per backbone community later on
 top_sentences_rationality <- sentences %>%
   select(
@@ -525,7 +531,7 @@ Within each decade, we cluster the selected sentences with k-means and compute c
 
 We label backbone community (the meta-clusters) and k-mean clusters with high-TF-IDF unigrams and bigrams and summarize them with indicators: centroid-closest sentences, “future(s)” exemplars, temporal distributions, and top contributing articles. The report is structured along backbone communities, but we also provide disaggregation by k-mean clusters within each backbone community.
 
-The next visualisations shows the overall network of kmean clusters connected by similarity links, coloured by backbone community.
+The next visualisations shows the overall network of hdbscan clusters connected by similarity links, coloured by backbone community.
 
 ```{r preparing-network-plot}
 # # Extract one centroid per HDBSCAN_cluster with data.table
@@ -612,6 +618,7 @@ knitr::include_graphics(here("pictures", "backbone_communities_heatmap.png"))
 
 rm(backbone_centroids, backbone_centroid_matrix, mat_scaled, d, hc)
 ```
+
 ```{r plot-network}
 sentences[, size_window := .N, by = window]
 sentences[,
@@ -986,10 +993,10 @@ A series of indicators are produced for each clusters. Here are some explanation
 **Caution**: This is not an "absolute" TF-IDF: to take into account the fact that more recent periods have more sentences, we average TF-IDF calculated at the window level.
 :::
 
-### Top TF-IDF terms by kmean cluster
+### Top TF-IDF terms by hdbscan cluster
 ::: {.callout-tip}
-**What this shows**: the kmean cluster’s distinctive vocabulary.  
-**How to read**: compare kmean clusters within the same backbone community to see terms that appear or fade.  
+**What this shows**: the hdbscan cluster’s distinctive vocabulary.  
+**How to read**: compare hdbscan clusters within the same backbone community to see terms that appear or fade.  
 **Use**: detect shifts in focus, methods, or cases across time, as well as diversity within a backbone community.
 :::
 
@@ -1014,11 +1021,11 @@ A series of indicators are produced for each clusters. Here are some explanation
 **Caution**: this has been calculated by averaging the embeddings of all sentences in the backbone community, and then finding the sentences closest to this centroid. May be biased towards more recent periods when the community grew over time.
 :::
 
-### Closest sentences to the kmean cluster centroids
+### Closest sentences to the hdbscan cluster centroids
 ::: {.callout-tip}
 **What this shows**: centroid-closest sentences split by window.  
 **How to read**: compare phrasing across clusters to see stability or change, as well as diversity in the community.
-**Caution**: this has been calculated by calculating the distance of each sentence to the centroid of its kmean cluster. Here, we look at the lowest values (low distance) rather than highest values (high similarity).
+**Caution**: this has been calculated by calculating the distance of each sentence to the centroid of its hdbscan cluster. Here, we look at the lowest values (low distance) rather than highest values (high similarity).
 :::
 
 ### Top articles (most sentences) of the backbone community
@@ -1030,10 +1037,10 @@ A series of indicators are produced for each clusters. Here are some explanation
 **How to read**: Most representative articles of the cluster. Worth clicking on the link to see more about what the article is about. Often a good way to understand how it talks about rationality.
 :::
 
-### Top articles (most sentences) of each kmean cluster
+### Top articles (most sentences) of each hdbscan cluster
 ::: {.callout-note}
-**What this shows**: same as above, but split by kmean cluster.  
-**How to read**: see which articles contribute to which kmean clusters within the backbone community
+**What this shows**: same as above, but split by hdbscan cluster.  
+**How to read**: see which articles contribute to which hdbscan clusters within the backbone community
 :::
 
 ### Most cited references in the backbone community
@@ -1053,7 +1060,7 @@ A series of indicators are produced for each clusters. Here are some explanation
 - Abbreviated journal names may vary.
 :::
 
-### Most cited references in each kmean clusters
+### Most cited references in each hdbscan clusters
 ::: {.callout-tip}
 **What this shows**: decade-level leaders by the same two indicators.
 **How to read**: compare decades and clusters in same decate to see which references anchor the community at different times.
@@ -1067,7 +1074,7 @@ A series of indicators are produced for each clusters. Here are some explanation
 - **Authors**: as listed.  
 - **Words Similarity**: cosine similarity to the embeddings of "rational"/"rationality".  
 - **Centroid Similarity**: cosine similarity to the cluster's centroid.  
-- **Distance to centroid**: distance to the kmean cluster's centroid.
+- **Distance to centroid**: distance to the hdbscan cluster's centroid.
 - **Number sentences**: sentences from that work in this cluster.  
 
 ### General cautions
@@ -1130,11 +1137,13 @@ for (cluster in list_clusters) {
     select(authors, id) %>%
     separate_longer_delim(authors, delim = ", ") %>%
     # unnest(authors) %>%
+    filter(authors != "\\s?Jr.") %>%
     add_count(authors, name = "nb_sentences") %>%
     distinct(authors, id, nb_sentences) %>%
     add_count(authors, name = "nb_articles") %>%
     distinct(authors, nb_sentences, nb_articles) %>%
     slice_max(order_by = nb_sentences, n = 15)
+
   cat(paste0(
     "The most recurring authors are ",
     paste0(
@@ -1355,10 +1364,10 @@ for (cluster in list_clusters) {
       hdbscan <- hdbscan_clusters %>%
         filter(cluster_id == hdbscan_id) %>%
         pull(HDBSCAN_cluster)
-      
+
       cat(
         glue(
-          "\n#### Closes sentences {cluster_data[cluster_id == hdbscan,]$label_hdbscan_cluster |> unique()} ({time_window})\n\n"
+          "\n#### Closes sentences {cluster_data[cluster_id == hdbscan_id,]$label_hdbscan_cluster |> unique()} ({time_window})\n\n"
         )
       )
 
@@ -1400,6 +1409,7 @@ for (cluster in list_clusters) {
     mutate(
       mean_similarity = mean(similarity_rv) %>% round(3),
       n = n(),
+      weighted_n = if_else(!is.na(n_sentences), n() / n_sentences, NA_real_),
       .by = id
     ) %>%
     distinct(
@@ -1408,6 +1418,7 @@ for (cluster in list_clusters) {
       journal,
       authors,
       n,
+      weighted_n,
       mean_similarity
     ) |>
     slice_max(n, n = 15, with_ties = FALSE) %>%
@@ -1419,6 +1430,7 @@ for (cluster in list_clusters) {
         "Journal",
         "Authors",
         "Number sentences",
+        "Proportion sentences",
         "Words Similarity"
       )
     ) %>%
@@ -1444,7 +1456,7 @@ for (cluster in list_clusters) {
 
       cat(
         glue(
-          "\n#### Top articles for {cluster_data[cluster_id == hdbscan,]$label_hdbscan_cluster |> unique()} ({time_window})\n\n"
+          "\n#### Top articles for {cluster_data[cluster_id == hdbscan_id,]$label_hdbscan_cluster |> unique()} ({time_window})\n\n"
         )
       )
 
@@ -1453,6 +1465,11 @@ for (cluster in list_clusters) {
         mutate(
           mean_similarity = mean(similarity_rv) %>% round(3),
           n = n(),
+          weighted_n = if_else(
+            !is.na(n_sentences),
+            n() / n_sentences,
+            NA_real_
+          ),
           .by = id
         ) %>%
         distinct(
@@ -1461,6 +1478,7 @@ for (cluster in list_clusters) {
           journal,
           authors,
           n,
+          weighted_n,
           mean_similarity
         ) %>%
         slice_max(n, n = 10, with_ties = FALSE) %>%
@@ -1472,6 +1490,7 @@ for (cluster in list_clusters) {
             "Journal",
             "Authors",
             "Number sentences",
+            "Proportion sentences",
             "Words Similarity"
           )
         ) %>%
@@ -1529,7 +1548,7 @@ for (cluster in list_clusters) {
     print()
 
   if (nrow(hdbscan_clusters) > 1) {
-    cat("\n### Most cited references per kmean clusters\n\n")
+    cat("\n### Most cited references per hdbscan clusters\n\n")
 
     for (hdbscan_id in unique(cluster_data$cluster_id)) {
       time_window <- hdbscan_clusters %>%
@@ -1565,7 +1584,7 @@ for (cluster in list_clusters) {
       if (nrow(top_ref_cluster) != 0 | nrow(top_ref_without_id_cluster) != 0) {
         cat(
           glue(
-            "\n#### Most cited references for {cluster_data[cluster_id == hdbscan,]$label_hdbscan_cluster |> unique()} ({time_window})\n\n"
+            "\n#### Most cited references for {cluster_data[cluster_id == hdbscan_id,]$label_hdbscan_cluster |> unique()} ({time_window})\n\n"
           )
         )
         if (nrow(top_ref_cluster) > 0) {
