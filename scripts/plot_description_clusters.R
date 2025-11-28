@@ -68,7 +68,7 @@ num_clusters_per_window <- df %>%
 p2 <- ggplot(num_clusters_per_window, aes(x = window, y = num_clusters)) +
   geom_col(fill = "grey50", color = "grey20") +
   theme_light(base_size = 25) +
-  theme(axis.text_x = element_text(angle = 45, hjust = 1)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   labs(
     title = "Number of HDBSCAN clusters by decades",
     x = NULL,

@@ -28,9 +28,17 @@ files = ISTEX + JSTOR + ELSEVIER
 RV_FILE = os.path.join(paths.ejhet_project_data_path, "rv_moving_average_by_year.feather")
 df_rv = feather.read_feather(RV_FILE)
 
+# load metadata for deletion
+METADATA = os.path.join(paths.ejhet_project_data_path, "metadata_maintext.feather")
+metadata = feather.read_feather(METADATA)
+valid_ids = set(metadata["id"].unique())
+
+print(f"Metadata contains {len(valid_ids)} valid ids.")
+
 # Load sentences to delete
 DELETE_FILE = os.path.join(paths.ejhet_project_data_path, "sentences_to_delete.feather")
 df_delete = feather.read_feather(DELETE_FILE)
+
 # create lookup set
 delete_keys = set(zip(df_delete["id"], df_delete["sentence_id"]))
 
@@ -54,7 +62,7 @@ def detect_source(path):
 
 
 # keep only files in range 1900-2020
-files = [f for f in files if extract_year(f) and 1900 <= extract_year(f) <= 1999]
+files = [f for f in files if extract_year(f) and 1900 <= extract_year(f) <= 2009]
 
 df_average_vectors_by_id = []
 
@@ -62,7 +70,9 @@ for file in tqdm(files):
   
     # load file
     df = feather.read_feather(file)
-    
+    # sécurité, on garde seulement les ids dans metadata car certains fichiers sbert contiennent des ids hors scope
+    df = df[df["id"].isin(valid_ids)]
+
     # Ensure embedding is numpy array 
     df["embedding"] = df["embedding"].apply(np.array)
     
@@ -91,6 +101,9 @@ df_merged = df_average_vectors_by_id.merge(
     df_rv[["year", "embedding_by_year_centered"]],
     on="year",
     how="left")
+
+
+print(f"fulltexts with average embeddings contains: {len(df_merged)} valid ids")
 
 # --------------------------- COMPUTE COSINE SIMILARITY --------------------------- #
 
@@ -123,3 +136,6 @@ df_merged.rename(columns={"cosine_sim_centered": "cosine_doc_with_rv"}, inplace=
 output_file = os.path.join(EJHET_DATA_PATH, f"fulltexts_cosine_sim_with_rv.feather")
 df_merged.to_feather(output_file)
 
+# load data to check
+# df_check = feather.read_feather(output_file)
+# print(df_check.head())

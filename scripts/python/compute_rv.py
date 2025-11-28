@@ -21,7 +21,15 @@ output_moving = os.path.join(paths.ejhet_project_data_path, "rv_moving_average_b
 # Load sentences to delete
 DELETE_FILE = os.path.join(paths.ejhet_project_data_path, "sentences_to_delete.feather")
 df_delete = feather.read_feather(DELETE_FILE)
-# create lookup set
+
+# load metadata for deletion
+METADATA = os.path.join(paths.ejhet_project_data_path, "metadata_maintext.feather")
+metadata = feather.read_feather(METADATA)
+valid_ids = set(metadata["id"].unique())
+
+print(f"Metadata contains {len(valid_ids)} valid ids.")
+
+# create lookup set for deletion
 delete_keys = set(zip(df_delete["id"], df_delete["sentence_id"]))
 del df_delete
 gc.collect()
@@ -53,6 +61,8 @@ all_years = sorted(files_by_year.keys())
 
 # ----- PASSAGE 1 : VECTEUR MOYEN PAR ANNÉE -----
 year_records = []
+removed_ids = set() # to track removed ids
+
 
 for year in tqdm(all_years, desc="Yearly mean vectors"):
     vecs = []
@@ -60,15 +70,27 @@ for year in tqdm(all_years, desc="Yearly mean vectors"):
 
     for fp in files_by_year[year]:
         df = feather.read_feather(fp)
+
+        # sécurité, on garde seulement les ids dans metadata car certains fichiers sbert contiennent des ids hors scope
+        df = df[df["id"].isin(valid_ids)]
+
         df["embedding"] = df["embedding"].apply(np.array)
         df["source"] = detect_source(fp)
 
         # filtrage seulement pour istex/jstor 
         if df["source"].iloc[0] in ["istex", "jstor"]:
+            
+            before_ids = set(df["id"].unique()) 
             df["key"] = list(zip(df["id"], df["sentence_id"]))
             df = df[~df["key"].isin(delete_keys)]
             df = df.drop(columns="key")
 
+            after_ids = set(df["id"].unique())
+            vanished = before_ids - after_ids
+            removed_ids.update(vanished)
+            if vanished:
+                print(f"Year {year}, file {os.path.basename(fp)}: removed {len(vanished)} ids.")
+        
         matches = df.loc[
             df["sentence"].str.contains(
                 r"\brational(?:ity)?\b", case=False, regex=True
@@ -89,12 +111,19 @@ for year in tqdm(all_years, desc="Yearly mean vectors"):
         {
             "year": year,
             "vec": avg_vec,
-            "count": count_matches,  # <--- sauvegarde du nombre de phrases
+            "count": count_matches,  
         }
     )
 
+print(f"Total removed ids: {len(removed_ids)}")
+
+
+# save 
 df_yearly = pd.DataFrame(year_records)
 df_yearly.to_feather(output_yearly)
+
+
+
 
 
 # ----- PASSAGE 2 : MOYENNE MOBILE CENTRÉE NON PONDÉRÉE -----
@@ -103,7 +132,7 @@ WINDOW_SIZE = 5
 
 records = []
 
-for year in df_yearly["year"].tolist():
+for year in tqdm(df_yearly["year"].tolist(), desc="Centered moving average"):
     # années de la fenêtre
     window = [
         y

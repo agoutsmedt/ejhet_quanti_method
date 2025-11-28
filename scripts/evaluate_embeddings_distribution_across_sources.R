@@ -3,53 +3,8 @@ source(file.path("scripts", "paths_and_packages.R"))
 pacman::p_load(fs)
 
 # load metadata
-
-# load metadata
-metadata_jstor <- read_rds(file.path(
-  jstor_raw_data,
-  "jstor_constellate_merged_metadata.rds"
-))
-
-# keep only relevant lines, columns and rename them for consistency
-metadata_jstor <- metadata_jstor %>%
-  filter(refined_sub_type == "research-article" & languages == "eng") %>%
-  select(url, is_part_of, title, creators_string, publication_year) %>%
-  rename(
-    year = publication_year,
-    id = url,
-    journal = is_part_of,
-    authors = creators_string
-  ) %>%
-  arrange(year)
-
-# same for scopus metadata
-metadata_scopus <- read_rds(file.path(
-  elsevier_data,
-  "scopus_economics_articles.rds"
-))
-
-metadata_scopus <- metadata_scopus %>%
-  filter(full_text == TRUE & subtype_description == "Article") %>%
-  select(
-    scopus_id,
-    dc_title,
-    dc_creator,
-    prism_publication_name,
-    prism_cover_date
-  ) %>%
-  rename(
-    id = scopus_id,
-    title = dc_title,
-    authors = dc_creator,
-    journal = prism_publication_name,
-    year = prism_cover_date
-  ) %>%
-  mutate(year = as.integer(str_sub(year, 1, 4)))
-
-metadata <- bind_rows(metadata_jstor, metadata_scopus)
-
-rm(metadata_jstor, metadata_scopus)
-
+metadata <- read_feather(file.path(data_path, "metadata_maintext.feather")) %>%
+  distinct(id, year)
 
 # fichiers
 ISTEX <- dir_ls(
@@ -71,7 +26,7 @@ ELSEVIER <- dir_ls(
 FILES <- c(ISTEX, JSTOR, ELSEVIER)
 
 # extraction légère des IDs
-ids <- lapply(FILES, function(f) {
+ids_in_embeddings_folders <- lapply(FILES, function(f) {
   # détecter la source à partir du chemin
   source <- case_when(
     grepl("istex_vectors", f) ~ "ISTEX",
@@ -84,17 +39,14 @@ ids <- lapply(FILES, function(f) {
     mutate(source = source)
 })
 
-df_ids <- bind_rows(ids)
+ids_in_embeddings_folders <- bind_rows(ids_in_embeddings_folders) %>%
+  distinct(id, year, source)
 
-# keep only year of interest
-
-df_ids <- df_ids %>%
-  left_join(metadata %>% select(id, year), by = "id") %>%
-  filter(year %in% c(1900:2009)) %>%
-  select(-year)
-
-# store distinct id source mapping
-id_source <- df_ids %>% distinct(id, source)
+# load fulltexts_cosine_sim_with_rv.feather
+fulltexts_cosine_sim <- read_feather(
+  file.path(data_path, "fulltexts_cosine_sim_with_rv.feather")
+) %>%
+  distinct(id, year)
 
 
 # load sentences_to_delete.feather
@@ -118,6 +70,15 @@ ids_deleted <- read_feather(
 ids_not_deleted <- df_ids %>%
   anti_join(ids_deleted, by = c("id", "sentence_id"))
 
+n_sentences_per_id <- ids_not_deleted %>%
+  group_by(id) %>%
+  summarise(n_sentences = n())
+
+# save
+write_feather(
+  n_sentences_per_id,
+  file.path(data_path, "n_sentences_per_id_after_cleaning.feather")
+)
 
 # load # top1pct_sentences_by_year.feather
 top1pct <- read_feather(

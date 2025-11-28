@@ -15,14 +15,18 @@ import paths
 # 1) LOAD RV (representative vectors)
 # ======================================================
 
-RV_FILE = os.path.join(
-    paths.ejhet_project_data_path, "rv_moving_average_by_year.feather"
-)
+RV_FILE = os.path.join(paths.ejhet_project_data_path, "rv_moving_average_by_year.feather")
 df_rv = feather.read_feather(RV_FILE)
 
 # ensure embeddings are np.arrays
 df_rv["rv_embedding"] = df_rv["embedding_by_year_centered"].apply(lambda x: np.array(x))
 
+METADATA = os.path.join(paths.ejhet_project_data_path, "metadata_maintext.feather")
+metadata = feather.read_feather(METADATA)
+valid_ids = set(metadata["id"].unique())
+print(f"Metadata contains {len(valid_ids)} valid ids.")
+del metadata
+gc.collect()
 
 # ======================================================
 # 2) LOAD SENTENCES TO DELETE
@@ -74,8 +78,13 @@ for year in tqdm(years, desc="Processing years"):
 
     # for each file of that year, filter noisy sentences and compute similarity to RV
     for fp in year_files:
+        
         # load file 
         df = feather.read_feather(fp)
+        
+        # sécurité, on garde seulement les ids dans metadata car certains fichiers sbert contiennent des ids hors scope
+        df = df[df["id"].isin(valid_ids)]
+        
         # ensure embeddings are np.arrays
         df["embedding"] = df["embedding"].apply(np.array)
 
@@ -122,7 +131,10 @@ for year in tqdm(years, desc="Processing years"):
 
 df_all = pd.concat(records, ignore_index=True)
 
-OUTPUT_FILE = os.path.join(paths.ejhet_project_data_path, "top1pct_sentences_by_year.feather")
+print(f"Total top 1% sentences across years: {len(df_all)}")
+print(f"Total number of documents in top 1% sentences: {df_all['id'].nunique()}")
 
+
+OUTPUT_FILE = os.path.join(paths.ejhet_project_data_path, "top1pct_sentences_by_year.feather")
 df_all.to_feather(OUTPUT_FILE)
 

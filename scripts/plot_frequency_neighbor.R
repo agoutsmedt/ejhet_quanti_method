@@ -15,64 +15,39 @@ stopwords <- unique(stop_words$word)
 neighbors <- neighbors[!(tolower(word) %in% stopwords)]
 
 # ----------------------------------------------------------
-# Sum by year
-# → We sum them TOGETHER (before + after)
+# Aggregate by decade
 # ----------------------------------------------------------
-
-yearly <- neighbors[, .(N_year = sum(count)), by = .(year, word)]
-
-# ----------------------------------------------------------
-# Compute decade
-# ----------------------------------------------------------
-yearly[, decade := floor(year / 10) * 10]
-
-# Merge 1900 + 1910 → "1900-1910"
-yearly[,
-  decade := fifelse(
-    decade %in% c(1900, 1910),
-    "1900-1910",
-    as.character(decade)
+decadal <- neighbors %>%
+  mutate(decade = year - (year %% 10)) %>%
+  # merge 1900s and 1910s
+  mutate(decade = ifelse(decade < 1920, "1900-1910s", as.character(decade))) %>%
+  summarise(
+    N_decade = sum(count),
+    .by = c("word", "decade")
   )
-]
-yearly <- yearly[!decade %in% c("1900", "1910")]
 
-# filter anything before 1900 and after 2011
-yearly <- yearly[!(year > 2011 | year < 1900)]
+# filter any before 1900 and 2009
+decadal <- decadal %>%
+  filter(decade >= 1900 & decade <= 2009)
 
-# ----------------------------------------------------------
-# Sum by decade
-# ----------------------------------------------------------
-decadal <- yearly[, .(N_decade = sum(N_year)), by = .(decade, word)]
-
-# ----------------------------------------------------------
-# Keep top 6 words per decade
-# ----------------------------------------------------------
-
-# remove stopwords
-df_top <- decadal |>
-  as_tibble() |>
-  mutate(decade = paste0(decade, "s")) |>
-  slice_max(order_by = N_decade, n = 6, by = decade, with_ties = FALSE) |>
+df_top <- decadal %>%
+  filter(decade >= 1900 & decade <= 2009) %>%
+  group_by(decade) %>%
+  slice_max(N_decade, n = 5) %>%
+  ungroup() %>%
   mutate(word = reorder_within(word, N_decade, decade))
 
-# ----------------------------------------------------------
-# Plot
-# ----------------------------------------------------------
-p <- df_top |>
-  ggplot(aes(x = word, y = N_decade)) +
-  geom_col(fill = "steelblue") +
+p <- ggplot(df_top, aes(x = word, y = N_decade)) +
+  geom_col(fill = "grey50", color = "grey20") +
   facet_wrap(~decade, scales = "free") +
   coord_flip() +
   scale_x_reordered() +
-  labs(
-    x = NULL,
-    y = "Frequency"
-  ) +
-  scale_y_continuous(
-    breaks = scales::breaks_pretty(n = 3),
-    labels = scales::label_number()
-  ) +
-  theme_light(base_size = 28)
+  labs(x = NULL, y = "Frequency") +
+  theme_light(base_size = 28) +
+  theme(
+    strip.background = element_blank(),
+    strip.text = element_text(colour = "black")
+  )
 
 print(p)
 
