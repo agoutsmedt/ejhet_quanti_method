@@ -3765,8 +3765,8 @@ pointer-events: all;
 <span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">nb_articles =</span> <span class="fu">uniqueN</span>(id)</span>
 <span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  ),</span>
 <span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>  by <span class="ot">=</span> .(backbone_community, HDBSCAN_cluster, window, authors)</span>
-<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>][<span class="fu">order</span>(<span class="sc">-</span>nb_sentences)][nb_sentences <span class="sc">&gt;</span> <span class="dv">1</span>][,</span>
-<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">head</span>(.SD, <span class="dv">6</span>),</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>][<span class="fu">order</span>(<span class="sc">-</span>nb_sentences)][nb_articles <span class="sc">&gt;</span> <span class="dv">1</span>][,</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">head</span>(.SD, <span class="dv">7</span>),</span>
 <span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>  by <span class="ot">=</span> .(backbone_community, HDBSCAN_cluster, window)</span>
 <span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>

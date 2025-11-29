@@ -253,8 +253,8 @@ recurring_authors <- sentences[
     nb_articles = uniqueN(id)
   ),
   by = .(backbone_community, HDBSCAN_cluster, window, authors)
-][order(-nb_sentences)][nb_sentences > 1][,
-  head(.SD, 6),
+][order(-nb_sentences)][nb_articles > 1][,
+  head(.SD, 7),
   by = .(backbone_community, HDBSCAN_cluster, window)
 ]
 
