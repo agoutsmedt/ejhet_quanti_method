@@ -230,15 +230,52 @@ documents_tbl %>%
 
 ![Relative citation of a selection of seminal papers on behavioral economics](images/citation_patterns_square.jpg){#fig-rationality-paper-citations}
 
+\newpage
 
+# References
 
-# References 
+::: {#refs}
+:::
 
+\newpage
 
 # Appendix 
 
-## Clustering details
+## Overview of the data and methods
+
+Here, a quick summary of all the databases used and the methods used. Could be nice to have a visual representation.
+
+## Building the full-text database
+
+Making clear the difference between the bibliometric database and the full-text database, and the full-text database and the rationality corpus.
+
+### Elaborating the list of economics journals
+
+### Extraction and cleaning process for economics full texts
+
+### Overview of the full-text database content
+
+### Merging with the bibliometric database
+
+## Creating a rationality corpus
+
+### Using LLMs and sentence embeddings to represent sentences
+
+### Building the representative vector of rationality
+
+### Selecting full-texts and sentences related to rationality
+
+## Text clustering methods
+
+### Sliding time windows and HDSBSCAN
 
 ![](images/hdbscan_cluster_distribution_over_time.png) 
 
 ![](images/hdbscan_number_of_clusters_per_window.png)
+
+
+### Backbone networks and matching clusters over time
+
+## Bibliographic coupling
+
+
