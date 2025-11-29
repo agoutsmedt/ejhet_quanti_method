@@ -3550,6 +3550,40 @@ compute_tf_idf <- function(
   token_doc[]
 }
 
+# Compute and apply per-group quantile threshold (data.table)
+filter_group_quantile <- function(
+  dt,
+  group_cols,
+  metric = "tf",
+  probs = 0.75,
+  inclusive = FALSE, # if TRUE use >=, otherwise >
+  keep_threshold = FALSE # if TRUE return the threshold column in result
+) {
+  if (!data.table::is.data.table(dt)) {
+    dt <- data.table::as.data.table(dt)
+  }
+
+  # compute threshold per group
+  dt[,
+    threshold := as.numeric(quantile(.SD[[1]], probs = probs, na.rm = TRUE)),
+    by = group_cols,
+    .SDcols = metric
+  ]
+
+  # apply comparison
+  if (inclusive) {
+    res <- dt[get(metric) >= threshold]
+  } else {
+    res <- dt[get(metric) > threshold]
+  }
+
+  if (!keep_threshold) {
+    res[, threshold := NULL]
+  }
+  return(res[])
+}
+
+
 #: Function for Shiny App-------------------------
 #' Launch an Interactive Shiny App to Explore Network Graphs
 #'

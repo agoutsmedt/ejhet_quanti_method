@@ -24,6 +24,60 @@ sentence_clusterized <- sentence_dataset %>%
   filter(is_noise == "real_cluster") %>% # Remove noise clusters
   collect()
 
+# Check euclidian distances between UMAP centroids
+check_umap_distance <- FALSE
+if (!check_umap_distance) {
+  message("Skipping UMAP distance check...")
+} else {
+  message("Checking UMAP distances between centroids...")
+  centroids_umap <- sentence_clusterized %>%
+    group_by(window, cluster) %>%
+    summarise(
+      centroid_vec = list(colMeans(do.call(rbind, umap))),
+      .groups = "drop"
+    )
+
+  centroid_umap_matrix <- centroids_umap$centroid_vec %>%
+    do.call(rbind, .) %>%
+    as.matrix()
+
+  # Calculate euclidian distance matrix
+  euclidian_umap_dist <- as.matrix(dist(
+    centroid_umap_matrix,
+    method = "euclidean"
+  ))
+
+  cluster_distance <- as.data.frame(euclidian_umap_dist) %>%
+    # transform matrix to long format
+    mutate(cluster_A = 1:n()) |>
+    pivot_longer(
+      -cluster_A,
+      names_to = "cluster_B",
+      values_to = "euclidian_distance"
+    ) %>%
+    mutate(cluster_B = str_remove(cluster_B, "V") |> as.integer()) %>%
+    # Remove self-similarity
+    filter(cluster_A != cluster_B)
+
+  # Preparing network -------------
+  cluster_attributes <- tibble(
+    window = centroids_umap$window,
+    cluster = centroids_umap$cluster
+  ) %>%
+    mutate(cluster_id = 1:n())
+
+  # 1) Nodes: gather node attributes
+  cluster_edges_distance <- cluster_distance %>%
+    # distinct(cluster_id = cluster_A) %>%
+    left_join(cluster_attributes, by = c("cluster_A" = "cluster_id")) %>%
+    rename(window_A = window, cluster_A_num = cluster) %>%
+    left_join(cluster_attributes, by = c("cluster_B" = "cluster_id")) %>%
+    rename(window_B = window, cluster_B_num = cluster) %>%
+    filter(window_A == window_B) %>%
+    # undirected graph: keep only one direction
+    filter(cluster_A < cluster_B, euclidian_distance < 1)
+}
+
 # ---------------------------------------------------------
 # 2. EXTRACT CENTROIDS (one per window x cluster)
 # ---------------------------------------------------------
@@ -102,16 +156,24 @@ edges <- cluster_similarity %>%
 # 3) Graph
 set.seed(89)
 g <- tbl_graph(nodes = nodes, edges = edges, directed = FALSE) %>%
-  backbone::backbone_from_weighted(model = "lans", alpha = 0.05) %>%
+  backbone::backbone_from_weighted(model = "lans", alpha = 0.02) %>%
   as_tbl_graph() %>%
   mutate(
     community = group_leiden(
       objective_function = "modularity",
       n = 1000,
-      resolution = 4
+      resolution = 1
     ) %>%
       as.factor()
   )
+
+# search number of components
+g %>%
+  mutate(comp = group_components()) %>%
+  as_tibble() %>%
+  count(comp, sort = T) %>%
+  print(n = Inf)
+
 
 g |> as_tibble() %>% count(community, sort = T) %>% print(n = Inf)
 write_rds(g, file.path(data_path, "backbone_network_of_sentences_clusters.rds"))

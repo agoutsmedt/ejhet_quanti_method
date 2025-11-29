@@ -27,7 +27,7 @@ e
 ```{r loading-data}
 #| output: false
 source(here::here("scripts", "paths_and_packages.R"))
-p_load(see, kableExtra, DT)
+p_load(see, kableExtra, DT, ggiraph)
 
 metadata_jstor <- read_rds(file.path(
   jstor_data_path,
@@ -47,7 +47,7 @@ metadata_jstor <- read_rds(file.path(
     year = publication_year,
     ID_Art = id_wos_matched
   ) %>%
-  mutate(url = str_c("https://", id)) |>
+  mutate(url = id) |>
   arrange(year)
 
 # same for scopus metadata
@@ -57,7 +57,7 @@ metadata_scopus <- read_rds(file.path(
 )) %>%
   mutate(
     year = as.integer(str_sub(prism_cover_date, 1, 4)),
-    url = str_c("https://doi.org/", prism_doi)
+    url = str_c("doi.org/", prism_doi)
   ) %>%
   filter(
     full_text == TRUE,
@@ -263,16 +263,22 @@ tokens_count_hdbscan_cluster <- compute_tf_idf(
   document_col = c("backbone_community", "HDBSCAN_cluster", "window")
 )
 
+# Apply function to get threshold per (backbone_community, HDBSCAN_cluster, window)
+top_terms_hdbscan_cluster <- filter_group_quantile(
+  tokens_count_hdbscan_cluster,
+  group_cols = c("backbone_community", "HDBSCAN_cluster", "window"),
+  metric = "tf",
+  probs = 0.75
+)
+
 # Top tf-idf terms
-top_terms_hdbscan_cluster <- tokens_count_hdbscan_cluster[order(-tf_idf)][
-  corpus_tf > 20,
+top_terms_hdbscan_cluster <- top_terms_hdbscan_cluster[order(-tf_idf)][,
   head(.SD, 15),
   by = .(backbone_community, HDBSCAN_cluster, window)
 ]
 
 # Labels per decade
-labels_hdbscan_cluster <- tokens_count_hdbscan_cluster[order(-tf_idf)][
-  corpus_tf > 20,
+labels_hdbscan_cluster <- top_terms_hdbscan_cluster[order(-tf_idf)][,
   head(.SD, 5),
   by = .(backbone_community, HDBSCAN_cluster, window)
 ]
@@ -305,8 +311,7 @@ rm(tokens)
 ```
 
 ```{r preparing-tfidf-backbone-community}
-tfidf_mean_community <- tokens_count_hdbscan_cluster[
-  corpus_tf > 50,
+tfidf_mean_community <- top_terms_hdbscan_cluster[,
   .(mean_tf_idf = mean(tf_idf)),
   by = .(token, backbone_community)
 ][order(-mean_tf_idf)]
@@ -363,6 +368,7 @@ top_sentences_rationality <- sentences %>%
 ```
 
 ```{r top-sentences-hdbscan-centroid}
+#| output: false
 # compute centroid (mean embedding) per backbone_community and attach to sentences,
 # then compute cosine similarity of each sentence to its backbone centroid
 
@@ -372,12 +378,18 @@ hdbscan_centroids <- sentences[,
     m <- do.call(rbind, embedding) # matrix: rows = sentences in group
     list(hdbscan_centroid = list(colMeans(m))) # store centroid as a list-column
   },
-  by = .(HDBSCAN_cluster, backbone_community) 
+  by = .(HDBSCAN_cluster, backbone_community)
 ]
 
 # 2) merge centroids back into sentences (preserve sentence_id order)
 similarities <- merge(
-  sentences[, .(id, sentence_id, HDBSCAN_cluster, backbone_community, embedding)],
+  sentences[, .(
+    id,
+    sentence_id,
+    HDBSCAN_cluster,
+    backbone_community,
+    embedding
+  )],
   hdbscan_centroids,
   by = c("HDBSCAN_cluster", "backbone_community"),
   all.x = TRUE
@@ -437,6 +449,7 @@ gc()
 ```
 
 ```{r top-sentences-backbone-centroid}
+#| output: false
 # compute centroid (mean embedding) per backbone_community and attach to sentences,
 # then compute cosine similarity of each sentence to its backbone centroid
 
@@ -609,7 +622,7 @@ ggsave(
   here("pictures", "backbone_communities_heatmap.png"),
   heatmap_plot,
   units = "cm",
-  width = 30,
+  width = 35,
   height = 30,
   dpi = 300
 )
@@ -716,8 +729,6 @@ knitr::include_graphics(here("pictures", "backbone_communities_network.png"))
 ```
 
 ```{r interactive-network}
-p_load(ggiraph)
-
 set.seed(89)
 backbone_network_ggiraph_plot <- ggraph(layout) +
   geom_edge_link(
@@ -1320,6 +1331,57 @@ for (cluster in list_clusters) {
     column_spec(2, "3.5cm") %>%
     print()
 
+  if (nrow(hdbscan_clusters) > 1) {
+    cat(
+      "\n### Closest sentences from 'rational' and 'rationality' of the HDBSCAN cluster\n\n"
+    )
+
+    for (hdbscan_id in unique(cluster_data$cluster_id)) {
+      time_window <- hdbscan_clusters %>%
+        filter(cluster_id == hdbscan_id) %>%
+        pull(window)
+
+      hdbscan <- hdbscan_clusters %>%
+        filter(cluster_id == hdbscan_id) %>%
+        pull(HDBSCAN_cluster)
+
+      cat(
+        glue(
+          "\n#### Closes sentences {cluster_data[cluster_id == hdbscan_id,]$label_hdbscan_cluster |> unique()} ({time_window})\n\n"
+        )
+      )
+
+      top_sentences_rationality_filtered %>%
+        filter(window == time_window, HDBSCAN_cluster == hdbscan) %>%
+        slice_max(similarity, n = 10) %>%
+        select(
+          sentence,
+          title,
+          year,
+          journal,
+          authors,
+          similarity
+        ) %>%
+        kbl(
+          escape = FALSE,
+          col.names = c(
+            "Sentence",
+            "Title",
+            "Year",
+            "Journal",
+            "Authors",
+            "Words Similarity"
+          )
+        ) %>%
+        kable_styling(
+          bootstrap_options = c("striped", "condensed"),
+          font_size = 12
+        ) %>%
+        column_spec(2, "3.5cm") %>%
+        print()
+    }
+  }
+
   ############# Top sentences centroid ##################
   cat("\n### Closest sentences of the backbone community's centroid\n\n")
 
@@ -1509,7 +1571,7 @@ for (cluster in list_clusters) {
     filter(backbone_community == cluster) %>%
     distinct(Nom, Annee, Revue_Abbrege, absolute_cit, weighted_cit) %>%
     filter(absolute_cit > 1) |>
-    slice_max(weighted_cit, n = 15, with_ties = FALSE) %>%
+    slice_max(absolute_cit, n = 15, with_ties = FALSE) %>%
     kbl(
       escape = FALSE,
       col.names = c(
@@ -1530,7 +1592,7 @@ for (cluster in list_clusters) {
     filter(backbone_community == cluster) %>%
     distinct(Nom, Annee, Revue_Abbrege, absolute_cit, weighted_cit) %>%
     filter(absolute_cit > 1) |>
-    slice_max(weighted_cit, n = 15, with_ties = FALSE) %>%
+    slice_max(absolute_cit, n = 15, with_ties = FALSE) %>%
     kbl(
       escape = FALSE,
       col.names = c(
@@ -1568,7 +1630,7 @@ for (cluster in list_clusters) {
           absolute_cluster_cit,
           weighted_cluster_cit
         ) %>%
-        slice_max(weighted_cluster_cit, n = 10, with_ties = FALSE)
+        slice_max(absolute_cluster_cit, n = 10, with_ties = FALSE)
 
       top_ref_without_id_cluster <- top_refs_without_id %>%
         filter(window == time_window, HDBSCAN_cluster == hdbscan) %>%
@@ -1579,7 +1641,7 @@ for (cluster in list_clusters) {
           absolute_cluster_cit,
           weighted_cluster_cit
         ) %>%
-        slice_max(weighted_cluster_cit, n = 10, with_ties = FALSE)
+        slice_max(absolute_cluster_cit, n = 10, with_ties = FALSE)
 
       if (nrow(top_ref_cluster) != 0 | nrow(top_ref_without_id_cluster) != 0) {
         cat(
