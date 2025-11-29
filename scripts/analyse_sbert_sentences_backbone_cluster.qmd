@@ -23,7 +23,7 @@ execute:
 editor_options: 
   chunk_output_type: console
 ---
-e 
+
 ```{r loading-data}
 #| output: false
 source(here::here("scripts", "paths_and_packages.R"))
@@ -240,6 +240,25 @@ top_refs_without_id <- sentences_art %>%
 rm(refs)
 ```
 
+```{r recurring_authors}
+recurring_authors <- sentences[
+  !is.na(authors),
+  .(authors = unlist(strsplit(authors, ",\\s+"))),
+  by = .(id, sentence_id, backbone_community, HDBSCAN_cluster, window)
+][, authors := trimws(authors)][
+  !str_detect(authors, "^(?:<suffix>)?Jr\\.?(?:</suffix>)?$")
+][,
+  .(
+    nb_sentences = .N,
+    nb_articles = uniqueN(id)
+  ),
+  by = .(backbone_community, HDBSCAN_cluster, window, authors)
+][order(-nb_sentences)][nb_sentences > 1][,
+  head(.SD, 6),
+  by = .(backbone_community, HDBSCAN_cluster, window)
+]
+
+```
 ```{r preparing-tfidf-hdbscan-cluster}
 tokens <- extract_ngrams(
   sentences[, .(
@@ -1143,32 +1162,6 @@ for (cluster in list_clusters) {
     ". \n\n"
   ))
 
-  recurring_authors <- cluster_data %>%
-    filter(!is.na(authors)) %>%
-    select(authors, id) %>%
-    separate_longer_delim(authors, delim = ", ") %>%
-    # unnest(authors) %>%
-    filter(authors != "\\s?Jr.") %>%
-    add_count(authors, name = "nb_sentences") %>%
-    distinct(authors, id, nb_sentences) %>%
-    add_count(authors, name = "nb_articles") %>%
-    distinct(authors, nb_sentences, nb_articles) %>%
-    slice_max(order_by = nb_sentences, n = 15)
-
-  cat(paste0(
-    "The most recurring authors are ",
-    paste0(
-      recurring_authors$authors,
-      " (",
-      recurring_authors$nb_sentences,
-      " sentences; ",
-      recurring_authors$nb_articles,
-      " articles)",
-      collapse = ", "
-    ),
-    ".\n\n"
-  ))
-
   recurring_journals <- cluster_data %>%
     select(journal, id) %>%
     add_count(journal, name = "nb_sentences") %>%
@@ -1189,6 +1182,35 @@ for (cluster in list_clusters) {
     ),
     ".\n\n"
   ))
+
+  if (hdbscan_clusters %>% nrow() > 1) {
+    for (hdbscan_id in hdbscan_clusters$cluster_id) {
+      authors <- recurring_authors[
+        HDBSCAN_cluster ==
+          hdbscan_clusters[cluster_id == hdbscan_id, ]$HDBSCAN_cluster &
+          window == hdbscan_clusters[cluster_id == hdbscan_id, ]$window,
+      ]
+
+      cat(paste0(
+        "\n- The most recurring authors of the cluster ",
+        cluster_data[cluster_id == hdbscan_id, ]$label_hdbscan_cluster |>
+          unique(),
+        " (",
+        hdbscan_clusters[cluster_id == hdbscan_id, ]$window,
+        "): ",
+        paste0(
+          authors$authors,
+          " (",
+          authors$nb_sentences,
+          " sentences; ",
+          authors$nb_articles,
+          " articles)",
+          collapse = ", "
+        ),
+        ".\n\n"
+      ))
+    }
+  }
 
   ############# TF-IDF ##################
   cat("\n### Top TF-IDF terms describing the community\n\n")
@@ -1233,6 +1255,41 @@ for (cluster in list_clusters) {
         ) %>%
         print()
     }
+
+    # build a wide table of top-10 tokens per HDBSCAN cluster (columns = label_hdbscan_cluster)
+    # top_terms_wide <- top_terms_hdbscan_cluster %>%
+    #   filter(backbone_community == !!cluster) %>%
+    #   arrange(window, HDBSCAN_cluster, desc(tf_idf)) %>%
+    #   group_by(HDBSCAN_cluster, window) %>%
+    #   slice_head(n = 10) %>%
+    #   ungroup() %>%
+    #   # attach human-readable hdbscan labels
+    #   left_join(
+    #     cluster_data %>%
+    #       distinct(HDBSCAN_cluster, window, label_hdbscan_cluster),
+    #     by = c("HDBSCAN_cluster", "window")
+    #   ) %>%
+    #   # rank tokens within each labelled cluster and pivot to wide
+    #   group_by(label_hdbscan_cluster) %>%
+    #   arrange(window, HDBSCAN_cluster, desc(tf_idf)) %>%
+    #   mutate(rank = row_number()) %>%
+    #   ungroup() %>%
+    #   select(label_hdbscan_cluster, rank, token) %>%
+    #   tidyr::pivot_wider(
+    #     names_from = label_hdbscan_cluster,
+    #     values_from = token
+    #   ) %>%
+    #   arrange(rank) %>%
+    #   select(-rank)
+
+    # # print as a single table: columns = HDBSCAN cluster labels, rows = top tokens
+    # top_terms_wide %>%
+    #   kbl(escape = FALSE, col.names = names(top_terms_wide)) %>%
+    #   kable_styling(
+    #     bootstrap_options = c("striped", "condensed"),
+    #     font_size = 11
+    #   ) %>%
+    #   print()
   }
 
   ############# Distribution sentences ##################

@@ -21,6 +21,7 @@ sentence_dataset <- arrow::open_dataset(
 )
 
 sentence_clusterized <- sentence_dataset %>%
+  select(-centroid) %>%
   filter(is_noise == "real_cluster") %>% # Remove noise clusters
   collect()
 
@@ -75,8 +76,81 @@ if (!check_umap_distance) {
     rename(window_B = window, cluster_B_num = cluster) %>%
     filter(window_A == window_B) %>%
     # undirected graph: keep only one direction
-    filter(cluster_A < cluster_B, euclidian_distance < 1)
+    filter(cluster_A < cluster_B) %>%
+    arrange(window_A, euclidian_distance) %>%
+    select(
+      window_A,
+      cluster_A = cluster_A_num,
+      cluster_B = cluster_B_num,
+      euclidian_distance
+    )
+
+  merge_values <- tibble(
+    window = cluster_attributes$window %>% unique(),
+    distance_threshold = c(0.7, 0.7, 0.8, 0.8, 0.9, 0.9, 1, 1, 1.1, 1.2)
+  )
+
+  cluster_edges_distance <- cluster_edges_distance %>%
+    rename(window = window_A) %>%
+    left_join(merge_values, by = "window") %>%
+    filter(euclidian_distance <= distance_threshold)
+
+  # Build transitive merge groups (connected components) per window
+  cluster_to_merge <- cluster_edges_distance %>%
+    # ensure we operate per window
+    group_by(window) %>%
+    group_modify(
+      ~ {
+        # edges for this window
+        edges_df <- .x %>% transmute(from = cluster_A, to = cluster_B)
+        # if no edges, return empty tibble for this group
+        if (nrow(edges_df) == 0) {
+          return(tibble(
+            window = .y$window,
+            cluster = integer(),
+            merge_group = integer()
+          ))
+        }
+        # build graph and extract components
+        g_w <- igraph::graph_from_data_frame(edges_df, directed = FALSE)
+        comps <- igraph::components(g_w)$membership
+        # membership names are vertex names (cluster numbers) as characters
+        tibble(
+          #    window = .y$window,
+          cluster = as.integer(names(comps)),
+          merge_group = as.integer(comps)
+        )
+      },
+      .keep = TRUE
+    ) %>%
+    ungroup() %>%
+    # create a stable group label and a global integer id for the merged group
+    group_by(window, merge_group) %>%
+    mutate(
+      merged_cluster_label = paste0(window, "_", merge_group),
+      merged_cluster_id = min(cluster)
+    ) %>%
+    ungroup() %>%
+    filter(cluster != merged_cluster_id) %>% # keep only clusters to merge
+    select(window, cluster, merged_cluster_id)
+
+  # replace in sentence_clusterized
+  sentence_clusterized <- sentence_clusterized %>%
+    left_join(
+      cluster_to_merge %>%
+        select(window, cluster, merged_cluster_id),
+      by = c("window", "cluster")
+    ) %>%
+    mutate(
+      cluster = ifelse(
+        is.na(merged_cluster_id),
+        cluster,
+        merged_cluster_id
+      )
+    ) %>%
+    select(-merged_cluster_id)
 }
+
 
 # ---------------------------------------------------------
 # 2. EXTRACT CENTROIDS (one per window x cluster)
@@ -85,7 +159,7 @@ if (!check_umap_distance) {
 centroids <- sentence_clusterized %>%
   group_by(window, cluster) %>%
   summarise(
-    centroid_vec = list(colMeans(do.call(rbind, centroid))),
+    centroid_vec = list(colMeans(do.call(rbind, embedding))),
     .groups = "drop"
   )
 
@@ -162,7 +236,7 @@ g <- tbl_graph(nodes = nodes, edges = edges, directed = FALSE) %>%
     community = group_leiden(
       objective_function = "modularity",
       n = 1000,
-      resolution = 1
+      resolution = 2
     ) %>%
       as.factor()
   )
@@ -174,8 +248,9 @@ g %>%
   count(comp, sort = T) %>%
   print(n = Inf)
 
-
+# Number of communities
 g |> as_tibble() %>% count(community, sort = T) %>% print(n = Inf)
+
 write_rds(g, file.path(data_path, "backbone_network_of_sentences_clusters.rds"))
 
 # --------------------------------------------
