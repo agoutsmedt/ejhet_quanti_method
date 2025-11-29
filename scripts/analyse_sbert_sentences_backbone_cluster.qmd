@@ -23,7 +23,7 @@ execute:
 editor_options: 
   chunk_output_type: console
 ---
-
+e 
 ```{r loading-data}
 #| output: false
 source(here::here("scripts", "paths_and_packages.R"))

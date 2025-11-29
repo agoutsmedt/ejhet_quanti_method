@@ -34,22 +34,104 @@ df["year"] = df["year"].astype(int)
 # 2. GLOBAL UMAP
 # ---------------------------------------------------------
 
-vectors = np.vstack(df["embedding"].values)
+
+# ---------------------------------------------------------
+# 2.1 SAMPLING STRATEGY FOR UMAP
+# ---------------------------------------------------------
+
+sampling_method = "pre1980_full_post1980_cap"
+
+# options:
+# "global"
+# "decade_balanced"
+# "pre1980_full_post1980_cap"
+
+# parameters
+max_per_decade = 5000
+max_per_year_after_1980 = 30000
+
+
+# --- METHOD 1 : GLOBAL FIT ----------------------------------------
+if sampling_method == "global":
+
+    X_sample = np.vstack(df["embedding"].values)
+    suffix = "umap_global"
+
+
+# --- METHOD 2 : BALANCED BY DECADE --------------------------------
+elif sampling_method == "decade_balanced":
+
+    df["decade"] = (df["year"] // 10) * 10
+    counts = df["decade"].value_counts()
+    n_per_decade = min(counts.min(), max_per_decade)
+
+    df_sample = (
+        df.groupby("decade")
+        .sample(n=n_per_decade, replace=False, random_state=42)
+    )
+
+    X_sample = np.vstack(df_sample["embedding"].values)
+    suffix = f"umap_balanced_decade_{n_per_decade}"
+
+
+# --- METHOD 3 : ALL BEFORE 1980 + CAPPED AFTER 1980 ----------------
+elif sampling_method == "pre1980_full_post1980_cap":
+
+    before_1980 = df[df["year"] < 1980]
+
+    after_1980 = (
+        df[df["year"] >= 1980]
+        .groupby("year")
+        .apply(
+            lambda x: x.sample(
+                n=min(len(x), max_per_year_after_1980),
+                replace=False,
+                random_state=42
+            ),
+            include_groups=False
+        )
+        .reset_index(drop=True)
+    )
+
+    df_sample = pd.concat([before_1980, after_1980], ignore_index=True)
+    X_sample = np.vstack(df_sample["embedding"].values)
+
+    suffix = f"umap_pre1980_full_post1980cap_{max_per_year_after_1980}"
+
+
+else:
+    raise ValueError("Unknown sampling_method")
+
+
+# ---------------------------------------------------------
+# 3. FIT + TRANSFORM
+# ---------------------------------------------------------
 
 um = umap.UMAP(
-    n_neighbors=15, # smaller to capture more local structure, bigger to capture more global structure
+    n_neighbors=15,
     min_dist=0.0,
-    n_components=100, 
-    metric="euclidean",  
-    low_memory=True,  
+    n_components=100,
+    metric="cosine",
+    low_memory=True,
     random_state=42,
 )
 
-vectors_umap = um.fit_transform(vectors)
-df["umap"] = list(vectors_umap)
+um.fit(X_sample)
 
-# temp save
-feather.write_feather(df, os.path.join(paths.ejhet_project_data_path, "closest_sentences_0.01_rationality_score_filtered_with_umap.feather"))
+# full projection
+X_full = np.vstack(df["embedding"].values)
+df["umap"] = list(um.transform(X_full))
+
+# ---------------------------------------------------------
+# 4. SAVE
+# ---------------------------------------------------------
+
+output_file = f"closest_sentences_0.01_rationality_score_filtered_with_{suffix}.feather"
+
+feather.write_feather(df,os.path.join(paths.ejhet_project_data_path, output_file))
+
+print(f"Saved → {output_file}")
+
 
 # ---------------------------------------------------------
 # 3. TIME WINDOWS
@@ -226,7 +308,6 @@ p = (
         fill="Cluster",
     )
 )
-
 
 
 # ---------------------------------------------------------
