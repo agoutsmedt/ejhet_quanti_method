@@ -71,13 +71,13 @@ p_load(docstring)
 #' @examples
 #' # normal case: two years with 2-d embeddings
 #' df <- tibble::tibble(
-#'   publication_year = c(1900L, 1900L, 1901L),
+#'   year = c(1900L, 1900L, 1901L),
 #'   embedding = list(c(1, 0), c(0, 1), c(2, 2))
 #' )
-#' build_year_centroid_mat(df, year_col = "publication_year", embedding_col = "embedding")
+#' build_year_centroid_mat(df, year_col = "year", embedding_col = "embedding")
 #'
 #' # edge case: no rows in requested years -> returns 0 x 0 matrix
-#' df_empty <- tibble::tibble(publication_year = integer(0), embedding = list())
+#' df_empty <- tibble::tibble(year = integer(0), embedding = list())
 #' build_year_centroid_mat(df_empty, years = 2000:2001)
 #'
 #' @keywords internal
@@ -258,7 +258,7 @@ row_normalize <- function(mat) {
 #'   where each element is a numeric vector (embedding). One row represents one
 #'   sentence. Rows with `NA` in the embedding column are filtered out prior to grouping.
 #' @param year_col character scalar. Name of the column in `bert_df` that contains
-#'   year labels. Default: `"publication_year"`. Values are treated as grouping keys;
+#'   year labels. Default: `"year"`. Values are treated as grouping keys;
 #'   they are coerced to `character` for matrix dimnames. NA year values are preserved
 #'   as a group if present.
 #' @param embeddings_col character scalar. Name of the list-column containing numeric
@@ -320,7 +320,7 @@ row_normalize <- function(mat) {
 #' library(tibble)
 #' # normal case: two years with two 3-d embeddings each
 #' df <- tibble::tibble(
-#'   publication_year = c(2000, 2000, 2001, 2001),
+#'   year = c(2000, 2000, 2001, 2001),
 #'   embedding = list(
 #'     c(1, 0, 0),
 #'     c(0, 1, 0),
@@ -328,21 +328,21 @@ row_normalize <- function(mat) {
 #'     c(0, 0, 1)
 #'   )
 #' )
-#' compute_apd_by_years(df, year_col = "publication_year", embeddings_col = "embedding", chunk_size = 2L)
+#' compute_apd_by_years(df, year_col = "year", embeddings_col = "embedding", chunk_size = 2L)
 #'
 #' # edge case: a year with no embeddings (row filtered out) -> returns matrix with NAs
 #' df2 <- tibble::tibble(
-#'   publication_year = c(2000, 2001),
+#'   year = c(2000, 2001),
 #'   embedding = list(NA, c(1, 0, 0))
 #' )
-#' compute_apd_by_years(df2, year_col = "publication_year", embeddings_col = "embedding")
+#' compute_apd_by_years(df2, year_col = "year", embeddings_col = "embedding")
 #'
 #' @seealso apd_from_mats, proto_distance_matrix
 #' @keywords similarity
 #' @export
 compute_apd_by_years <- function(
   bert_df,
-  year_col = "publication_year",
+  year_col = "year",
   embeddings_col = "embedding",
   chunk_size = 5000L
 ) {
@@ -853,7 +853,7 @@ consecutive_proto_drift <- function(mat) {
 #'   where each element is a numeric vector (embedding). One row represents one
 #'   sentence. Rows with `NA` in the embedding column are filtered out prior to grouping.
 #' @param year_col character scalar. Name of the column in `bert_df` that contains
-#'   year labels. Default: `"publication_year"`. Values are treated as grouping keys;
+#'   year labels. Default: `"year"`. Values are treated as grouping keys;
 #'   they are coerced to `character` for matrix dimnames. NA year values are preserved
 #'   as a group if present.
 #' @param embeddings_col character scalar. Name of the list-column containing numeric
@@ -915,7 +915,7 @@ consecutive_proto_drift <- function(mat) {
 #' library(tibble)
 #' # normal case: two years with two 3-d embeddings each
 #' df <- tibble::tibble(
-#'   publication_year = c(2000, 2000, 2001, 2001),
+#'   year = c(2000, 2000, 2001, 2001),
 #'   embedding = list(
 #'     c(1, 0, 0),
 #'     c(0, 1, 0),
@@ -923,14 +923,14 @@ consecutive_proto_drift <- function(mat) {
 #'     c(0, 0, 1)
 #'   )
 #' )
-#' compute_apd_by_years(df, year_col = "publication_year", embeddings_col = "embedding", chunk_size = 2L)
+#' compute_apd_by_years(df, year_col = "year", embeddings_col = "embedding", chunk_size = 2L)
 #'
 #' # edge case: a year with no embeddings (row filtered out) -> returns matrix with NAs
 #' df2 <- tibble::tibble(
-#'   publication_year = c(2000, 2001),
+#'   year = c(2000, 2001),
 #'   embedding = list(NA, c(1, 0, 0))
 #' )
-#' compute_apd_by_years(df2, year_col = "publication_year", embeddings_col = "embedding")
+#' compute_apd_by_years(df2, year_col = "year", embeddings_col = "embedding")
 #'
 #' @seealso apd_from_mats, proto_distance_matrix
 #' @keywords similarity
@@ -939,7 +939,7 @@ consecutive_proto_drift <- function(mat) {
 #' @family similarity
 compute_apd_by_years <- function(
   bert_df,
-  year_col = "publication_year",
+  year_col = "year",
   embeddings_col = "embedding",
   chunk_size = 5000L
 ) {
@@ -1326,7 +1326,7 @@ anchor_series_from_apd <- function(APD, anchor_year) {
 #'   Files are expected at `file.path(data_path, "sentences_embeddings",
 #'   glue::glue("sentence_embeddings_{yr}.feather"))`.
 #' @param year_col character scalar. Column name in the per-year files that
-#'   contains the year identifier. Default: `"publication_year"`. Must exist
+#'   contains the year identifier. Default: `"year"`. Must exist
 #'   in the feather files; values are used to filter rows for the requested year.
 #' @param embedding_col character scalar. Name of the list-column holding numeric
 #'   embedding vectors (each element a numeric vector of length `ncol(mat)`).
@@ -1344,7 +1344,7 @@ anchor_series_from_apd <- function(APD, anchor_year) {
 #' @return A tibble with the top driver rows from the earlier (`type = "old"`)
 #'   and later (`type = "new"`) year. Columns retained (when present in the
 #'   source files) include `id` (same type as in files), the year column named
-#'   by `year_col` (returned as `publication_year`), `sentence` (character),
+#'   by `year_col` (returned as `year`), `sentence` (character),
 #'   and `projection_score` (numeric). The tibble has an attribute `"dir_vec"`
 #'   containing the numeric unit direction vector used for projection (length =
 #'   `ncol(mat)`). If no drift is detected the function returns a tibble with
@@ -1417,13 +1417,13 @@ anchor_series_from_apd <- function(APD, anchor_year) {
 #' dir.create(file.path(data_path, "sentences_embeddings"), showWarnings = FALSE)
 #' df2000 <- tibble::tibble(
 #'   id = 1L,
-#'   publication_year = 2000L,
+#'   year = 2000L,
 #'   sentence = "old sense",
 #'   embedding = list(c(0, 0, 1))
 #' )
 #' df2001 <- tibble::tibble(
 #'   id = 2L,
-#'   publication_year = 2001L,
+#'   year = 2001L,
 #'   sentence = "new sense",
 #'   embedding = list(c(0, 1, 0))
 #' )
@@ -1434,7 +1434,7 @@ anchor_series_from_apd <- function(APD, anchor_year) {
 #' mat <- matrix(c(0, 0, 1, 0, 1, 0), nrow = 2, byrow = TRUE)
 #' rownames(mat) <- c("2000", "2001")
 #' res <- rank_drivers_for_year_pair(mat, 2000, data_path = data_path,
-#'                                   year_col = "publication_year",
+#'                                   year_col = "year",
 #'                                   embedding_col = "embedding", top_n = 1)
 #' res
 #'
@@ -1447,7 +1447,7 @@ rank_drivers_for_year_pair <- function(
   mat,
   year_t,
   data_path = NULL,
-  year_col = "publication_year",
+  year_col = "year",
   embedding_col = "embedding",
   top_n = 50L,
   normalize_rows = TRUE,
@@ -1489,7 +1489,7 @@ rank_drivers_for_year_pair <- function(
     # return empty tibble with expected columns and NA dir_vec attribute
     empty_tbl <- tibble::tibble(
       id = integer(0),
-      publication_year = integer(0),
+      year = integer(0),
       sentence = character(0),
       projection_score = numeric(0),
       type = character(0)
@@ -1649,7 +1649,7 @@ rank_drivers_for_year_pair <- function(
       "sentence",
       "projection_score"
     ))) |>
-    dplyr::rename(publication_year = dplyr::any_of(year_col)) |>
+    dplyr::rename(year = dplyr::any_of(year_col)) |>
     dplyr::mutate(type = "old")
   rm(tbl_t)
   gc()
@@ -1664,7 +1664,7 @@ rank_drivers_for_year_pair <- function(
       "sentence",
       "projection_score"
     ))) |>
-    dplyr::rename(publication_year = dplyr::any_of(year_col)) |>
+    dplyr::rename(year = dplyr::any_of(year_col)) |>
     dplyr::mutate(type = "new")
   rm(tbl_tp1)
   gc()
@@ -1830,7 +1830,7 @@ process_matrices_for_drivers <- function(
           rank_drivers_for_year_pair(
             mat = mat_i,
             year_t = yr,
-            year_col = "publication_year",
+            year_col = "year",
             embedding_col = "embedding",
             top_n = 200L,
             normalize_rows = TRUE,

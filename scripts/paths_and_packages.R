@@ -4,7 +4,7 @@ if (!"pacman" %in% rownames(installed.packages())) {
 
 library(pacman)
 
-p_load(
+pacman::p_load(
   here,
   RSQLite,
   DBI,

@@ -2,49 +2,54 @@
 
 graphs <- readRDS(here::here(
   data_path,
+  "networks",
   "networks_1960_2014_8_year_windows_0.1_rationality_score.RDS"
 ))
 
 labels <- readRDS(here::here(
   data_path,
+  "networks",
   "label_ai_1960_2014_8_year_windows_0.1_rationality_score.RDS"
 ))
 
-match_jstor_wos <- readRDS(here::here(data_path, "final_match.RDS")) %>%
-  filter(!is.na(id_match_final)) %>%
-  distinct(url_jstor = id_jstor, ID_Art = id_match_final) %>%
-  mutate(
-    id_jstor = str_extract(url_jstor, "\\/[0-9]+$") %>% str_remove(., "/"),
-    ID_Art = as.character(ID_Art)
-  ) %>%
+metadata <- arrow::read_feather(here::here(
+  data_path,
+  "metadata_maintext.feather"
+)) %>%
+  select(id_wos_matched, id, doi) %>%
+  rename(ID_Art = id_wos_matched, id_text = id) %>%
+  mutate(ID_Art = as.character(ID_Art)) %>%
+  filter(!is.na(ID_Art)) %>%
   distinct(ID_Art, .keep_all = TRUE)
 
-sentences <- read_rds(here::here(
+graphs <- lapply(graphs, function(graph) {
+  graph <- graph %>%
+    activate(nodes) %>%
+    left_join(
+      metadata,
+      by = "ID_Art"
+    )
+})
+
+sentences <- arrow::read_feather(here::here(
   data_path,
-  "closest_sentences_0.01_filtered_rationality_score_window_5.rds"
+  "closest_sentences_0.01_rationality_score_filtered_with_embeddings.feather"
 )) %>%
-  bind_rows() %>%
-  filter(publication_year > 1959) %>%
-  left_join(
-    match_jstor_wos,
-    by = c("id" = "id_jstor"),
-    relationship = "many-to-many"
-  )
+  filter(year > 1959)
 
 # Getting the most representative sentence per article
 
 article_sentences <- sentences %>%
-  group_by(ID_Art) %>%
-  slice_max(order_by = similarity, n = 1, with_ties = FALSE) %>%
-  select(ID_Art, sentence, similarity)
+  group_by(id) %>%
+  slice_max(order_by = similarity_rv, n = 1, with_ties = FALSE) %>%
+  select(id, sentence, similarity_rv)
 
-# add labels to the list of graphs
+# add labels to the list of graphs and prepare node tooltips
 graphs <- lapply(graphs, function(graph) {
   graph <- graph %>%
     activate(nodes) %>%
     left_join(labels, by = c("dynamic_cluster_leiden" = "id_col")) %>%
-    left_join(match_jstor_wos, by = c("ID_Art" = "ID_Art")) %>%
-    left_join(article_sentences, by = c("ID_Art" = "ID_Art")) %>%
+    left_join(article_sentences, by = c("id_text" = "id")) %>%
     arrange(desc(node_size)) %>%
     rename(color = main_colors) %>%
     mutate(
@@ -92,6 +97,7 @@ graphs <- lapply(graphs, function(g) {
 all_graphs_data <- map(graphs, ~ . %N>% as_tibble()) %>%
   bind_rows() %>%
   select(ID_Art, z_within, participation_coefficient)
+
 thr <- choose_role_thresholds(
   z = all_graphs_data$z_within,
   P = all_graphs_data$participation_coefficient
@@ -125,8 +131,8 @@ nodes <- map(graphs, ~ . %N>% as_tibble()) %>%
     value_col = if_else(is.na(value_col), dynamic_cluster_leiden, value_col),
     ID_Art = as.integer(ID_Art),
     Titre = if_else(
-      !is.na(url_jstor),
-      glue("<a href='{url_jstor}' target='_blank'>{Titre}</a>"),
+      !is.na(doi),
+      glue("<a href='{doi}' target='_blank'>{Titre}</a>"),
       Titre
     )
   )
@@ -191,6 +197,7 @@ references_cited <- references_cited %>%
     cluster_citation = n,
     share_ref_cluster
   )
+
 graphs <- lapply(graphs, function(g) {
   g %N>%
     left_join(references_cited) %>%
@@ -208,18 +215,17 @@ graphs <- lapply(graphs, function(g) {
 # Adding closest sentences to each cluster
 cli::cli_alert_info("Adding closest sentences...")
 closest_sentences <- sentences %>%
-  mutate(ID_Art = as.integer(ID_Art)) %>%
   right_join(
     select(
       nodes,
-      ID_Art,
+      id_text,
       Annee_Bibliographique,
       Nom,
       Titre,
       value_col,
       time_window
     ),
-    by = c("ID_Art" = "ID_Art"),
+    by = c("id" = "id_text"),
     relationship = "many-to-many"
   ) %>%
   distinct(
@@ -229,18 +235,19 @@ closest_sentences <- sentences %>%
     Nom,
     Titre,
     sentence,
-    similarity
+    similarity_rv
   ) %>%
   group_by(value_col, time_window) %>%
-  slice_max(order_by = similarity, n = 15, with_ties = FALSE) %>%
-  mutate(similarity = round(similarity, 3)) %>%
-  arrange(desc(similarity))
+  slice_max(order_by = similarity_rv, n = 15, with_ties = FALSE) %>%
+  mutate(similarity_rv = round(similarity_rv, 3)) %>%
+  arrange(desc(similarity_rv))
 
 
 # Calculating circulation of nodes between clusters over time
 cli::cli_alert_info(
   "Calculating circulation of nodes between clusters over time..."
 )
+
 alluvial_data <- networkflow::networks_to_alluv(
   graphs,
   intertemporal_cluster_column = "dynamic_cluster_leiden",
@@ -340,8 +347,8 @@ graphs <- lapply(graphs, function(graph) {
     activate(nodes) %>%
     mutate(
       Titre = if_else(
-        !is.na(url_jstor),
-        glue("<a href='{url_jstor}' target='_blank'>{Titre}</a>"),
+        !is.na(doi),
+        glue("<a href='{doi}' target='_blank'>{Titre}</a>"),
         Titre
       )
     )
@@ -351,7 +358,7 @@ graphs <- lapply(graphs, function(graph) {
 graphs <- lapply(graphs, function(graph) {
   graph <- graph %N>%
     mutate(
-      similarity = round(similarity, 3),
+      similarity_rv = round(similarity_rv, 3),
       participation_coefficient = round(participation_coefficient, 3),
       z_within = round(z_within, 3),
       cit_from_cluster = round(cit_from_cluster, 3),
