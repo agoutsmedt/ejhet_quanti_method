@@ -17,13 +17,14 @@ data_app <- readRDS(here::here(data_path, "data_for_app_bibliometrics.RDS"))
 list2env(data_app, envir = environment())
 rm(data_app)
 
+graphs <- map(graphs, ~ .x %N>% rename(Year = Annee_Bibliographique))
 # Lauching the app
 launch_network_app(
   graph_tbl = graphs,
   cluster_id = "value_col",
   cluster_information = c(
     "Titre",
-    "Annee_Bibliographique",
+    "Year",
     "Nom",
     "sentence",
     "node_size",

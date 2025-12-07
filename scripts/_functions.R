@@ -3837,6 +3837,25 @@ launch_network_app <- function(
 
   # Server
   server <- function(input, output, session) {
+    # Helper to ensure DT font size is 11px for all tables.
+    make_dt <- function(
+      data,
+      ...,
+      options = list(),
+      escape = TRUE,
+      rownames = FALSE
+    ) {
+      dt <- DT::datatable(
+        data,
+        options = options,
+        escape = escape,
+        rownames = rownames,
+        ...
+      )
+      dt <- DT::formatStyle(dt, columns = names(data), fontSize = "11px")
+      dt
+    }
+
     selected_cluster <- shiny::reactiveVal(NULL)
     selected_node_id <- shiny::reactiveVal(NULL)
 
@@ -4051,7 +4070,7 @@ launch_network_app <- function(
         dplyr::rename(Cluster = !!cluster_sym) %>%
         dplyr::select(Cluster, n, pct)
 
-      DT::datatable(
+      make_dt(
         tab,
         options = list(dom = 't', paging = FALSE),
         rownames = FALSE
@@ -4094,6 +4113,8 @@ launch_network_app <- function(
         )
       }
 
+      # enforce font size 11px
+      tbl <- DT::formatStyle(tbl, columns = names(out), fontSize = "11px")
       tbl
     })
 
@@ -4232,10 +4253,10 @@ launch_network_app <- function(
         )
       }
 
-      DT::datatable(
+      # Use helper to enforce font size
+      make_dt(
         shown,
-        filter = "top",
-        escape = -which(cols %in% c("role", "Titre")), # do not escape role HTML; escape others
+        escape = -which(cols %in% c("role", "Titre")),
         rownames = FALSE,
         options = list(
           dom = "lfrtip",
@@ -4279,7 +4300,7 @@ launch_network_app <- function(
           "sentence",
           "similarity"
         )))
-      DT::datatable(
+      make_dt(
         tab,
         escape = FALSE,
         options = list(pageLength = 15),
@@ -4295,10 +4316,10 @@ launch_network_app <- function(
         as.data.frame() %>%
         distinct(!!cluster_sym, time_window) %>%
         dplyr::left_join(top_references)
-      main_refs_cluster %>%
+      tab <- main_refs_cluster %>%
         dplyr::filter(!!cluster_sym == selected_cluster()) %>%
-        dplyr::select(Nom, Annee, Revue_Abbrege, nb_cit) %>%
-        DT::datatable(options = list(pageLength = 20))
+        dplyr::select(Nom, Annee, Revue_Abbrege, nb_cit)
+      make_dt(tab, options = list(pageLength = 20), rownames = FALSE)
     })
 
     output$cluster_refs_without_id <- DT::renderDT({
@@ -4309,10 +4330,10 @@ launch_network_app <- function(
         as.data.frame() %>%
         distinct(!!cluster_sym, time_window) %>%
         dplyr::left_join(top_references_without_id)
-      main_refs_cluster %>%
+      tab <- main_refs_cluster %>%
         dplyr::filter(!!cluster_sym == selected_cluster()) %>%
-        dplyr::select(Nom, Annee, Revue_Abbrege, nb_cit) %>%
-        DT::datatable(options = list(pageLength = 10))
+        dplyr::select(Nom, Annee, Revue_Abbrege, nb_cit)
+      make_dt(tab, options = list(pageLength = 10), rownames = FALSE)
     })
 
     output$cluster_tf_idf <- DT::renderDT({
@@ -4324,11 +4345,11 @@ launch_network_app <- function(
         distinct(!!cluster_sym, time_window) %>%
         dplyr::left_join(tf_idf_data) %>%
         filter(!is.na(term))
-      tf_idf_for_cluster %>%
+      tab <- tf_idf_for_cluster %>%
         dplyr::filter(!!cluster_sym == selected_cluster()) %>%
         dplyr::select(term, tf_idf) %>%
-        mutate(tf_idf = round(tf_idf, 4)) %>%
-        DT::datatable(options = list(pageLength = 20))
+        mutate(tf_idf = round(tf_idf, 4))
+      make_dt(tab, options = list(pageLength = 20), rownames = FALSE)
     })
 
     output$cluster_origins_table <- DT::renderDT({
@@ -4339,11 +4360,11 @@ launch_network_app <- function(
         as.data.frame() %>%
         distinct(!!cluster_sym, time_window) %>%
         dplyr::left_join(cluster_origins)
-      origins %>%
+      tab <- origins %>%
         dplyr::filter(!!cluster_sym == selected_cluster()) %>%
         dplyr::select(previous_cluster, origin_percent) %>%
-        mutate(origin_percent = sprintf("%.1f%%", 100 * origin_percent)) %>%
-        DT::datatable(options = list(pageLength = 10))
+        mutate(origin_percent = sprintf("%.1f%%", 100 * origin_percent))
+      make_dt(tab, options = list(pageLength = 10), rownames = FALSE)
     })
 
     output$cluster_destinies_table <- DT::renderDT({
@@ -4354,11 +4375,23 @@ launch_network_app <- function(
         as.data.frame() %>%
         distinct(!!cluster_sym, time_window) %>%
         dplyr::left_join(cluster_destinies)
-      destinies %>%
+
+      tab <- destinies %>%
         dplyr::filter(!!cluster_sym == selected_cluster()) %>%
         dplyr::select(forward_cluster, destiny_percent) %>%
-        mutate(destiny_percent = sprintf("%.1f%%", 100 * destiny_percent)) %>%
-        DT::datatable(options = list(pageLength = 10))
+        dplyr::mutate(
+          destiny_percent = sprintf("%.1f%%", 100 * destiny_percent)
+        )
+
+      make_dt(
+        tab,
+        options = list(pageLength = 10),
+        rownames = FALSE
+      ) %>%
+        DT::formatStyle(
+          columns = names(tab),
+          fontSize = '11px' # keep explicit for this table too
+        )
     })
   }
 
