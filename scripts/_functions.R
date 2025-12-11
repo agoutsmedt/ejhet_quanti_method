@@ -1,5 +1,3 @@
-p_load(docstring)
-
 #: Manipulating embeddings-----------------------
 
 #' Build per-year centroid matrix from sentence-level embeddings

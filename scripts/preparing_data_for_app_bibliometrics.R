@@ -6,6 +6,28 @@ graphs <- readRDS(here::here(
   "networks_1960_2014_8_year_windows_0.1_rationality_score.RDS"
 ))
 
+ref_dataset <- open_dataset(
+  here::here(wos_data_path, "all_ref.parquet"),
+  format = "parquet"
+)
+
+list_ids <- lapply(graphs, function(graph) {
+  graph %>%
+    activate(nodes) %>%
+    as_tibble() %>%
+    select(ID_Art) %>%
+    distinct()
+}) %>%
+  bind_rows() %>%
+  distinct() %>%
+  pull(ID_Art) %>%
+  as.integer()
+
+refs <- ref_dataset %>%
+  filter(ID_Art %in% list_ids) %>%
+  select(ID_Art, ItemID_Ref, Annee, Nom, Revue_Abbrege) %>%
+  collect()
+
 labels <- readRDS(here::here(
   data_path,
   "networks",
@@ -16,7 +38,10 @@ metadata <- arrow::read_feather(here::here(
   data_path,
   "metadata_maintext.feather"
 )) %>%
-  select(id_wos_matched, id, doi) %>%
+  mutate(
+    url = if_else(str_detect(id, "jstor"), id, str_c("https://doi.org/", doi))
+  ) %>%
+  select(id_wos_matched, id, url) %>%
   rename(ID_Art = id_wos_matched, id_text = id) %>%
   mutate(ID_Art = as.character(ID_Art)) %>%
   filter(!is.na(ID_Art)) %>%
@@ -131,19 +156,11 @@ nodes <- map(graphs, ~ . %N>% as_tibble()) %>%
     value_col = if_else(is.na(value_col), dynamic_cluster_leiden, value_col),
     ID_Art = as.integer(ID_Art),
     Titre = if_else(
-      !is.na(doi),
-      glue("<a href='{doi}' target='_blank'>{Titre}</a>"),
+      !is.na(url),
+      glue("<a href='{url}' target='_blank'>{Titre}</a>"),
       Titre
     )
   )
-
-refs <- open_dataset(
-  here::here(wos_data_path, "all_ref.parquet"),
-  format = "parquet"
-) %>%
-  filter(ID_Art %in% nodes$ID_Art) %>%
-  select(ID_Art, ItemID_Ref, Annee, Nom, Revue_Abbrege) %>%
-  collect()
 
 references_cited <- nodes %>%
   distinct(ID_Art, value_col, time_window) %>%
@@ -347,8 +364,8 @@ graphs <- lapply(graphs, function(graph) {
     activate(nodes) %>%
     mutate(
       Titre = if_else(
-        !is.na(doi),
-        glue("<a href='{doi}' target='_blank'>{Titre}</a>"),
+        !is.na(url),
+        glue("<a href='{url}' target='_blank'>{Titre}</a>"),
         Titre
       )
     )
