@@ -4258,9 +4258,9 @@ launch_network_app <- function(
         rownames = FALSE,
         options = list(
           dom = "lfrtip",
-          searchHighlight = TRUE,
-          rowCallback = js_row_cb,
-          columnDefs = col_defs
+          searchHighlight = TRUE #,
+          # rowCallback = js_row_cb,
+          # columnDefs = col_defs
         )
       )
     })

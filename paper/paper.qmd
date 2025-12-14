@@ -57,11 +57,6 @@ pacman::p_load(knitr,
 
 ```
 
-::: callout-warning
-### Warning
-This is a work in progress. The discussion Section in particular will be expanded in future versions.
-:::
-
 ::: callout-note 
 ### Interactive application to explore the data 
 We have developed an interactive application to explore the data and results presented in this paper. It is available at: [https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/). The first tab allows to explore the bibliometric networks; the second tab is a global summary of textual clusters.
@@ -80,10 +75,6 @@ library(rmarkdown)
 
 drive_auth()
 # Réutiliser le cache OAuth déjà créé
-options(
-  gargle_oauth_cache = ".secrets",
-  gargle_oauth_email = "thomdelcey@gmail.com"
-)
 
 if (!googledrive::drive_has_token()) {
   stop(
