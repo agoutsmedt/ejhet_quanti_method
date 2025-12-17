@@ -61,7 +61,7 @@ knitr::opts_knit$set(root.dir = data_path)
 
 time_window_var <- 8
 length_cl_var <- 2
-share_cl_max_var <- 0.05
+share_cl_max_var <- 5
 year_high <- 2010
 year_low <- 1960
 rationality_score_filter <- 0.05
