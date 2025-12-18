@@ -30,7 +30,7 @@ freeze: auto
 
 
 \begin{abstract}
-blablabla
+This paper provides a concrete, method-driven account of how unsupervised classification models can illuminate the history of a capacious concept in economics—rationality. We assemble a large full-text corpus paired with structured citation data and use large language models to trace semantic shifts since 1900. Combining semantic analysis with bibliometrics and network methods, we document how methodological choices shape both corpus construction and results. We show that unsupervised models, when combined with close reading, function as tools of both confirmation and discovery in the history of economics. We release an application that allows scholars to explore the identified clusters and the indicators used to interpret them.
 \end{abstract}
 
 \begin{keywords}
