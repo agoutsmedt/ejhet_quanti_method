@@ -113,6 +113,14 @@ writeLines(txt, md)
 
 {{< include gdoc.md >}}
 
+\newpage
+
+# References
+
+::: {#refs}
+:::
+
+\newpage
 
 # Figures
 
@@ -170,8 +178,6 @@ documents_tbl <- documents %>%
 #| message: false
 #| warning: false
 
-
-
 # === Subtable 1: Sentences
 sentences_tbl %>%
   kbl(
@@ -182,10 +188,8 @@ sentences_tbl %>%
     escape = FALSE
   ) %>%
   kable_styling(font_size = 9, latex_options = c("striped")) %>%
-  column_spec(1, width = "10cm") %>%
-  column_spec(2, width = "1cm") 
-
-
+  column_spec(1, width = "11cm") %>%
+  column_spec(2, width = "2cm") 
 
 ```
 
@@ -208,8 +212,8 @@ documents_tbl %>%
   kable_styling(font_size = 9, latex_options = c("striped")) %>%
   column_spec(1, width = "5cm") %>%
   column_spec(2, width = "2.5cm") %>%
-  column_spec(3, width = "3.5cm") %>%
-  column_spec(4, width = "1cm") %>%
+  column_spec(3, width = "3cm") %>%
+  column_spec(4, width = "1.5cm") %>%
   # add footnote
   footnote(general = "Documents vectors are computed as the average of their sentences vectors.")
 
@@ -220,13 +224,6 @@ documents_tbl %>%
 
 
 ![Relative citation of a selection of seminal papers on behavioral economics](images/citation_patterns_square.jpg){#fig-rationality-paper-citations}
-
-\newpage
-
-# References
-
-::: {#refs}
-:::
 
 \newpage
 
