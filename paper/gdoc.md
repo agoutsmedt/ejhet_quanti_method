@@ -466,10 +466,10 @@ appear. This metric has been used repeatedly in the literature,
 especially to track the emergence or decline of fields within economics.
 In well-delimited domains, term frequency can serve as a reliable proxy
 for intellectual dynamics. For instance, @trucNeuroeconomics2023 shows
-that counting occurrences of highly specific neuroeconomics terms---such
-as "striatum" or "prefrontal"---closely approximates more advanced
-quantitative measures, and thus provides a simple but meaningful signal
-of activity in the field.
+that counting occurrences of highly specific neuroeconomics terms in
+economics journals---such as "striatum" or "prefrontal"---closely
+approximates more advanced quantitative measures, and thus provides a
+simple but meaningful signal of activity in the field.
 
 @fig-relative-frequency shows the relative frequency (with respect to
 the total number of words published each year) of "rational" and
@@ -775,7 +775,7 @@ the cluster. Such indicators include:
 -   The most recurring authors. While Talcott Parsons and Frank Knight
     appear frequently in the 1920s and 1930s, Herbert Simon becomes a
     central author in the 1950s and 1970s. In the 1990s, we notably find
-    Robert Sugden.
+    Robert Sugden a behavioral economists.
 
 -   The journals that contain the most sentences associated with this
     cluster. The *Journal of Economic Issues*, oriented toward
