@@ -72,23 +72,43 @@ rationality_prop_filter <- 0.10
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
 # matching bd
-matching <- readRDS(here(data_path, "final_match.RDS"))
+jstor_matched <- read_rds(here(
+  data_path,
+  "jstor_constellate_merged_metadata.rds"
+))
+jstor_matched <- jstor_matched[
+  !is.na(id_wos_matched),
+  .(id = url, id_wos_matched)
+]
+
+scopus_matched <- read_rds(here(
+  data_path,
+  "scopus_economics_articles.rds"
+))
+scopus_matched <- scopus_matched[
+  !is.na(id_wos_matched),
+  .(id = scopus_id, id_wos_matched)
+]
+matching <- rbind(jstor_matched, scopus_matched)
 
 # Similarity scores
-rationality_score_original <- arrow::read_feather(here(data_path, "similarities_fulltexts_window_5.feather")) %>% as.data.table()
-rationality_score_original[,id:=paste0("http://www.jstor.org/stable/", id)]
-rationality_score <- rationality_score_original %>% rename(jstor_id = id, similarity = cosine_sim_centered) %>% select(jstor_id, similarity) %>% unique()
-rationality_score <- merge(matching, rationality_score, all.x = TRUE, by.x = "id_jstor", by.y = "jstor_id")
-rationality_score <- rationality_score[!is.na(id_match_final) & !is.na(similarity),.(id_match_final, similarity)] %>% rename(ID_Art = id_match_final)
-rationality_score[,ID_Art:=as.character(ID_Art)]
-rationality_score[,similarity:=mean(similarity), ID_Art]
-rationality_score <- unique(rationality_score)
-filter_mean_score_ids <- rationality_score %>% slice_max(similarity, prop = rationality_prop_filter) %>% .[[1]]
+rationality_score_original <- arrow::read_feather(here(
+  data_path,
+  "fulltexts_cosine_sim_with_rv.feather"
+)) %>%
+  as.data.table()
 
-rationality_score_abstract <- arrow::read_feather(here(data_path, "similarities_wos_abstracts_window_5.feather")) %>% as.data.table()
-ids_rationality_abstract <- rationality_score_abstract %>% slice_max(cosine_sim_centered, prop = rationality_prop_filter) %>% .[[1]]
+rationality_score <- rationality_score_original[, .(
+  id,
+  similarity = cosine_doc_with_rv
+)]
 
-filter_mean_score_ids <- append(filter_mean_score_ids, ids_rationality_abstract)
+filter_mean_score_ids <- rationality_score %>%
+  slice_max(similarity, prop = rationality_prop_filter) %>%
+  .[[1]]
+
+rationality_score[,ID_Art:=id]
+# filter_mean_score_ids <- append(filter_mean_score_ids)
 
 # corpus
 corpus <- arrow::read_parquet(here(general_data_path,"all_art.parquet"), arrow.unsafe_metadata = TRUE)
