@@ -30,7 +30,7 @@ freeze: auto
 
 
 \begin{abstract}
-This paper provides a concrete, method-driven account of how unsupervised classification models can illuminate the history of a capacious concept in economics—rationality. We assemble a large full-text corpus paired with structured citation data and use large language models to trace semantic shifts since 1900. Combining semantic analysis with bibliometrics and network methods, we document how methodological choices shape both corpus construction and results. We show that unsupervised models, when combined with close reading, function as tools of both confirmation and discovery in the history of economics. We release an application that allows scholars to explore the identified clusters and the indicators used to interpret them.
+This paper provides a concrete, method-driven account of how unsupervised classification models can illuminate the history of a capacious concept in economics—rationality. We assemble a large full-text corpus paired with structured citation data and use large language models to trace semantic shifts since 1900. Combining semantic analysis with bibliometrics and network methods, we document how methodological choices shape both corpus construction and results. We show that unsupervised models, when combined with close reading, function as tools of both confirmation and discovery in the history of economics. We also release a free-open source application that allows scholars to explore the identified clusters and the indicators used to interpret them.
 \end{abstract}
 
 \begin{keywords}
@@ -57,11 +57,6 @@ pacman::p_load(knitr,
 
 ```
 
-::: callout-warning
-### Warning
-This is a work in progress. The discussion Section in particular will be expanded in future versions.
-:::
-
 ::: callout-note 
 ### Interactive application to explore the data 
 We have developed an interactive application to explore the data and results presented in this paper. It is available at: [https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/). The first tab allows to explore the bibliometric networks; the second tab is a global summary of textual clusters.
@@ -80,10 +75,6 @@ library(rmarkdown)
 
 drive_auth()
 # Réutiliser le cache OAuth déjà créé
-options(
-  gargle_oauth_cache = ".secrets",
-  gargle_oauth_email = "thomdelcey@gmail.com"
-)
 
 if (!googledrive::drive_has_token()) {
   stop(
