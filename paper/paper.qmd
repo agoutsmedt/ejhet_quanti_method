@@ -113,8 +113,6 @@ writeLines(txt, md)
 
 {{< include gdoc.md >}}
 
-\newpage
-
 # References
 
 ::: {#refs}
