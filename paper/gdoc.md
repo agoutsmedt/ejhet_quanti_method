@@ -90,7 +90,7 @@ article.[^3]
 
 # **From sources to corpus**
 
-## From sources to data
+## From sources to data {#sec-sources_data}
 
 Discussions on quantitative methods often focus on the varieties of
 existing methods. In practice, however, analysis and interpretation come
@@ -161,13 +161,14 @@ sources. For citation data, the Web of Science (WoS) provides the most
 reliable and consistent coverage for our period and has been widely used
 in the history of economics. As for full text, we relied on three
 providers. First, JSTOR's full-text collection offers high-quality scans
-of most leading economics journals. Second, we used Scopus to identify
-peer-reviewed economics journals not included in JSTOR and to compile a
-complementary list of articles; for these, we retrieved full texts first
-through the Elsevier Full-Text API, when available. Third, remaining
-full texts were obtained through the ISTEX project, which provides
-access to a substantial corpus of documents for researchers affiliated
-with French universities.[^5]
+of most leading economics journals [@jstorText2025]. Second, we used
+Scopus to identify peer-reviewed economics journals not included in
+JSTOR and to compile a complementary list of articles; for these, we
+retrieved full texts first through the Elsevier Full-Text API, when
+available. Third, remaining full texts were obtained through the ISTEX
+project [@istexInfrastructure2025], which provides access to a
+substantial corpus of documents for researchers affiliated with French
+universities.[^5]
 
 The @fig-distribution shows the distribution of this corpus. It can be
 already noted that our corpus disproportionately represents Anglo-Saxon
@@ -1327,31 +1328,26 @@ represented approximately 30% of the entire network with many additional
 communities structured by behavioral economics research without being
 explicitly characterized as such. The scale and speed of acceptance
 differed dramatically from Simon's experience. By 1980,
-@kahnemanProspect1979 was already more cited than @simonBehavioral1955
-had been at that point (@fig-rationality-paper-citations). By 1985,
-prospect theory had already surpassed the lifetime citation peak that
-Simon's work would ever reach within economics. By the 2000s, most
-microeconomic publications addressing rationality were explicitly
-connected to the behavioral economics research program. While bounded
-and procedural rationality remained frequently invoked concepts, no
-subsequent research community clearly carried Simon's legacy as a stable
-bibliometric anchor.
+@kahnemanProspect1979 had already surpassed @simonBehavioral1955 in
+annual citations (@fig-rationality-paper-citations). By 1985, prospect
+theory had already surpassed the lifetime citation peak that Simon's
+work would ever reach within economics. By the 2000s, most microeconomic
+publications addressing rationality were explicitly connected to the
+behavioral economics research program. While bounded and procedural
+rationality remained frequently invoked concepts, no subsequent research
+community clearly carried Simon's legacy as a stable bibliometric
+anchor.
 
 The contrast is stark and raises fundamental questions about
-disciplinary reception: Why did one Nobel Prize--winning critique of
-rationality give rise to a vast and self-sustaining research program,
-while another remained conceptually influential yet institutionally
-homeless?
-
-Our quantitative study yields two particularly surprising results
-regarding the contrasting reception of Kahneman and Simon. First, the
-temporal patterns of adoption differ radically. For the historian
-@heukelomBehavioral2014, a pivotal moment in the history of behavioral
-economics was the explicit creation of research programs within the
-Sloan and Russell Sage Foundations between 1984 and 1992, notably
-fostering the Kahneman--Thaler collaboration that decisively transformed
-the field's trajectory. Our analysis, however, suggests that a
-distinctive dynamic was already underway by the early 1980s in the
+disciplinary reception. Our quantitative study yields two particularly
+surprising results regarding the contrasting influence of Kahneman and
+Simon. First, the temporal patterns of adoption differ radically. For
+the historian @heukelomBehavioral2014, a pivotal moment in the history
+of behavioral economics was the explicit creation of research programs
+within the Sloan and Russell Sage Foundations between 1984 and 1992,
+notably fostering the Kahneman--Thaler collaboration that decisively
+transformed the field's trajectory. Our analysis, however, suggests that
+a distinctive dynamic was already underway by the early 1980s in the
 reception of Kahneman and Tversky's work. Despite the fact that
 @kahnemanProspect1979 was the duo's only publication in an economics
 journal until 1985---well before the Sloan--Russell Sage programs
