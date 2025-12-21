@@ -441,7 +441,10 @@ the vectors of all sentences containing "rationality" or "rational" from
 reflects how these terms were used at that particular moment in time. A
 sentence from 1910 is therefore judged similar not to the general, and
 likely modern-day meaning of rationality, but to the way the concept was
-expressed during its own historical period. This helps ensure that our
+expressed during its own historical period. The representative vector
+should be interpreted as an operational summary of the various semantic
+contexts in which 'rationality' is used in a given year, not as a unique
+theoretical definition of rationality itself. This helps ensure that our
 analysis is sensitive to historical changes in language. Since each
 document is a set of sentences, we also identify the documents---and the
 authors---that discuss rationality most intensively or frequently.
@@ -1143,20 +1146,20 @@ The origins of financial issues can be traced to semantic cluster 3
 which focused initially on the theory of investment. Until the 1930s,
 the issue was framed around the returns of capital. For instance, the
 cluster includes the so-called Hayek-Knight controversy on the
-conception of capital [@CohenHayek2003]. After the 1940s,
+conception of capital [@cohenHayek2003]. After the 1940s,
 decision-making under uncertainty becomes a central theme, crystallized
 by works such as @shackleTheory1942 on investment under radical
 uncertainty, which figures among the most representative articles. One
-decade later, Jack @hirshleiferInvestment1958 inscribed investment
-theory within the rising neoclassical conception of rationality, by
-formalizing investment decisions as a problem of intertemporal
-maximization of consumption*.* In the same vein, the Modigliani--Miller
-theorem [@ModiglianiCost1958] further consolidated this shift by
-grounding firm financial decisions as an arbitrage problem, opening the
-path to modern financial economics. Their theorem, they argued, can be
-used "as a basis for rational investment decision-making within the
-firm" [@ModiglianiCost1958, 296]. After the 1960s, cluster 3 became
-much more prominent, consistently accounting for more than 10% of all
+decade later, Jack @hirshleiferTheory1958 inscribed investment theory
+within the rising neoclassical conception of rationality, by formalizing
+investment decisions as a problem of intertemporal maximization of
+consumption*.* In the same vein, the Modigliani--Miller theorem
+[@modiglianiCost1958] further consolidated this shift by grounding
+firm financial decisions as an arbitrage problem, opening the path to
+modern financial economics. Their theorem, they argued, can be used "as
+a basis for rational investment decision-making within the firm"
+[@modiglianiCost1958, 296]. After the 1960s, cluster 3 became much
+more prominent, consistently accounting for more than 10% of all
 sentences. In this period, rationality is increasingly framed in formal
 decision-theoretic terms and focused on appropriate investment choices
 under uncertainty. Hence, our analysis shows that rationality in finance
