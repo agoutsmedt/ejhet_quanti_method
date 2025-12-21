@@ -20,7 +20,7 @@ neighbors <- neighbors[!(tolower(word) %in% stopwords)]
 decadal <- neighbors %>%
   mutate(decade = year - (year %% 10)) %>%
   # merge 1900s and 1910s
-  mutate(decade = ifelse(decade < 1920, "1900-1910s", as.character(decade))) %>%
+  mutate(decade = ifelse(decade < 1920, "1900s-1910s", str_c(decade, "s"))) %>%
   summarise(
     N_decade = sum(count),
     .by = c("word", "decade")

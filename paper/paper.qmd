@@ -13,6 +13,9 @@ biblio-style: tfcad
 format:
   pdf:
     documentclass: interact 
+header-includes:
+  - "\\usepackage{float}"
+  - "\\usepackage{placeins}"
 # Quarto execution defaults
 execute:
   echo: false
@@ -25,7 +28,7 @@ freeze: auto
   Aurélien Goutsmedt\textsuperscript{b}\thanks{Email: aurelien.goutsmedt@uclouvain.be},
   and Alexandre Truc\textsuperscript{c}\thanks{Email: alexandre.truc@cnrs.fr}}
 \affil{\textsuperscript{a}Université de Bourgogne
-       \textsuperscript{b}UC Louvain, ISPOLE; ICHEC
+       \textsuperscript{b}UC Louvain, ISPOLE; ICHEC Brussels
        \textsuperscript{c}Université du CNRS}
 
 
@@ -141,7 +144,6 @@ Relative frequency of terms "rational" and "rationality" in the jstor database (
 
 ![Most frequent neighbor terms of "rational" and "rationality" by decade](images/top_neighbor_words_decades.png){#fig-co-occurence}
 
-
 ```{r}
 #| echo: false
 #| message: false
@@ -186,7 +188,7 @@ sentences_tbl %>%
     align = c("l", "c"),
     escape = FALSE
   ) %>%
-  kable_styling(font_size = 9, latex_options = c("striped")) %>%
+  kable_styling(font_size = 9, latex_options = c("striped", "hold_position")) %>%
   column_spec(1, width = "11cm") %>%
   column_spec(2, width = "2cm") 
 
@@ -208,7 +210,7 @@ documents_tbl %>%
     align = c("l", "l", "l", "c"),
     escape = FALSE
   ) %>%
-  kable_styling(font_size = 9, latex_options = c("striped")) %>%
+  kable_styling(font_size = 9, latex_options = c("striped", "hold_position")) %>%
   column_spec(1, width = "5cm") %>%
   column_spec(2, width = "2.5cm") %>%
   column_spec(3, width = "3cm") %>%
@@ -226,10 +228,9 @@ documents_tbl %>%
 
 \newpage 
 
-
 # Appendix 
 
-We provide here an overview of the data and methods used to build our databases and our methods to build intertemporal semantic clusters and bibliometric communities. @fig-method-schema summarizes the general workflow. We describe the construction of the full-text database, the computation of sentence embeddings and representative vectors of rationality, and the clustering methods used to identify semantic and bibliometric structures over time.
+We provide here an overview of the data and methods used to build our databases and our methods to build intertemporal semantic clusters and bibliometric communities. @fig-method-schema summarizes the general workflow. We describe the construction of the full-text database, the computation of sentence embeddings and representative vectors of rationality, and the clustering methods used to build our semantic clusters and bibliometric communities.
 
 ```{r}
 #| label: fig-method-schema
@@ -240,7 +241,7 @@ We provide here an overview of the data and methods used to build our databases 
 #| fig-pos: "H"
 
 out_path <- here::here("paper", "images", "method_schema.png")
-png(out_path, width = 1600, height = 1100, res = 200)
+png(out_path, width = 1600, height = 1400, res = 300)
 op <- par(mar = c(0, 0, 0, 0))
 plot.new()
 plot.window(xlim = c(0, 1), ylim = c(0, 1))
@@ -263,16 +264,20 @@ draw_box(0.70, 0.74, 0.22, 0.08, "ISTEX")
 # Middle pipeline
 draw_box(0.28, 0.62, 0.44, 0.08, "Merge into full-text database")
 
-# NEW: Web of Science square to the left of the "Add citation" step
+# Web of Science square to the left of the "Add citation" step
 draw_box(0.08, 0.48, 0.08, 0.08, "WOS")
 
-# CHANGED: replace "Web of Science joining" by "Add citation"
+# Add citation
 draw_box(0.28, 0.48, 0.44, 0.08, "Add citation")
 
-draw_box(0.28, 0.34, 0.44, 0.08, "Compute sentence vectors")
-draw_box(0.28, 0.20, 0.44, 0.08, "Compute representative vectors")
+draw_box(0.28, 0.36, 0.44, 0.08, "Compute sentence vectors")
+draw_box(0.28, 0.24, 0.44, 0.08, "Compute representative vectors")
 
-# Bottom: clustering
+# Intermediate outputs from representative vectors
+draw_box(0.12, 0.12, 0.28, 0.06, "Top 1% sentences")
+draw_box(0.6, 0.12, 0.28, 0.06, "Top 10% articles")
+
+# Bottom: clustering outputs
 draw_box(0.08, 0.00, 0.36, 0.08, "Semantic clusters")
 draw_box(0.56, 0.00, 0.36, 0.08, "Bibliometric community")
 
@@ -288,15 +293,19 @@ draw_arrow(0.81, 0.74, 0.61, 0.70)
 
 # Pipeline arrows
 draw_arrow(0.50, 0.62, 0.50, 0.56)  # Merge -> Add citation
-draw_arrow(0.50, 0.48, 0.50, 0.42)  # Add citation -> Sentence vectors
-draw_arrow(0.50, 0.34, 0.50, 0.28)  # Sentence vectors -> Representative vector
+draw_arrow(0.50, 0.48, 0.50, 0.44)  # Add citation -> Sentence vectors
+draw_arrow(0.50, 0.36, 0.50, 0.32)  # Sentence vectors -> Representative vector
 
 # Arrow from WoS square to "Add citation"
 draw_arrow(0.16, 0.52, 0.28, 0.52)
 
-# Arrows to clustering outputs
-draw_arrow(0.50, 0.20, 0.26, 0.08)  # Representative vector -> Semantic clusters
-draw_arrow(0.50, 0.20, 0.72, 0.08)  # Representative vector -> Bibliometric community
+# Arrows from representative vector to the two intermediate boxes
+draw_arrow(0.50, 0.24, 0.3, 0.185)  # to Top 1% sentences (left)
+draw_arrow(0.50, 0.24, 0.7, 0.185)  # to Top 10% articles (right)
+
+# Arrows from intermediate boxes to final outputs
+draw_arrow(0.25, 0.12, 0.25, 0.085)  # Top 1% sentences -> Semantic clusters
+draw_arrow(0.75, 0.12, 0.75, 0.085)  # Top 10% articles -> Bibliometric community
 
 par(op)
 dev.off()

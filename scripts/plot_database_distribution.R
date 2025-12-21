@@ -58,6 +58,8 @@ gg <- metadata %>%
   count(year) %>%
   ggplot(aes(x = year, y = n)) +
   geom_col(fill = "grey70", colour = "black", width = 0.8) +
+  scale_x_continuous(breaks = seq(1900, 2009, by = 20), expand = c(0.01, 0)) +
+  scale_y_continuous(expand = c(0.01, 0)) +
   labs(x = NULL, y = "Number of documents") +
   theme_light(base_size = 25)
 
@@ -86,20 +88,29 @@ gg <- metadata |>
       fre = "French",
       ita = "Italian",
       other = "Other"
-    )
+    ),
+    languages = factor(
+      languages,
+      levels = c("English", "German", "French", "Italian", "Other")
+    ),
+    decade = (year - (year %% 10))
   ) |>
-  count(year, languages) |>
-  group_by(year) |>
+  count(decade, languages) |>
+  group_by(decade) |>
   mutate(pct = n / sum(n) * 100) |>
   ungroup() |>
-  ggplot(aes(x = year, y = pct, fill = languages)) +
+  ggplot(aes(x = decade, y = pct, fill = fct_rev(languages))) +
   geom_col(position = "fill") +
-  scale_fill_brewer(palette = "Set2") +
-  scale_y_continuous(labels = scales::percent_format(scale = 100)) +
+  scale_fill_grey(start = 0.8, end = 0.1) +
+  scale_y_continuous(
+    labels = scales::percent_format(scale = 100),
+    expand = c(0.01, 0)
+  ) +
+  scale_x_continuous(breaks = seq(1900, 2009, by = 20), expand = c(0.01, 0)) +
   labs(
     x = NULL,
     y = "Percentage of documents",
-    fill = NULL,
+    fill = NULL
   ) +
   theme_light(base_size = 25)
 
