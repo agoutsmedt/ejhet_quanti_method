@@ -66,8 +66,8 @@ gg <- metadata %>%
 ggsave(
   plot = gg,
   file.path(image_path, "documents_distribution_fulltext_database.png"),
-  width = 12,
-  height = 9
+  width = 16,
+  height = 10
 )
 
 
@@ -119,6 +119,6 @@ gg <- metadata |>
 ggsave(
   plot = gg,
   file.path(image_path, "language_distribution_by_year_fulltext_database.png"),
-  width = 12,
-  height = 9
+  width = 16,
+  height = 10
 )

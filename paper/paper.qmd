@@ -13,9 +13,6 @@ biblio-style: tfcad
 format:
   pdf:
     documentclass: interact 
-header-includes:
-  - "\\usepackage{float}"
-  - "\\usepackage{placeins}"
 # Quarto execution defaults
 execute:
   echo: false
@@ -29,15 +26,15 @@ freeze: auto
   and Alexandre Truc\textsuperscript{c}\thanks{Email: alexandre.truc@cnrs.fr}}
 \affil{\textsuperscript{a}Université de Bourgogne
        \textsuperscript{b}UC Louvain, ISPOLE; ICHEC Brussels
-       \textsuperscript{c}Université du CNRS}
+       \textsuperscript{c}Université Côte d'Azur}
 
 
 \begin{abstract}
-This paper provides a concrete, method-driven account of how unsupervised classification models can illuminate the history of a capacious concept in economics—rationality. We assemble a large full-text corpus paired with structured citation data and use large language models to trace semantic shifts since 1900. Combining semantic analysis with bibliometrics and network methods, we document how methodological choices shape both corpus construction and results. We show that unsupervised models, when combined with close reading, function as tools of both confirmation and discovery in the history of economics. We also release a free-open source application that allows scholars to explore the identified clusters and the indicators used to interpret them.
+This article offers a concrete, method-driven demonstration of how unsupervised quantitative methods can enrich the history of economic thought. Focusing on the long and shifting history of rationality in economics, we assemble and analyze the most extensive English-language corpus ever used for a historical study of economics, with nearly 290,000 full-text journal articles published between 1900 and 2009, paired with structured citation data. Combining large language model–based semantic analysis with bibliometric and network methods, we trace how economists have discussed, reformulated, and contested rationality over more than a century. Our approach identifies sentences and articles most closely associated with rationality, groups them into semantic clusters and bibliometric communities within short time windows, and then aggregates these groupings over time. This multi-scale design makes it possible to both “zoom out” to capture broad intellectual transformations and “zoom in” to examine specific debates, research programs, and moments of reception. Beyond substantive findings—illustrated through the contrasting trajectories of bounded rationality and behavioral economics—the article advances a broader methodological argument. We show that unsupervised quantitative methods, when combined with close reading and historiographical expertise, function not only as tools of confirmation but also as genuine discovery devices, revealing patterns, continuities, and tensions that remain difficult to grasp through traditional approaches alone. To foster transparency and reuse, we also release an open-source interactive application that allows readers to explore the clusters, indicators, and interpretive pathways underlying our analysis.
 \end{abstract}
 
 \begin{keywords}
-rationality; economics; bibliometrics; text mining; natural language processing; large language models
+rationality; economics history; bibliometrics; behavioral economics; natural language processing; large language models
 \end{keywords}
 
 \begin{jelcode}
@@ -60,13 +57,6 @@ pacman::p_load(knitr,
                kableExtra)
 
 ```
-
-::: callout-note 
-### Interactive application to explore the data 
-We have developed an interactive application to explore the data and results presented in this paper. It is available at: [https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/). The first tab allows to explore the bibliometric networks; the second tab is a global summary of textual clusters.
-::: 
-
-
 
 ```{r}
 #| label: fetch-gdoc
@@ -124,13 +114,13 @@ writeLines(txt, md)
 
 \newpage
 
-# Figures
+# Figures  
 
 ::: {#fig-distribution layout-nrow="2"}
 
-![Documents](images/documents_distribution_fulltext_database.png){#fig-fulltextdistribution_a width="90%"}
+![Documents](images/documents_distribution_fulltext_database.png){#fig-fulltextdistribution_a width="86%"}
 
-![Languages](images/language_distribution_by_year_fulltext_database.png){#fig-fulltextdistribution_b width="90%"}
+![Languages](images/language_distribution_by_year_fulltext_database.png){#fig-fulltextdistribution_b width="86%"}
 
 Distribution of documents and languages in the full-text database over time (1900-2009).
 ::: 
@@ -143,6 +133,8 @@ Relative frequency of terms "rational" and "rationality" in the jstor database (
 ::: 
 
 ![Most frequent neighbor terms of "rational" and "rationality" by decade](images/top_neighbor_words_decades.png){#fig-co-occurence}
+
+![Relative citation of a selection of seminal papers on behavioral economics](images/citation_patterns_square.jpg){#fig-rationality-paper-citations}
 
 ```{r}
 #| echo: false
@@ -188,12 +180,11 @@ sentences_tbl %>%
     align = c("l", "c"),
     escape = FALSE
   ) %>%
-  kable_styling(font_size = 9, latex_options = c("striped", "hold_position")) %>%
+  kable_styling(font_size = 9, latex_options = c("striped")) %>%
   column_spec(1, width = "11cm") %>%
   column_spec(2, width = "2cm") 
 
 ```
-
 
 ```{r}
 #| label: tbl-illustrative_documents
@@ -210,7 +201,7 @@ documents_tbl %>%
     align = c("l", "l", "l", "c"),
     escape = FALSE
   ) %>%
-  kable_styling(font_size = 9, latex_options = c("striped", "hold_position")) %>%
+  kable_styling(font_size = 9, latex_options = c("striped")) %>%
   column_spec(1, width = "5cm") %>%
   column_spec(2, width = "2.5cm") %>%
   column_spec(3, width = "3cm") %>%
@@ -218,15 +209,9 @@ documents_tbl %>%
   # add footnote
   footnote(general = "Documents vectors are computed as the average of their sentences vectors.")
 
-
-
-
 ```
 
-
-![Relative citation of a selection of seminal papers on behavioral economics](images/citation_patterns_square.jpg){#fig-rationality-paper-citations}
-
-\newpage 
+\newpage
 
 # Appendix 
 
@@ -241,7 +226,7 @@ We provide here an overview of the data and methods used to build our databases 
 #| fig-pos: "H"
 
 out_path <- here::here("paper", "images", "method_schema.png")
-png(out_path, width = 1600, height = 1400, res = 300)
+png(out_path, width = 1600, height = 1000, res = 300)
 op <- par(mar = c(0, 0, 0, 0))
 plot.new()
 plot.window(xlim = c(0, 1), ylim = c(0, 1))
@@ -486,7 +471,7 @@ To identify the sentences most closely related to rationality, we compare every 
 
 ### Clustering with HDBSCAN
 
-We cluster the top 1\% sentences within temporal windows using HDBSCAN. To make clustering tractable while preserving semantic structure, we first project the 768-dimensional sentence embeddings to a 100-dimensional UMAP space (metric = cosine, n_neighbors = 15, min_dist = 0.0). Intuitively, the rationale for using UMAP is that high-dimensional spaces are often sparse, making distance-based clustering less effective. UMAP finds a lower-dimensional representation of the data that preserves information of the original high-dimensional space. This is a standard practice in text clustering workflows [e.g., \cite{delcey_large_2023}].
+We cluster the top 1\% sentences within temporal windows using HDBSCAN. To make clustering tractable while preserving semantic structure, we first project the 768-dimensional sentence embeddings to a 100-dimensional UMAP space (metric = cosine, n_neighbors = 15, min_dist = 0.0). Intuitively, the rationale for using UMAP is that high-dimensional spaces are often sparse, making distance-based clustering less effective. UMAP finds a lower-dimensional representation of the data that preserves information of the original high-dimensional space. This is a standard practice in text clustering workflows [e.g., @benzMapping2025].
 
 The UMAP fit uses a sampling strategy that keeps all pre-1980 sentences and caps the post-1980 years at 30,000 sentences each, then we transform the full dataset with the fitted model. This approach aims to avoid over-representing recent years in the UMAP fit while retaining their semantic structure. We define time windows as 1900--1919 (merged) followed by standard decades from 1920--1929 through 2000--2009. Within each window, we run HDBSCAN on the UMAP coordinates. HDBSCAN's hyperparameters, in particular `min_cluster_size` and `min_samples`, influence the granularity of the clusters and have to be chosen given the data and research question. We set `min_cluster_size = max(20, 1% of total sentences in the window)` and `min_samples = 1`. These parameters were selected based on empirical inspection of cluster interpretability. @fig-hdbscan_cluster_distribution_over_time shows the distribution of noisy vs clustered sentences and the number of clusters identified per time window by HDBSCAN.
 
@@ -532,17 +517,15 @@ draw_arrow <- function(x0, y0, x1, y1) {
 }
 
 draw_box(0.28, 0.74, 0.44, 0.08, "Representative vectors")
-draw_box(0.28, 0.62, 0.44, 0.08, "Select closest documents")
-draw_box(0.28, 0.50, 0.44, 0.08, "Backbone extraction")
-draw_box(0.28, 0.38, 0.44, 0.08, "Leiden community detection")
-draw_box(0.28, 0.26, 0.44, 0.08, "Merge communities over time")
+draw_box(0.28, 0.59, 0.44, 0.08, "Select closest documents")
+draw_box(0.28, 0.44, 0.44, 0.08, "Leiden community detection")
+draw_box(0.28, 0.29, 0.44, 0.08, "Merge communities over time")
 draw_box(0.28, 0.14, 0.44, 0.08, "Intertemporal bibliometric communities")
 
-draw_arrow(0.50, 0.732, 0.50, 0.708)
-draw_arrow(0.50, 0.612, 0.50, 0.588)
-draw_arrow(0.50, 0.492, 0.50, 0.468)
-draw_arrow(0.50, 0.372, 0.50, 0.348)
-draw_arrow(0.50, 0.252, 0.50, 0.228)
+draw_arrow(0.50, 0.732, 0.50, 0.67)
+draw_arrow(0.50, 0.582, 0.50, 0.52)
+draw_arrow(0.50, 0.432, 0.50, 0.37)
+draw_arrow(0.50, 0.282, 0.50, 0.22)
 
 par(op)
 dev.off()

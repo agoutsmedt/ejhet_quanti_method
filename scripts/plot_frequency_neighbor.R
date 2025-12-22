@@ -43,7 +43,7 @@ p <- ggplot(df_top, aes(x = word, y = N_decade)) +
   coord_flip() +
   scale_x_reordered() +
   labs(x = NULL, y = "Frequency") +
-  theme_light(base_size = 28) +
+  theme_light(base_size = 20) +
   theme(
     strip.background = element_blank(),
     strip.text = element_text(colour = "black")
@@ -57,8 +57,8 @@ print(p)
 ggsave(
   here::here(image_path, "top_neighbor_words_decades.png"),
   plot = p,
-  width = 60,
-  height = 50,
-  units = "cm",
+  width = 16,
+  height = 10,
+  units = "in",
   dpi = 300
 )

@@ -755,20 +755,22 @@ through this back-and-forth can we turn algorithmic groupings into
 meaningful historical insights. This is both a weakness and a strength.
 On the one hand, the analysis is not immediately transparent, as it
 requires the construction of intermediate tools---such as our
-interactive applications---to guide interpretation. On the other hand,
-it is consistent with the practices of historians of economic thought,
-who likewise select, prioritise, and read texts in order to make sense
-of their corpus.
+interactive application---to guide interpretation. On the other hand, it
+is consistent with the practices of historians of economic thought, who
+likewise select, prioritise, and read texts in order to make sense of
+their corpus.
 
 For the purpose of the exploration and interpretation of our results, we
-have built an online interactive application, where we can find all the
-semantic clusters and bibliometric communities, and their corresponding
-indicators. Let us take as an example the semantic cluster 11, which
-gathers close to 20,000 sentences from 1920 to 2009. How can we get a
-sense of what this cluster actually coalesces around? Before any
-qualitative interpretation or contextualization with the secondary
-literature, we must first produce a series of indicators to characterize
-the cluster. Such indicators include:
+have built an [online interactive
+application](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/),
+where we can find all the semantic clusters and bibliometric
+communities, and their corresponding indicators. Let us take as an
+example the semantic cluster 11, which gathers close to 20,000 sentences
+from 1920 to 2009. How can we get a sense of what this cluster actually
+coalesces around? Before any qualitative interpretation or
+contextualization with the secondary literature, we must first produce a
+series of indicators to characterize the cluster. Such indicators
+include:
 
 - The most identifying words of the cluster for each decade. While the
   first period of the cluster (the 1920s) deals notably with
@@ -954,8 +956,8 @@ the prism of the "pecuniary institutions" that shaped it. For instance,
 Charles Cooley [@cooleyProgress1915] underlined that "pecuniary
 valuation," or economic valuation, is only possible because of the
 institutions that make such valuation possible [see also
-@rutherfordInstitutionalist2013, 58--59]. Figure @fig-co-occurence
-shows well the importance of "pecuniary" as a neighbor to "rational" and
+@rutherfordInstitutionalist2013, 58--59]. @fig-co-occurence shows
+well the importance of "pecuniary" as a neighbor to "rational" and
 "rationality" in the first twenty years of the twentieth century.
 
 The centrality of institutionalist economists---as well as the
@@ -1493,9 +1495,10 @@ used to confirm or challenge existing claims in the history and
 philosophy of economics, they also help identify patterns that have so
 far been absent---or only marginally present---in the historical
 literature. We have briefly pointed to some of these patterns above. By
-making available two interactive applications to explore our results, we
-hope to encourage readers to pursue their own paths of discovery within
-the corpus.
+making available an [interactive
+application](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/)
+to explore our results, we hope to encourage readers to pursue their own
+paths of discovery within the corpus.
 
 [^1]: The bibliometric communities, identified through network analysis,
     could also be called clusters. But we opted for "communities" in
@@ -1505,7 +1508,8 @@ the corpus.
     helpful for very large corpora. However, it is where their surplus
     value may appear as the most obvious.
 
-[^3]: The application is available here: LINK
+[^3]: The application is available here:
+    [[https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/]{.underline}](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/)
 
 [^4]: One of the main challenges for a quantitative history of economics
     is to move beyond reliance on proprietary digital libraries and to
@@ -1585,7 +1589,8 @@ the corpus.
     that the scope of our study is too broad to summarize every pattern
     revealed by our results. Other scholars could have, at various
     junctures, pursued different interpretive directions on the basis of
-    the same material. The publication of the interactive applications
+    the same material. The publication of the [interactive
+    application](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/)
     we used to explore the results thus serves as an exercise in
     transparency and---in addition to being, we hope, useful for
     historians of economic thought more generally---allows readers to
@@ -1595,13 +1600,12 @@ the corpus.
     clusters are likely biased toward American journals, notably in the
     first decades.
 
-[^20]: Some years earlier, Mitchell [@mitchellRationality1910, 97; see
-    semantic cluster 9 and 4] already pushed forward similar claims,
-    regretting that "few economists have regarded the study of
-    psychology as a necessary part of the equipment of their work",
-    often relying on "tacit preconceptions" rather than to seek to
-    "psychologists to gain a knowledge of the mind and its modes of
-    operation".
+[^20]: Some years earlier, @mitchellRationality1910[97] already
+    pushed forward similar claims, regretting that "few economists have
+    regarded the study of psychology as a necessary part of the
+    equipment of their work," often relying on "tacit preconceptions"
+    rather than to seek to "psychologists to gain a knowledge of the
+    mind and its modes of operation."
 
 [^21]: Machlup's position was that even if a "goodly portion of all
     business behavior may be non-rational, thoughtless, [or] blindly
@@ -1610,7 +1614,7 @@ the corpus.
     failure of marginal theory when properly interpreted. In a similar
     defense of profit maximization, Leonid @hurwiczTheory1946[110]
     first acknowledged that it was not "inconceivable that business is
-    run more by routine than by rationality", but argued that behavior
+    run more by routine than by rationality," but argued that behavior
     may appear irrational or merely "routine" from the standpoint of a
     purely static theory that ignores uncertainty, while proving fully
     "rational" once uncertainty and long-run effects are taken into
