@@ -14,45 +14,12 @@ documents <- read_feather(file.path(
   "fulltexts_cosine_sim_with_rv.feather"
 ))
 
-# keep only relevant lines, columns and rename them for consistency
+# load metadata
 
-metadata_jstor <- read_rds(file.path(
-  jstor_raw_data,
-  "jstor_constellate_merged_metadata.rds"
-)) %>%
-  filter(refined_sub_type == "research-article" & languages == "eng") %>%
-  select(url, is_part_of, title, creators_string, publication_year) %>%
-  rename(
-    year = publication_year,
-    id = url,
-    journal = is_part_of,
-    authors = creators_string
-  ) %>%
-  arrange(year)
-
-# same for scopus metadata
-metadata_scopus <- read_rds(file.path(
-  elsevier_data,
-  "scopus_economics_articles.rds"
-)) %>%
-  filter(full_text == TRUE & subtype_description == "Article") %>%
-  select(
-    scopus_id,
-    dc_title,
-    dc_creator,
-    prism_publication_name,
-    prism_cover_date
-  ) %>%
-  rename(
-    id = scopus_id,
-    title = dc_title,
-    authors = dc_creator,
-    journal = prism_publication_name,
-    year = prism_cover_date
-  ) %>%
-  mutate(year = as.integer(str_sub(year, 1, 4)))
-
-metadata <- bind_rows(metadata_jstor, metadata_scopus)
+metadata <- read_feather(file.path(
+  data_path,
+  "metadata_maintext.feather"
+))
 
 
 # --------------------------------------------
@@ -64,8 +31,7 @@ df_top_specific <- sentences %>%
   # mutate(decade = (year %/% 10) * 10) %>%
   # group_by(decade) %>%
   group_by(year) %>%
-  arrange(desc(similarity_rv)) %>%
-  slice_head(n = 5) %>%
+  slice_max(similarity_rv, n = 5) %>%
   ungroup()
 
 # add metadata

@@ -155,12 +155,14 @@ documents <- read_feather(here::here(
 sentences_tbl <- sentences %>%
   filter(year == 1910) %>%
   mutate(similarity_rv = round(similarity_rv, 3)) %>%
-  select(sentence, similarity_rv)
+  select(sentence, similarity_rv) %>%
+  arrange(desc(similarity_rv))
 
 documents_tbl <- documents %>%
   filter(year == 1910) %>%
   mutate(similarity_rv = round(cosine_doc_with_rv, 3)) %>%
-  select(title, authors, journal, similarity_rv)
+  select(title, authors, journal, similarity_rv) %>%
+  arrange(desc(similarity_rv))
 
 ```
 
@@ -207,7 +209,8 @@ documents_tbl %>%
   column_spec(3, width = "3cm") %>%
   column_spec(4, width = "1.5cm") %>%
   # add footnote
-  footnote(general = "Documents vectors are computed as the average of their sentences vectors.")
+  footnote(general = "Documents vectors are vector centroids of all sentences in the document.",
+           general_title = "Note:")
 
 ```
 
