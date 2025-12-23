@@ -538,10 +538,50 @@ dev.off()
 
 ### Dynamic coupling networks 
 
-### Leiden community detection
+Networks were constructed using bibliographic coupling, where two publications are linked if they cite common references. This approach identifies articles that draw on similar intellectual foundations, revealing thematic communities within the literature.
+Raw common references counting can be misleading, as articles that cite many references overall are more likely to share citations by chance and references that are highly cited are also overall more likely to link to articles by chance. 
+To weight shared references between two articles, we use the coupling strength method from [@shenRefinedMethodComputing2019]. Coupling strength weighs both the size of the reference list of articles and the number of overall citations of each reference to overweight significant co-occurrences of references.
 
-### Merging communities over time
+To construct temporally coherent networks, we employed a dynamic windowing approach:
 
-### Spatialization of clusters and communities
+* Time window: 8 years 
+* Overlapping windows: windows overlap to allow smooth temporal transitions (1980-1987, 1981-1988…)
+* Edge threshold: articles are only connected if they have at least 2 shared references
 
+For each time window, we removed isolated articles (articles with no connections) and small components (connected groups of articles disconnected from the main network) ensuring that the analysis focused on the coherent and relevant literature.
+
+### Clustering algorithm, spatilization, and intertemporal analysis
+
+Clusters (or communities) within each network were identified using the Leiden algorithm with modularity optimization [@traag_LouvainLeidenGuaranteeing_2019]. This algorithm identify groups of articles that are have strong connections to each others, but few connections to the rest of the networks (i.e., relevant sub-groups of articles across the main network).
+
+To identify the most relevant clusters across multiple networks, we made to an intertemporal analysis of our cluster. To trace the evolution of research communities over time, we linked clusters across consecutive time windows. Communities were considered continuous if they shared at least 50.1% of their members across two time windows. For example, if a cluster in the 1990-1997 network is made of similar articles as another cluster in the 1991-1998 network, the cluster are identified as the same one. This approach allows us to follow how research communities emerge, grow, split, merge, or decline over the 50-year period.
+
+For visualization and interpretation we made an alluvial graph [@fig-alluv_named_minimal] that follow these intertemporal clusters across time windows, we focused on substantive communities using two criteria:
+
+* Temporal persistence: Communities must appear in at least 2 time windows
+* Size significance: Communities must represent at least 5% of the network in their peak window
+
+Smaller or more transient clusters were coded as "grey" in visualizations to emphasize the major research streams.
+
+To visualize individual networks, articles (nodes) are color-coded by intertemporal clusters and spatiliazed in a two-dimensional space using the Force Atlas 2 algorithm [@jacomy_ForceAtlas2ContinuousGraph_2014]. This layout enhances readability by positioning similar articles in close proximity. However, these visualizations are intended as heuristic aids rather than primary analytical tools. The study’s findings are grounded in quantitative network metrics and detailed tables rather than visual analysis.
+
+
+### Characterizing Research Communities
+
+As a way to have a first exploratory labels for clusters, names were generated using a local open large language model (Gemma 3 27B) through the Ollama framework. For each community, we provided the model with:
+
+* The 20 most frequently cited references (with titles when available)
+* The 20 most productive authors
+* The 20 highest TF-IDF terms
+
+The model was prompted to generate concise labels capturing the thematic focus of each cluster. This semi-automated approach combines quantitative bibliometric indicators with semantic interpretation to produce exploratory community labels.
+
+For each 8-year time window, the analysis generates more detailed tables for every clusters present in that network so that we could analyze manually what characterize the clusters. Among other things we focused on:
+
+* Biggest Nodes of the Cluster: articles ranked by number of citations including full titles, journals and authors
+* Most Productive Journals: journals ranked by number of publications in the clusters, revealing the primary publication venues for each research stream
+* Most Productive Authors: authors ranked by number of publications in the cluster to study concentration of research activity
+* Most Cited References: references ranked by citation frequency within the cluster, with publication years, journals, first author and titles. This information identifies the foundational works that define each research cluster intellectual heritage
+* Most Cited References Without IDs: references ranked by citation frequency within the cluster with unmatched IDs (typically books or working papers) ranked by frequency, capturing important influences not captured in the article-focused databases
+* Most Cited Journals: journals ranked by citation frequency in cluster reference lists, showing which publication venues cluster members draw upon most heavily
 
