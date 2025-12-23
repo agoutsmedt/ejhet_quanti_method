@@ -524,7 +524,7 @@ information for corpus exploration. The evolution of an idea depends not
 only on how it is formulated by its authors, but also on how it is
 appropriated, and reinterpreted by readers. A substantial literature in
 citation theory examines how citations function as a scientific practice
-and how they should be interpreted [see, e.g., @TahamtanCore1979].
+and how they should be interpreted [see, e.g., @tahamtanCore2018].
 Citations may reflect a wide range of motivations---from a genuine
 desire to acknowledge intellectual debt to more strategic uses aimed at
 persuading readers or satisfying referees. Nevertheless, citations at
@@ -1362,7 +1362,7 @@ experienced rapid and sustained citation growth
 bibliometric network, we identify a cluster structured around their
 work, indicating that the article not only attracted citations but
 quickly catalyzed new research strands, in a way Simon's work never did
-within economics [@heukelomSense2012].
+within economics [@heukelom_sense_2012].
 
 The second surprising finding concerns the relationship between "old"
 and "new" behavioral economics. Contrary to narratives of rupture or
