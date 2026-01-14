@@ -103,9 +103,9 @@ Neither a proof of concept paper, nor a review of methods
 
 ::: {#fig-distribution layout-ncol=2}
 
-![Année de publication](images/documents_distribution_fulltext_database.png){#fig-corpus_distribution width=90%}
+![Année de publication](../images/documents_distribution_fulltext_database.png){#fig-corpus_distribution width=90%}
 
-![Language](images/language_distribution_by_year_fulltext_database.png){#fig-language_distribution width=90%}
+![Language](../images/language_distribution_by_year_fulltext_database.png){#fig-language_distribution width=90%}
 
 Distribution of documents in the JSTOR fulltext database
 ::: 
@@ -115,9 +115,9 @@ Distribution of documents in the JSTOR fulltext database
 
 ::: {#fig-exploration layout-ncol=2}
 
-![Term frequency](images/relative_freq_rationality_and_rational.png){#fig-relative_freq_rationality width=70%}
+![Term frequency](../images/relative_freq_rationality_and_rational.png){#fig-relative_freq_rationality width=70%}
 
-![Neighbor words of "rational" and "rationality"](images/top_neighbor_words_both.png){#fig-top_neighbor_words width=80%}
+![Neighbor words of "rational" and "rationality"](../images/top_neighbor_words_both.png){#fig-top_neighbor_words width=80%}
 
 Exploration of the corpus with simple text analysis tools
 ::: 
@@ -127,9 +127,9 @@ Exploration of the corpus with simple text analysis tools
 
 ::: {#fig-computation_methods layout-ncol=2}
 
-![A probabilistic topic model](images/re.png){#fig-topic_model width=70%}
+![A probabilistic topic model](../images/re.png){#fig-topic_model width=70%}
 
-![Inference from topics](images/figure_9_gender_effect-1.png){#fig-inference_from_topics width=70%}
+![Inference from topics](../images/figure_9_gender_effect-1.png){#fig-inference_from_topics width=70%}
 
 Illustrations of probablistic topic model outputs in HET 
 
@@ -262,7 +262,7 @@ dtm %>%
 :::: {.columns}
 
 ::: {.column width="50%"}
-![Thomas Mikolov, a pioneer of word embeddings](images/mikolov.png){#fig-mikolov width=70%}
+![Thomas Mikolov, a pioneer of word embeddings](../images/mikolov.png){#fig-mikolov width=70%}
 :::
 
 ::: {.column width="50%"}
@@ -278,7 +278,7 @@ dtm %>%
 :::: {.columns}
 ::: {.column width="65%"}
 
-![A simplified representation of words embeddings in 2D](images/fake_semantic_space_words_in_2D.png){#fig-vector_space width=100%}
+![A simplified representation of words embeddings in 2D](../images/fake_semantic_space_words_in_2D.png){#fig-vector_space width=100%}
 :::
 
 ::: {.column width="35%"}
@@ -328,8 +328,6 @@ data |>
   gt::tab_options(table.font.size = 15)
 
 ```
-
-
 
 ## Our empirical strategy  
 
@@ -388,7 +386,7 @@ Output: intertemporal clusters of sentences related to rationality.
 
 ## The alluvial diagram of intertemporal clusters 
 
-![](images/intertemporal_clusters_alluvial.png){width=50% fig-align="center"}
+![](../images/intertemporal_clusters_alluvial.png){width=50% fig-align="center"}
 
 ## Navigating our own results with an app 
 

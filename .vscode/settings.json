@@ -1,0 +1,10 @@
+{
+    "spellright.language": [
+        "French"
+    ],
+    "spellright.documentTypes": [
+        "markdown",
+        "latex",
+        "quarto"
+    ]
+}
