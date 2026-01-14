@@ -19,4 +19,4 @@ rsconnect/
 .secrets
 groq_api_key.txt
 openai_api_key.txt
-
+.vscode/
