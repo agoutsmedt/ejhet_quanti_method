@@ -1,0 +1,473 @@
+---
+title: "Faire l'histoire de l'économie à l'aide des Large Language Models"
+author: 
+  - name: "[Aurélien Goutsmedt](mailto:aurelien.goutsmedt@uclouvain.be)"
+    affiliation: 'Midis de la Recherche'
+lang: "fr"
+filters: 
+  - pandoc-quotation.lua
+quot-lang: fr
+date: "02-09-2026"
+date-format: long
+bibliography: ../references.bib
+format: 
+  revealjs: 
+    theme: 
+      - custom_clean.scss
+    css: custom.css
+    transition: fade
+    slide-number: true
+    toc: false 
+    toc-depth: 1
+    slide-level: 2
+    embed-resources: true
+    view-distance: 100
+    progress: true
+    width: 1200
+    margin: 0.03
+    incremental: true
+    lightbox: auto
+    fig-align: center
+    cap-location: top
+    center: true
+execute:
+    echo: false
+    warning: false
+    cache: true
+---
+
+```{r loading-data}
+# load data OUTPUT_FILE = top_5_sentences_to_fake_sentence.feather
+source(here::here("scripts", "paths_and_packages.R"))
+p_load(kableExtra)
+data <- arrow::read_feather(here::here(
+  data_path,
+  "top_5_sentences_to_fake_sentence.feather"
+))
+```
+## 
+
+:::{.highlight-last .very-small-text}
+
+### [One Sentence at a Time: A Computational History of Rationality in Economics](https://osf.io/preprints/socarxiv/38na2_v1) - Delcey, Goutsmedt and Truc
+
+:::{.fragment .nonincremental}
+- Utiliser des méthodes textuelles pour saisir l'évolution des usages et des significations de la rationalité :
+    - Une préoccupation de longue date pour les historiens de l'économie ;
+    - Un concept complexe et en évolution.
+:::
+
+:::{.fragment .nonincremental}
+- Construire une méthode visant à :
+    - explorer des corpus très vastes (des millions de phrases) ;
+    - prendre en compte le contexte historique ;
+    - permettre l'exploration interprétative des résultats.
+
+:::
+
+:::
+
+:::{.notes}
+- Présentation 
+  - Histoire de la discipline économique.
+  - Emergence des méthodes quantitatives en histoire de la pensée économique.
+- Une histoire de la manière dont les économistes utilisent le concept de rationalité. Qu'est-ce que la rationalité pour eux, qu'est-ce que cela implique pour les agents? Pour quels problèmes le concept est-il utilisé? Faire cela dans une perspective d'histoire longue.
+- Article de recherche récent dans le cadre d'un numéro spécial
+- Utiliser des méthodes textuelles: text mining, NLP, text as data. La publication académique comme source de la donnée. Utiliser des méthodes computationelles appropriées pour analyser ce type de source.
+  - Pourquoi ce concept: longue histoire dans la discipline, 
+  - concept complexe et en évolution.
+- Que doit être capable de faire la/les méthodes choisies:
+  - traiter de très grand corpus. Plus de 110 ans de publications (60 millions de phrases et 290k articles d'économie).
+  - Contexte historique: important aussi dans la visualisation. Etre capable de situer les résultats dans le temps, et donc d'avoir des méthodes relativement adaptées à la dimension historique du projet. Ne pas calquer les définitions actuelles de la rationalité. Observer les usages de la rationalité tels qu'ils se font à un moment donné. 
+  - Particularité de la recherche en HPE mais aussi, de l'histoire intellectuelle plus généralement. Méfiance envers le quantitatif, et rôle important de l'interprétation du texte, de sa contextualisation, etc... Important d'avoir une méthode qui permette des allers-retours entre les résultats quantitatifs et l'interprétation qualitative, l'analyse textuelle traditionnelle.
+- Voici les grandes lignes du projet d'article. Proposer une présentation originale de ce travail à travers la visualisation. Car véritable enjeux de visualisations. Sans trop forcer le trait, nombreuse étape et choix méthodologiques guidés à un moment ou à un autre par la visualisation. Repenser la méthode est passé parfois par la manière de repenser la visualisation des résultats. Forte imbrication entre les deux.
+  - Beaucoup de visualisations dans mes slides pour illustrer cela. Certains visualisations sont des "brouillons". 
+- N'hésitez pas à poser des qeustions à tout moment, notamment sur la méthode et les visualisations.
+:::
+
+## Représenter numériquement un texte
+
+:::{.fragment}
+```{r}
+#| label: tbl-corpus_example2
+#| tbl-cap: "Exemple de corpus"
+
+corpus <- tibble(id = c(1, 2, 3, "..."), texte = c("I love markets", "Viva la revolucion", "In markets, we trust", "..."), année = c(1950, 1950, 1955, "..."), variable_2 = c("...", "...", "...", "..."))
+
+corpus %>%
+  kbl() %>%
+  kableExtra::kable_minimal() %>%
+  kableExtra::kable_styling(full_width = F, font_size = 35)
+```
+:::
+::: {.callout-caution appearance="simple" .fragment}
+A "l'oeil nu", il est facile de voir que le premier et le troisième documents sont sémantiquement plus proches l'un de l'autre que du second. Comment un ordinateur peut-il le repérer ?
+:::
+
+
+## Bag-of-words 
+
+::: {.highlight-last}
+- La méthode la plus simple consiste à compter la fréquence des unités textuelles choisies (mots, n-grammes, etc.) dans chaque document.
+
+::: {.callout-tip .fragment .incremental}
+### Bag-of-words - Mode d'emploi
+- Etant donné un corpus $C$ avec $D$ documents...
+- ... et un vocabulaire $V$ termes, la liste des mots uniques du corpus...
+- la représentation "bag-of-words" de $C$ est une matrice $W$ de dimension $D \times V$.
+- Chaque entrée $w_{d,v}$ est le nombre d'occurrences du terme $v$, $v \in \{1, \ldots, V\}$ dans le document $D$
+::: 
+
+::: 
+
+## Un exemple
+
+::: {.r-stack}
+::: {.fragment .fade-in-then-out}
+```{r}
+#| label: tbl-corpus_example3
+#| tbl-cap: "Exemple de corpus"
+
+corpus <- tibble(
+  id = c(1, 2, 3, "..."),
+  texte = c(
+    "I love markets",
+    "Viva la revolucion",
+    "In markets, we trust",
+    "..."
+  ),
+  année = c(1950, 1950, 1955, "..."),
+  variable_2 = c("...", "...", "...", "...")
+)
+
+corpus %>%
+  kbl() %>%
+  kableExtra::kable_minimal() %>%
+  kableExtra::kable_styling(full_width = F, font_size = 25)
+```
+
+::: 
+
+::: {.fragment} 
+```{r}
+#| label: tbl-dtm_example1
+#| tbl-cap: "Exemple d'une matrice bag-of-words"
+
+tokens <- corpus |> 
+  tidytext::unnest_tokens(word, text) 
+
+
+dtm <- tokens |>
+  count(id, word) |>
+  pivot_wider(names_from = word, values_from = n, values_fill = 0) |>
+  arrange(id)
+
+dtm %>%
+  kbl() %>%
+  kableExtra::kable_minimal() %>%
+  kableExtra::kable_styling(full_width = F, font_size = 25) 
+``` 
+::: 
+::: 
+
+::: {.highlight-last}
+:::: {.columns}
+
+::: {.column width="50%"}
+::: {.callout-tip .fragment}
+### Avantages 
+- Simple à construire et à interpréter.
+- Bonne approximation pour la similarité entre documents.
+:::
+:::
+
+::: {.column width="50%"}
+::: {.callout-important .fragment}
+### Inconvénients
+- La matrice est très creuse et de haute dimension ($V \gg D$).
+- On ignore l'ordre des mots et les variations de sens (synonymes, polysémie, etc.).
+::: 
+::: 
+
+:::: 
+:::
+
+## Perte d'information
+
+::: {.highlight-last}
+::: {.fragment .nonincremental}
+- Prenons les phrases suivantes :
+  1. "People are rational."
+  2. "We assume _homo economicus_."
+  3. "Preferences are complete and transitive."
+  4. "Agents are profit-maximizers."
+::: 
+
+::: {.callout-caution appearance="simple" .fragment}
+- Ces phrases ne partagent pas un mot en commun mais ont pourtant un sens très proche.
+- Idéalement, on veut une représentation capable de capturer cette similarité
+::: 
+
+:::
+
+## Word embeddings
+
+:::: {.columns}
+
+::: {.column .center-content width="50%"}
+![](../images/mikolov.png){width=70%}
+
+```{r}
+# example word embeddings
+#| label: tbl-embeddings_example
+#| echo: false
+
+rationality_embedding <- c(0.27, 0.32, 0.01, -0.12, 0.97)
+
+embeddings <- tibble(
+  word = c("rational", "agent", "profit", "markets", "revolution", "love"),
+  d1 = c(0.25, 0.20, 0.15, 0.10, -0.30, -0.40),
+  d2 = c(0.30, 0.28, 0.05, 0.12, -0.25, -0.35),
+  d3 = c(0.00, 0.05, 0.02, 0.03, -0.10, 0.50),
+  d4 = c(-0.10, -0.05, 0.01, 0.00, 0.40, 0.20),
+  d5 = c(0.95, 0.80, 0.77, 0.60, -0.20, -0.60)
+)
+
+embeddings %>%
+  kbl(col.names = c("Word", paste0("Dim", 1:5))) %>%
+  kable_minimal() %>%
+  kable_styling(full_width = FALSE, font_size = 28)
+
+```
+
+:::
+
+::: {.column .highlight-last width="50%"}
+- Les vecteurs sont entraînés sur une tâche de prédiction:
+  - Prochain *token*; *token* "masqué";
+  - Les valeurs du vecteur correspondent aux paramètres "appris" par le réseau de neurones.
+::: 
+
+:::: 
+
+## Mesurer le "sens" de la rationalité: *embeddings* fixes et contextuels
+
+:::: {.columns}
+::: {.column width="65%"}
+
+![](../images/fake_semantic_space_words_in_2D.png){width=90%}
+:::
+
+::: {.column width="35%" .small-text .highlight-last}
+
+::: {.callout-tip .fragment .nonincremental appearance="simple"}
+- La distance entre les vecteurs reflète la similarité sémantique.
+- Métrique de distance : similarité cosinus.
+::: 
+
+::: {.callout-note .fragment appearance="simple"}
+- Premiers modèles : *embeddings* fixes (e.g., word2vec, GloVe).
+- LLMs : *embeddings* contextuels (e.g., BERT, GPT, etc.).
+::: 
+
+::: 
+::::
+
+:::{.notes}
+- Modèle d'*embeddings*: modèle entraînés pour représenter des mots ou des phrases comme des vecteurs dans un espace multidimensionnel.
+  - entraînement sur de grands corpus textuels pour deviner le contexte des mots, ou les mots manquants, ou des phrases qui se suivent.
+- La position des mots dans cet espace reflète leur signification et leur usage. Plus de proximité = plus de similarité sémantique.
+- Mesure par la similarité cosinus: valeur entre -1 et 1 qui indique à quel point deux vecteurs pointent dans la même direction.
+- Embeddings fixes: chaque mot a une représentation unique, indépendamment du contexte.
+- Embeddings contextuels: la représentation d'un mot ou d'une phrase dépend du contexte dans lequel il apparaît, capturant ainsi des nuances sémantiques plus fines. Permet de prendre en compte la polysémie.
+:::
+
+## Qu'est-ce que BERT ?
+
+:::{.columns}
+
+:::{.column .tiny-text .highlight-last width="50%"}
+- BERT (**Bidirectional Encoder Representations from Transformers**) = modèle de langage open source développé par Google en 2018.
+  - Basé sur l'architecture **Transformer**: mécanismes d'**attention** pour traiter les séquences de texte.
+  - **Attention** : mécanisme qui permet au modèle de se concentrer sur différentes parties du texte pour comprendre les relations entre les mots.
+
+![@alammarHandsOn2024](../images/embeddings.png){width=90%}
+
+:::
+
+:::{.column .tiny-text .center-content .fragment width="50%"}
+![@rogersPrimer2021](../images/attention.png){width=80%}
+:::
+:::
+
+## BERT vs GPT : Quelles différences
+
+::: {.columns .nonincremental .tiny-text .highlight-last}
+::: {.column width="50%"}
+### BERT — compréhension (encoder, bidirectionnel)
+
+- Objectif d'entraînement : Masked Language Modeling (MLM) — prédire des tokens masqués.
+- Architecture : Transformer *encoder* (bidirectionnel).
+- Contexte : utilise le contexte gauche + droite.
+- Usages typiques : classification, extraction d'entités, similarité de phrases (avec SBERT).
+- Limites : pas optimisé pour la génération séquentielle.
+:::
+
+::: {.column width="50%"}
+### GPT — génération (decoder, autoregressif)
+
+- Objectif d'entraînement : Language Modeling autoregressif — prédire le token suivant.
+- Architecture : Transformer *decoder* (causal / unidirectionnel).
+- Contexte : accès causal (gauche → droite).
+- Usages typiques : génération de texte, complétions, dialogues, instruction-following.
+- Limites : nécessite adaptation pour certaines tâches de compréhension.
+:::
+:::
+
+:::{.notes}
+BERT lit une phrase comme un humain qui relit :
+il voit tout en même temps.
+
+GPT lit une phrase comme quelqu’un qui écrit :
+mot après mot, sans connaître la suite.
+
+Dans BERT, chaque mot peut “regarder” tous les autres mots de la phrase. Tous les tokens sont présents dès le départ. L’attention est bidirectionnelle : un mot au milieu voit ce qui est avant et après. Résultat : chaque token est encodé comme une synthèse du contexte global. Pour forcer le modèle à comprendre le contexte, on lui enlève des mots.
+
+On masque un mot : “La politique monétaire vise la stabilité des [MASK] à moyen terme.” Pour prédire le mot manquant, BERT doit comprendre toute la phrase.
+
+GPT n’a le droit de regarder que le passé. À chaque position, le modèle voit uniquement : les tokens à gauche.
+L’attention est causale : interdiction absolue de voir le futur. “La politique monétaire vise…” → quel est le prochain token ?
+
+Répété des milliards de fois, Le modèle apprend : la grammaire, les régularités discursives, les enchaînements plausibles d’idées.
+:::
+
+## Sentence embeddings 
+
+::: {.callout-note appearance="simple"}
+On utilise *sentence-BERT*, un modèle LLM qui représente des **phrases** comme des vecteurs et est optimisé pour les tâches de similarité sémantique.
+::: 
+
+. . . 
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| label: tbl-top_sentences
+#| tbl-cap: 'Phrases proches de "Economic agents are supposed to be rational."'
+
+
+# ;2 "Basically, for Professor Hicks, as for Jevons and Marshall, economic decisions are made by an abstract calculating machine";3 "I find myself continuing to believe ... that, whatever the origin of the want, when it rises to consciousness, it is subject to a process which we call rational, when the human agent decides
+sentence_clean <- "Basically, for Professor Hicks, as for Jevons and Marshall, economic decisions are made by an abstract calculating machine."
+
+data |>
+  filter(rank < 4, year %in% c(1950, 1975, 2000)) |>
+  mutate(
+    sentence = ifelse(str_detect(sentence, "^;"), sentence_clean, sentence)
+  ) |>
+  # kable the table
+  select(year, sentence, similarity) |>
+  mutate(similarity = round(similarity, 3)) |>
+  gt::gt() |>
+  gt::tab_options(table.font.size = 15)
+
+```
+
+## Mesurer polysémie & évolution sémantique
+
+:::{.fragment}
+![@giulianelliAnalysing2020a](../images/giulianelli_example.png){width=60%}
+:::
+
+:::{.notes}
+- Embeddings utile pour mesurer la polysémie, mais comment faire exactement? Une papier qui nous avait intéressé, notamment pour ses visualisations temporelles.
+- Apparition et propension des sens au fil du temps.
+- Comment ça marche: ici on a l'impression que ce sont vraiment des sens qui sont identifiés, mais ce qu'on voit c'est des exemples retravaillés des sens. Le résultat sous-jacent, ce sont des clusters de phrases comportant le terme. Chaque cluster est interprété comme un sens différent. Voilà l'idée.
+- Dans leur papier, ils appliquent cela à un très large vocabulaire. Pour nous, uniquement deux mots. possibilité de zoomer beaucoup plus d'être plus fin dans l'analyse. Volonté de prendre vraiment en compte la dimension historique (corpus beaucoup plus gros dans les années récentes qui risque d'écraser les périodes plus anciennes.)
+:::
+
+## Et l'histoire dans tout ça ?
+
+:::{.columns .fragment}
+
+:::{.column .center-content width="50%"}
+![](../images/underwood_abstract.png)
+
+:::
+
+:::{.column .center-content width="50%"}
+![](../images/underwood_graph.png)
+
+:::
+
+:::
+
+## Adaptation au domaine
+
+:::{.highlight-last .small-text}
+- **pretraining** : les modèles sont entrainés sur des très grands corpus ; les paramètres obtenus peuvent être utilisés pour d'autres tâches = *transfer learning*.
+  - ... mais les modèles sont entraînés sur des corpus **généraux** et **récents**.
+- possibilité de réentraîner les modèles sur un corpus plus spécifique, pour adapter les paramètres à un domaine particulier.
+  - ... mais nécessite des ressources importantes pour l'**adaptation** au domaine...
+- Développement de modèles de langage spécialisés pour l'histoire, comme *HistBERT* [@qiuHistBERT2022] et au climat *ClimateBERT* [@webersinkeClimateBert2022].
+:::
+
+## Stratégie empirique adoptée
+
+::: {.highlight-last .tiny-text}
+1. Calculer des "vecteurs représentatifs" pour le concept de rationalité.
+    1. Sélectionner toutes les phrases contenant les mots "rational" ou "rationality". 
+    1. Calculer l'*embeddings* de ces phrases. 
+    1. Calculer une moyenne mobile de ces vecteurs = un "vecteur représentatif" par an.
+
+2. Extraire les phrases similaires dans le corpus à partir de ce vecteur.
+    1. Pour chaque année, calculer la similarité cosinus entre le "vecteur représentatif" et les 61M d'*embeddings* de phrases du corpus. 
+    2. Sélectionner le top 1% des phrases les plus similaires pour chaque année
+
+3. Grouper ces phrases en clusters.
+    1. Regrouper les phrases par décennie.
+    1. Calculer les centroïdes des clusters pour fusionner les clusters similaires en méta-clusters.
+::: 
+
+## Méthodes non-supervisées & interprétation
+
+:::{.highlight-last .tiny-text}
+:::{.fragment .nonincremental}
+- **Non-supervisé** : Utilisation d'algorithme pour identifier des structures dans les données
+  - Produire des catégorisations qui ne sont pas données à priori par le ou la chercheur·se
+  - (Pas possible avec un chatbot...)
+:::
+
+:::{.fragment}
+- **Interprétation** : comprendre pourquoi l'algorithme a regroupé certaines phrases ensemble, et pas d'autres. 
+:::
+
+:::{.fragment .nonincremental}
+- Non-supervisé ne veut pas dire sans moyen de varier composition, taille et nombre de catégories
+  - Implique de tester différents jeux de paramètres
+:::
+
+:::{.fragment .nonincremental}
+- Mais que signifient ces catégories ? Pourquoi certains documents sont groupés ensemble ?
+  - Nécessite un travail d'interprétation qualitative
+  - Nécessite un travail de visualisation adapté, pour faire apparaître ce qui caractérise ces catégories, ce qui les lie et les différencie
+:::
+:::
+
+:::{.notes}
+- Quel intérêt des méthodes non-supervisées: éviter l'anachronisme, laisser émerger des choses inattendues, permettre un travail de zoom et de dézoom. (Augmenter le nombre de catégories pour une méthode non-supervisée comporte beaucoup moins de risques que faire de même avec une méthode supervisée)
+:::
+
+## Utiliser une application interactive pour explorer les résultats
+
+[https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/)
+
+:::{.notes}
+- L'application sert des fonctions multiples:
+  - avant toute chose, elle est un outil de travail et d'exploration pour le chercheur lui même
+  - c'est un outil de transparence pour que les évaluateurs et lecteurs puissent vérifier le narratif avancé par les auteur.ices, à condition que ces derniers soit transparent sur leur usage de l'app
+  - c'est un outil qui permet de prolonger la recherche et de l'étendre, en permettant à d'autres d'utiliser l'application.
+:::
+
+## Bibliographie
+

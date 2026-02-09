@@ -68,12 +68,13 @@ Reconstruire l'histoire de ce projet de recherche à travers la manière de le v
 - Une histoire de la manière dont les économistes utilisent le concept de rationalité. Qu'est-ce que la rationalité pour eux, qu'est-ce que cela implique pour les agents? Pour quels problèmes le concept est-il utilisé? Faire cela dans une perspective d'histoire longue.
 - Article de recherche récent dans le cadre d'un numéro spécial
 - Utiliser des méthodes textuelles: text mining, NLP, text as data. La publication académique comme source de la donnée. Utiliser des méthodes computationelles appropriées pour analyser ce type de source.
-  - Pourquoi ce concept: longue histoire dans la discipline, concept complexe et en évolution.
+  - Pourquoi ce concept: longue histoire dans la discipline, 
+  - concept complexe et en évolution.
 - Que doit être capable de faire la/les méthodes choisies:
   - traiter de très grand corpus. Plus de 110 ans de publications (60 millions de phrases et 290k articles d'économie).
   - Contexte historique: important aussi dans la visualisation. Etre capable de situer les résultats dans le temps, et donc d'avoir des méthodes relativement adaptées à la dimension historique du projet. Ne pas calquer les définitions actuelles de la rationalité. Observer les usages de la rationalité tels qu'ils se font à un moment donné. 
   - Particularité de la recherche en HPE mais aussi, de l'histoire intellectuelle plus généralement. Méfiance envers le quantitatif, et rôle important de l'interprétation du texte, de sa contextualisation, etc... Important d'avoir une méthode qui permette des allers-retours entre les résultats quantitatifs et l'interprétation qualitative, l'analyse textuelle traditionnelle.
-- Voici les grandes lignes du projet d'article. Proposer une présentation originale de ce travail à travers la visualisation. Car véritable enjeux de visualisations. Sans trop forcer le trait, nombreuse étape et choix méthodologiques guidés à un moment ou à un autre par la visualisation. Repenser la méthode est passé parfois pa la manière de repenser la visualisation des résultats. Forte imbrication entre les deux.
+- Voici les grandes lignes du projet d'article. Proposer une présentation originale de ce travail à travers la visualisation. Car véritable enjeux de visualisations. Sans trop forcer le trait, nombreuse étape et choix méthodologiques guidés à un moment ou à un autre par la visualisation. Repenser la méthode est passé parfois par la manière de repenser la visualisation des résultats. Forte imbrication entre les deux.
   - Beaucoup de visualisations dans mes slides pour illustrer cela. Certains visualisations sont des "brouillons". 
 - N'hésitez pas à poser des qeustions à tout moment, notamment sur la méthode et les visualisations.
 :::
@@ -94,7 +95,7 @@ Reconstruire l'histoire de ce projet de recherche à travers la manière de le v
 :::{.notes}
 - Si les méthodes quantitatives s'implantent récemment en HPE, quelles sont les méthodes utilisées. 
   - Un type de méthode particulier, assez loin de ce que vous allez trouver en économie (pas d'économétrie, pas de modèles formels, etc...). Moins loin de la socio quantitative (ACM, ACP), mais assez différent quand il s'agit de méthode textuelle.
-  - Fil commun : méthodes non-supervisées. Découverte de structure dans les données; identification de catégories émergentes.
+  - Fil commun : méthodes non-supervisées. Découverte de structure dans les données sans présager de ce que pourrait être cette structure; identification de catégories émergentes.
 - Couplage bibliométrique
 - Topic modeling
 :::
@@ -137,7 +138,7 @@ Reconstruire l'histoire de ce projet de recherche à travers la manière de le v
 - Quel intérêt des méthodes non-supervisées: éviter l'anachronisme, laisser émerger des choses inattendues, permettre un travail de zoom et de dézoom. (Augmenter le nombre de catégories pour une méthode non-supervisée comporte beaucoup moins de risques que faire de même avec une méthode supervisée)
 :::
 
-## Mesurer le "sens" de la rationalité: embeddings et *Large Language Models*
+## Mesurer le "sens" de la rationalité: *embeddings* et *Large Language Models*
 
 :::: {.columns}
 ::: {.column width="65%"}
@@ -246,7 +247,7 @@ data |>
 - On peut voir l'influence de la visualisation par alluvial
 - Comment est-ce qu'on groupé les clusters ici? Comme pour le couplage bibliométrique: on regarde les clusters dans deux fenêtres consécutives; si ils sont assez proches, on les relie. 
 - Points forts: représentation synthétique. Montre bien la proportion des clusters dans chaque période, ainsi que l'apparition de nouveau méta-cluster
-- Points faibles: beaucoup d'informations avec la nécessité de zoomer. Trop de couleurs. Pas de détails sur les cluster à chaque période car aggégation. Que représente les flux? Rien !
+- Points faibles: beaucoup d'informations avec la nécessité de zoomer. Trop de couleurs. Pas de détails sur les cluster à chaque période car aggrégation. Que représente les flux? Rien !
 - Revenons sur la méthode: Mais peut-être arbitraire (le second cluster le plus proche peut-être aussi très proche). Ou bien pas de cluster si proche en t + 1, mais possible en t + 2
 :::
 
@@ -266,7 +267,7 @@ data |>
 
 :::{.notes}
 - Comparaison insatisfaisante des clusters deux à deux, bien représenté par l'inutilité des "flux", nous a fait repasser par le réseau.
-- Oublier les couleurs. Chaque point est un cluster. Les liens sont la similarité. Méthode de pruning pour ne garder que les liens les plus significatifs statistiquement. 
+- Oublier les couleurs. Chaque point est un cluster dans une décennie. Les liens sont la similarité. Méthode de pruning pour ne garder que les liens les plus significatifs statistiquement. 
 - Vision plus globale plutôt que deux à deux. Voir comment les noeuds se regroupent, lesquels sont proches. Passer par le réseau pour créer les méta-clusters. 
 - Permet d'avoir une perspective centre/périphérie, mais aussi quels clusters sont les plus connectés entre eux, lesquels sont des groupements moins uniformes.
 - Quel problème majeur ici? perte de la dimension historique. Comment remettre de l'histoire Sans perdre trop d'information.
