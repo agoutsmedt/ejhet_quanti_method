@@ -5,16 +5,16 @@ quantitative methods has increased [see e.g.,
 @goutsmedtQuantitative2023 special issue]. Several essays have adopted
 a reflexive stance, examining the implications of using quantitative
 methods in the history of economics [@cherrierQuantitative2018;
-@edwardsQuantitative2018]. These contributions have aimed to provide
-broad discussions on the use of such methods. However, given the
-virtually unlimited variety of quantitative approaches potentially
-relevant to historians of economics---and the wide array of research
-questions they can address---these reflections often remain abstract and
+@edwardsQuantitative2018]. These contributions providedbroad
+discussions on the use of such methods. However, given the virtually
+unlimited variety of quantitative approaches potentially relevant to
+historians of economics---and the wide array of research questions they
+can address---these reflections often remained at an abstract level and
 offer little practical guidance. As a result, they tend to provide
 useful broad overviews, but without clearly articulating what
-quantification entails in practice, and how it can be both meaningful
-and challenging to integrate into research specific to the history and
-philosophy of economics.
+quantification entails in practice, and how quantitative methods can be
+both meaningful and challenging to integrate into research specific to
+the history and philosophy of economics.
 
 Our contribution sits between a historical study that uses quantitative
 methods to answer a specific question and a general methodological
@@ -38,10 +38,9 @@ accelerated and "distant reading" [@morettiDistant2013;
 because their unsupervised nature reduces the risk of presentism: rather
 than imposing present-day categories on the past, unsupervised
 algorithms uncover patterns directly from the data. When time is
-explicitly incorporated, they allow researchers to map the discipline at
-different points of time, to identify the emergence and decline of
-subjects and concepts, and to assess the influence of specific
-economists or ideas.
+explicitly incorporated, researchers can map the discipline at different
+points of time, to identify the emergence and decline of subjects and
+concepts, and to assess the influence of specific economists or ideas.
 
 Our article uses two types of data, texts and citations. The analysis of
 textual corpora offers a direct window into the semantic content of
@@ -49,7 +48,7 @@ debates, while citation data provides a lens through which to view
 intellectual interconnections and channels of influence within the
 discipline. We show how a large corpus of documents can be classified
 based on the information contained in textual and citation data---what
-we call "semantic clusters" and "bibliometric communities."[^1]
+we call "*semantic clusters*" and "*bibliometric communities*."[^1]
 
 Above all, our discussion aims to illustrate a core principle for
 historical inquiry with such unsupervised quantitative methods. They
@@ -62,13 +61,13 @@ exploration of large datasets to reveal historical patterns. They often
 confirm, and sometimes complement, established findings. They can also
 reveal pitfalls and blind spots in existing research.
 
-The concept of "rationality" is an effective focus for a concrete
+The concept of "rationality" is an effective focus for this concrete
 demonstration. First, many historians of economics engage with it in one
 way or another, which makes the exercise relevant for a broad audience.
 Second, because the concept is broad and pervasive in economics,
 applying quantitative methods to a very large corpus is particularly
 informative.[^2] We use a corpus of around 290 000 articles in economics
-extending back to 1900 to show how these methods can handle long time
+between 1900 and 2009 to show how these methods can handle long time
 horizons. Third, the multiple meanings attached to "rationality" and its
 uses applied to various subjects show how textual methods, coupled with
 bibliometrics, can help capture this semantic plurality.
@@ -93,74 +92,72 @@ article.[^3]
 ## From sources to data {#sec-sources_data}
 
 Discussions on quantitative methods often focus on the varieties of
-existing methods. In practice, however, analysis and interpretation come
-last. Most effort goes into collecting, cleaning, and structuring data,
-much of which remains invisible in published work. Sources rarely arrive
-as ready-to-use datasets; they must be transformed from somewhat raw
-materials into usable corpora. In short, the quantitative historian must
-be as much a data wrangler as a data analyst.
+existing methods. In practice, however, implementing a method and
+interpreting its results come last. A great deal of effort goes into
+collecting, cleaning, and structuring data, much of which remains
+invisible in published work. Sources rarely arrive as ready-to-use
+datasets; they must be transformed from somewhat raw materials into
+usable corpora. In short, the quantitative historian is a data wrangler
+as much as a data analyst.
 
 Bibliometric databases are a convenient way to access corpora of
 economic texts: they record relatively well-structured data, gathering
-key features of scientific output---such as authors, journals and
-affiliations, *etc*. Some of these databases, such as *Web of Science,
-OpenAlex,* or *Scopus,* record citation data, which enables tracing
-intellectual influence through diffusion patterns, and mapping scholarly
-contributions over time.
+key features of scientific output---authors, journals, affiliations,
+*etc*. Some of these databases, such as *Web of Science, OpenAlex,* or
+*Scopus,* record citation data, which enables tracing intellectual
+influence through references and mapping scholarly contributions over
+time.
 
-Each database has its own strengths and weaknesses. While at a very
-general level Web of Science, OpenAlex, or Scopus have similar coverage
-[@martin-martinGoogleScholarMicrosoft2021; @culbertReference2025],
-some studies might suffer from choosing a less appropriate database
-regarding the research questions. For instance, Scopus has a lower
-coverage of the top 5 economics journals before the 1990s and while
-being openaccess, OpenAlex has been less curated than the products of
-private publishers. Whatever the provider, less successful or
-now-defunct journals are also more likely to have incomplete or
+Regarding data availability, each database has its own strengths and
+weaknesses. While at a very general level Web of Science, OpenAlex, or
+Scopus have similar coverage [@martin-martinGoogleScholarMicrosoft2021;
+@culbertReference2025], some studies might suffer from choosing a less
+appropriate database regarding the research questions. For instance,
+Scopus has a lower coverage of the "top five" economics journals before
+the 1990s and, while being openaccess, OpenAlex has been less curated
+than the products of for-profit publishers. Whatever the provider, less
+central or now-defunct journals are more likely to have incomplete or
 discontinuous digital coverage, impeding their inclusion for historical
-analyses. Additionally, databases are oriented toward English-speaking
-contributions; these databases may thus be deficient for a research
-project targeting another or multiple languages.[^4] More generally,
-citation practices have only standardised progressively in the postwar
-period. Consequently, citation data are most of the time relatively poor
-before the 1960s. Last but not least, although they provide useful
-metadata and citation information, these databases generally lack full
-text, which is subject to copyright and therefore cannot be obtained
-from a single publisher.
+analyses. Additionally, as these databases are oriented toward
+English-speaking contributions, they may be inadequate for a research
+project targeting other languages.[^4] More generally, citation
+practices have only standardised progressively in the postwar period.
+Consequently, citation data are most of the time relatively poor before
+the 1960s. Last, although they provide useful metadata and citation
+information, these databases generally lack full text, which is subject
+to copyright and therefore, a large and representative corpus of
+economics articles cannot be obtained from a single publisher.
 
-Even when citations and full texts are available, the amount and quality
-of information that can be reliably encoded remain limited. Citation
-data are notoriously difficult to structure, because both the very
-notion of what constitutes a reference and the conventions governing its
-recording have changed over time---for instance, from references
-embedded in footnotes to the development of standardized bibliographies
-and the author--date system [@graftonFootnote1999]. Full texts face
-similar limitations: mathematical expressions and empirical material,
-such as tables, are often poorly captured or inconsistently encoded by
-providers. These shortcomings restrict what can be studied by
-quantitative tools.
+Even when citations and full texts are available, the quality of
+information that can be reliably encoded remains limited. Citation data
+are difficult to structure, because both the very notion of what
+constitutes a reference and the conventions governing its recording have
+changed over time---for instance, from references embedded in footnotes
+to the development of standardized bibliographies and the author--date
+system [@graftonFootnote1999]. Full texts face similar limitations:
+mathematical expressions and empirical material, such as tables, are
+often poorly captured by providers and difficult to encode properly.
+These shortcomings restrict what can be studied by quantitative tools.
 
-A first important point is, therefore, that data availability shapes
-what can be asked and so answered. The scarcity and structure of
-available data affect every stage of inquiry, from the choice of
-research questions to the interpretations of quantitative results. In
-practice, research may be shaped as much by the scarcity of our data as
-by researchers' own preferences. It is of course possible to build
-handmade datasets from scratch, but, in the case of textual and citation
-data, such tasks remain time-consuming beyond small-scale study. More
-commonly, it is often necessary to combine information from different
-databases to fulfill a specific goal. For example, a medium-scale study
-of the publications of the European Economic Review
-[@goutsmedtIndependent2023]---few thousands documents---required to
-combine three heterogenous databases: Econlit (for JEL codes
-classification) Web of Science, and Scopus (due to imperfect coverage of
-Web of Science).
+In short, the availability and quality of data determine what can be
+asked and so answered. The scarcity and structure of data affect every
+stage of inquiry, from the choice of research questions to the
+interpretations of quantitative results. Scholars are not condemned to
+rely on existing databases and may build handmade textual and citation
+datasets from scratch. However, such tasks remain time-consuming beyond
+small-scale study. More commonly, it is often necessary to combine
+information from different databases to fulfill a specific goal. For
+example, a medium-scale study of the publications of the European
+Economic Review [@goutsmedtIndependent2023]---few thousands
+documents---required to combine three heterogenous databases: Econlit
+(for JEL codes classification) Web of Science, and Scopus (due to
+incomplete coverage of the EER in Web of Science).
 
 For our study of rationality, the first step was to identify the best
 sources. For citation data, the Web of Science (WoS) provides the most
 reliable and consistent coverage for our period and has been widely used
 in the history of economics. As for full text, we relied on three
-providers. First, JSTOR's full-text collection offers high-quality scans
+providers. First, JSTOR's full-text collection offers good-quality scans
 of most leading economics journals [@jstorText2025]. Second, we used
 Scopus to identify peer-reviewed economics journals not included in
 JSTOR and to compile a complementary list of articles; for these, we
@@ -170,13 +167,13 @@ project [@istexInfrastructure2025], which provides access to a
 substantial corpus of documents for researchers affiliated with French
 universities.[^5]
 
-The @fig-distribution shows the distribution of this corpus. It can be
-already noted that our corpus disproportionately represents Anglo-Saxon
-journals, which are also those most systematically digitized and
-preserved. Not only do we tend to overlook other traditions of research,
-but this also raises a serious issue of presentism: the fact that
-retrospective data on these journals are easily accessible today does
-not imply that they were equally central in earlier ones, nor that
+The @fig-distribution shows the distribution over year of this corpus.
+It can be already noted that our corpus disproportionately represents
+Anglo-Saxon journals, which are also those most systematically digitized
+and preserved. Not only do we tend to overlook other traditions of
+research, but this also raises a serious issue of presentism: the fact
+that retrospective data on these journals are easily accessible today
+does not imply that they were equally central in earlier ones, nor that
 articles were the dominant vehicle for the diffusion of ideas. Rather,
 it reflects the fact that they had the resources and opportunities to
 digitize and maintain comprehensive digital archives of their
@@ -1501,8 +1498,9 @@ to explore our results, we hope to encourage readers to pursue their own
 paths of discovery within the corpus.
 
 [^1]: The bibliometric communities, identified through network analysis,
-    could also be called clusters. But we opted for "communities" in
-    order to distinguish them from the "semantic clusters".
+    could also be called clusters. But we opted for "communities", a
+    term often used in network analysis, in order to distinguish them
+    from the "semantic clusters".
 
 [^2]: To be clear, we don't think that quantitative methods are only
     helpful for very large corpora. However, it is where their surplus

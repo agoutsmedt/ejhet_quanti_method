@@ -60,6 +60,7 @@ if (str_detect(getwd(), "goutsmed")) {
       "data",
       "elsevier"
     )
+    project_path <- path.expand("~/r_github_projects/history_labor_economics/")
   } else {
     data_path <- file.path(path.expand("~"), "data", "ejhet_project")
     jstor_data_path <- file.path(path.expand("~"), "data", "jstor")
