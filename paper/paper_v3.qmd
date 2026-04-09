@@ -410,6 +410,8 @@ table_source %>%
   kable_styling(font_size = 9, latex_options = c("striped"))
 ```
 
+ADD MORE INFORMATION ON DISTRIBUTION OVER TIME OF SOURCES, OF WOS MATCHING, etc.
+
 ## Sentence embeddings 
 
 We compute sentence embeddings with Sentence-BERT, using the pretrained model [\texttt{sentence-transformers/all-mpnet-base-v2}](https://huggingface.co/sentence-transformers/all-mpnet-base-v2). This model yields a single 768-dimensional dense vector per sentence. It has been shown to perform well on various semantic textual similarity tasks and is widely used in natural language processing applications. We use the `sentence-transformers` Python library to compute the embeddings. 
@@ -542,6 +544,8 @@ dev.off()
 Networks were constructed using bibliographic coupling, where two publications are linked if they cite common references. This approach identifies articles that draw on similar intellectual foundations, revealing thematic communities within the literature. Raw common references counting can be misleading, as articles that cite many references overall are more likely to share citations by chance and references that are highly cited are also overall more likely to link to articles by chance. To weight shared references between two articles, we use the coupling strength method from [@shenRefinedMethodComputing2019]. Coupling strength weighs both the size of the reference list of articles and the number of overall citations of each reference to overweight significant co-occurrences of references.^[ Statistical determination of edges are best options but are computionally unfeasable given the size of our networks] 
 
 To study the evolution of networks over time, we employed a dynamic windowing approach:
+
+CHANGE TIME WINDOW AND JUSTIFY
 
 * Time window: 8 years 
 * Overlapping windows: windows overlap to allow smooth temporal transitions (1980-1987, 1981-1988, etc.)
