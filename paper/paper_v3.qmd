@@ -18,6 +18,7 @@ execute:
   echo: false
   warning: false
   message: false
+  cache: true
 freeze: auto
 ---
 
@@ -118,30 +119,35 @@ writeLines(txt, md)
 
 # Figures  
 
-::: {#fig-distribution layout-nrow="2"}
-
-![Documents](images/documents_distribution_fulltext_database.png){#fig-fulltextdistribution_a width="86%"}
-
-![Languages](images/language_distribution_by_year_fulltext_database.png){#fig-fulltextdistribution_b width="86%"}
-
-Distribution of documents and languages in the full-text database over time (1900-2009).
-::: 
-
-::: {#fig-relative-frequency}
-
-![](images/relative_freq_rationality_and_rational.png)
-
-Relative frequency of terms "rational" and "rationality" in the jstor database (1900-2009). Points are the empirical data. Lines are the loess smoothed trends.
-::: 
-
-![Most frequent neighbor terms of "rational" and "rationality" by decade](images/top_neighbor_words_decades.png){#fig-co-occurence}
-
-![Relative citation of a selection of seminal papers on behavioral economics](images/citation_patterns_square.jpg){#fig-rationality-paper-citations}
-
 ```{r}
 #| echo: false
 #| message: false
 #| warning: false
+
+nb_sentences_top_1_percent <- read_feather(
+  here::here(
+    data_path,
+    "top1pct_sentences_by_year.feather"
+  ),
+  as_data_frame = FALSE
+) %>%
+  nrow()
+
+nb_articles_meta_corpus <- read_feather(here::here(
+  data_path,
+  "metadata_maintext.feather"
+), as_data_frame = FALSE) %>%
+  nrow()
+
+nb_articles_top_10_percent <- read_feather(here::here(
+  data_path,
+  "fulltexts_cosine_sim_with_rv.feather"
+), as_data_frame = FALSE) %>%
+  slice_max(cosine_doc_with_rv, prop = 0.1, with_ties = FALSE) %>%
+  collect() %>%
+  nrow()
+
+gc() # remove large objects from memory
 
 sentences <- read_feather(here::here(
   data_path,
@@ -165,8 +171,300 @@ documents_tbl <- documents %>%
   mutate(similarity_rv = round(cosine_doc_with_rv, 3)) %>%
   select(title, authors, journal, similarity_rv) %>%
   arrange(desc(similarity_rv))
-
 ```
+
+```{r}
+#| label: fig-method-schema
+#| echo: false
+#| message: false
+#| warning: false
+#| eval: false
+#| fig-pos: "H"
+
+#  [1] "#7E1700" "#8C360A" "#ac5f1f" "#A3651E" "#AD7B27" "#B99235" "#C4AB4A" "#CEC56C" "#D1DC94"
+# [10] "#C9E8B5" "#B4E9CC" "#95E0D6" "#73CED5" "#54B8D0" "#3DA2C9" "#2F8CBF" "#2677B7" "#1F61AD"
+# [19] "#164AA3" "#023198"
+
+out_path <- here::here("paper", "images", "method_schema.png")
+png(out_path, width = 1800, height = 2000, res = 300)
+
+op <- par(mar = c(0, 0, 0, 0))
+plot.new()
+plot.window(xlim = c(0, 1), ylim = c(0, 1))
+
+inst_fill <- "#8C360A" # light red (institutional databases)
+corpus_fill <- "#2F8CBF" # light green (created corpora)
+proc_fill <- "white"
+
+draw_box <- function(
+  x,
+  y,
+  w,
+  h,
+  label,
+  sub_label = "",
+  cex = 0.9,
+  sub_cex = 0.75,
+  fill = "white"
+) {
+  rect(x, y, x + w, y + h, lwd = 1.2, col = fill, border = "grey30")
+  text(x + w / 2, y + h * 0.62, label, cex = cex)
+  if (nzchar(sub_label)) {
+    text(x + w / 2, y + h * 0.30, sub_label, cex = sub_cex)
+  }
+}
+
+draw_arrow <- function(x0, y0, x1, y1) {
+  arrows(x0, y0, x1, y1, length = 0.07, lwd = 1.0)
+}
+
+# Top row
+draw_box(
+  0.07,
+  0.90,
+  0.24,
+  0.07,
+  "JSTOR economics\njournals",
+  cex = 0.80,
+  fill = inst_fill
+)
+draw_box(
+  0.37,
+  0.90,
+  0.56,
+  0.07,
+  "Scopus economics journals",
+  cex = 0.85,
+  fill = inst_fill
+)
+
+# Sources (no extra JSTOR box)
+draw_box(0.39, 0.78, 0.22, 0.07, "Elsevier API", fill = inst_fill)
+draw_box(0.70, 0.78, 0.22, 0.07, "ISTEX", fill = inst_fill)
+
+# Main pipeline
+draw_box(
+  0.27,
+  0.64,
+  0.46,
+  0.10,
+  "Merge and clean",
+  sub_label = "English articles,\nwithout headings, bibliography, etc.",
+  cex = 0.88,
+  sub_cex = 0.72,
+  fill = proc_fill
+)
+draw_box(
+  0.27,
+  0.53,
+  0.46,
+  0.08,
+  "Meta-corpus",
+  sub_label = glue("{nb_articles_meta_corpus} full-text documents"),
+  cex = 0.86,
+  sub_cex = 0.70,
+  fill = corpus_fill
+)
+draw_box(
+  0.05,
+  0.42,
+  0.18,
+  0.07,
+  "Web of\nScience",
+  cex = 0.84,
+  fill = inst_fill
+)
+draw_box(0.27, 0.42, 0.46, 0.07, "Add citation data", fill = proc_fill)
+
+# Reduced heights
+draw_box(0.27, 0.33, 0.46, 0.06, "Compute sentence vectors", fill = proc_fill)
+draw_box(
+  0.27,
+  0.25,
+  0.46,
+  0.06,
+  "Compute representative vectors",
+  fill = proc_fill
+)
+
+# Give more space to these two
+draw_box(
+  0.12,
+  0.12,
+  0.28,
+  0.09,
+  "Sentences-corpus",
+  sub_label = glue("Top 1% sentences\n{nb_sentences_top_1_percent} sentences"),
+  cex = 0.85,
+  sub_cex = 0.70,
+  fill = corpus_fill
+)
+draw_box(
+  0.60,
+  0.12,
+  0.28,
+  0.09,
+  "Articles-corpus",
+  sub_label = glue("Top 10% articles\n{nb_articles_top_10_percent} articles (post-1960)"),
+  cex = 0.85,
+  sub_cex = 0.70,
+  fill = corpus_fill
+)
+
+# Reduced heights at bottom
+draw_box(0.08, 0.03, 0.36, 0.055, "Semantic clusters", fill = proc_fill)
+draw_box(0.56, 0.03, 0.36, 0.055, "Bibliometric communities", fill = proc_fill)
+
+# Arrows: top -> sources/merge
+draw_arrow(0.19, 0.90, 0.38, 0.74) # JSTOR economics journals -> Merge
+draw_arrow(0.50, 0.90, 0.50, 0.85) # Scopus economics journals -> Elsevier
+draw_arrow(0.81, 0.90, 0.81, 0.85) # Scopus economics journals -> ISTEX
+
+# Arrows: sources -> merge
+draw_arrow(0.50, 0.78, 0.50, 0.74) # Elsevier -> Merge
+draw_arrow(0.81, 0.78, 0.62, 0.74) # ISTEX -> Merge
+
+# Arrows: internal pipeline
+draw_arrow(0.50, 0.64, 0.50, 0.61) # Merge -> Meta-corpus
+draw_arrow(0.50, 0.53, 0.50, 0.49) # Meta-corpus -> Add citation
+draw_arrow(0.23, 0.455, 0.27, 0.455) # WoS -> Add citation
+draw_arrow(0.50, 0.42, 0.50, 0.39) # Add citation -> Compute sentence vectors
+draw_arrow(0.50, 0.33, 0.50, 0.31) # Sentence vectors -> Representative vectors
+
+# Arrows: to outputs
+draw_arrow(0.50, 0.25, 0.30, 0.21)
+draw_arrow(0.50, 0.25, 0.70, 0.21)
+draw_arrow(0.26, 0.12, 0.26, 0.085)
+draw_arrow(0.74, 0.12, 0.74, 0.085)
+
+par(op)
+dev.off()
+```
+
+![Workflow of the method.](images/method_schema.png){#fig-method-schema}
+
+```{r}
+#| label: fig-rv-method-diagram
+#| fig-cap: "Construction and use of time-specific representative vectors."
+#| echo: false
+#| warning: false
+#| message: false
+
+pacman::p_load(DiagrammeR, DiagrammeRsvg, rsvg)
+
+g <- grViz(
+  "
+digraph rv_method {
+  graph [layout = dot, rankdir = TB, fontsize = 18]
+
+  node [shape = box, style = rounded, fontname = Helvetica, fontsize = 11]
+  edge [fontname = Helvetica, fontsize = 9]
+
+  subgraph cluster_left {
+    label = 'A. Build representative vector for 1910 (window 1905–1915)';
+    color = gray70;
+    style = rounded;
+
+    y1915 [label='1915 embeddings of sentences\\nwith rational/rationality'];
+    c1915 [label='Centroid 1915'];
+    yd2   [label='...'];
+    cd2   [label='...'];
+    y1910 [label='1910 embeddings of sentences\\nwith rational/rationality'];
+    c1910 [label='Centroid 1910'];
+    yd1   [label='...'];
+    cd1   [label='...'];
+    y1906 [label='1906 embeddings of sentences\\nwith rational/rationality'];
+    c1906 [label='Centroid 1906'];
+    y1905 [label='1905 embeddings of sentences\\nwith rational/rationality'];
+    c1905 [label='Centroid 1905'];
+
+    rv1910 [label='Representative vector 1910\\n= mean(1905 ... 1915)', shape = box, style='rounded,filled', fillcolor='#8C360A'];
+
+    y1915 -> c1915;
+    yd2   -> cd2;
+    y1910 -> c1910;
+    yd1   -> cd1;
+    y1906 -> c1906;
+    y1905 -> c1905;
+
+    c1905 -> rv1910;
+    c1906 -> rv1910;
+    cd1   -> rv1910;
+    c1910 -> rv1910;
+    cd2   -> rv1910;
+    c1915 -> rv1910;
+  }
+
+  subgraph cluster_right {
+    label = 'B. Score all 1910 sentences and keep top 1%';
+    color = gray70;
+    style = rounded;
+    labelloc = b;
+    labeljust = l;
+
+    s1   [label='1910_sentence_1'];
+    s2   [label='1910_sentence_2', style='rounded,filled', fillcolor='#2F8CBF'];
+    sd1  [label='...'];
+    sk   [label='1910_sentence_k'];
+    sd2  [label='...'];
+    sn   [label='1910_sentence_N', style='rounded,filled', fillcolor='#2F8CBF'];
+    top1 [label='Top 1% selected', style='rounded,filled', fillcolor='#2F8CBF'];
+
+    { rank = same; s1; s2; sd1; sk; sd2; sn; }
+
+    s1  -> s2  [style=invis, weight=10, constraint=false];
+    s2  -> sd1 [style=invis, weight=10, constraint=false];
+    sd1 -> sk  [style=invis, weight=10, constraint=false];
+    sk  -> sd2 [style=invis, weight=10, constraint=false];
+    sd2 -> sn  [style=invis, weight=10, constraint=false];
+
+    rv1910 -> s1;
+    rv1910 -> s2;
+    rv1910 -> sd1;
+    rv1910 -> sk  [label='cosine similarity', fontsize=14, fontcolor='#4A4A4A'];
+    rv1910 -> sd2;
+    rv1910 -> sn;
+
+    s2 -> top1 [color=gray40];
+    sn -> top1 [color=gray40];
+  }
+}
+"
+)
+
+out_path <- here::here("paper", "images", "rv_method_diagram.png")
+svg_txt <- DiagrammeRsvg::export_svg(g)
+rsvg::rsvg_png(
+  charToRaw(svg_txt),
+  file = out_path,
+  width = 2400,
+  height = 1500
+)
+
+out_path
+```
+
+![Construction and use of time-specific representative vectors.](images/rv_method_diagram.png){#fig-rv-method-diagram width="95%"}
+
+::: {#fig-distribution layout-nrow="2"}
+
+![Documents](images/documents_distribution_fulltext_database.png){#fig-fulltextdistribution_a width="86%"}
+
+![Languages](images/language_distribution_by_year_fulltext_database.png){#fig-fulltextdistribution_b width="86%"}
+
+Distribution of documents and languages in the full-text database over time (1900-2009).
+::: 
+
+::: {#fig-relative-frequency}
+
+![](images/relative_freq_rationality_and_rational.png)
+
+Relative frequency of terms "rational" and "rationality" in the jstor database (1900-2009). Points are the empirical data. Lines are the loess smoothed trends.
+::: 
+
+![Most frequent neighbor terms of "rational" and "rationality" by decade](images/top_neighbor_words_decades.png){#fig-co-occurence}
+
+![Relative citation of a selection of seminal papers on behavioral economics](images/citation_patterns_square.jpg){#fig-rationality-paper-citations}
 
 ```{r}
 #| label: tbl-illustrative_sentences
@@ -221,87 +519,6 @@ documents_tbl %>%
 # Appendix 
 
 We provide here an overview of the data and methods used to build our databases and our methods to build intertemporal semantic clusters and bibliometric communities. @fig-method-schema summarizes the general workflow. We describe the construction of the full-text database, the computation of sentence embeddings and representative vectors of rationality, and the clustering methods used to build our semantic clusters and bibliometric communities.
-
-```{r}
-#| label: fig-method-schema
-#| echo: false
-#| message: false
-#| warning: false
-#| eval: false
-#| fig-pos: "H"
-
-out_path <- here::here("paper", "images", "method_schema.png")
-png(out_path, width = 1600, height = 1000, res = 300)
-op <- par(mar = c(0, 0, 0, 0))
-plot.new()
-plot.window(xlim = c(0, 1), ylim = c(0, 1))
-
-draw_box <- function(x, y, w, h, label) {
-  rect(x, y, x + w, y + h, lwd = 1.2)
-  text(x + w / 2, y + h / 2, label, cex = 0.9)
-}
-
-draw_arrow <- function(x0, y0, x1, y1) {
-  arrows(x0, y0, x1, y1, length = 0.08, lwd = 1.0)
-}
-
-# Top: collection
-draw_box(0.35, 0.88, 0.30, 0.08, "Collect full-texts")
-draw_box(0.08, 0.74, 0.22, 0.08, "JSTOR")
-draw_box(0.39, 0.74, 0.22, 0.08, "Elsevier")
-draw_box(0.70, 0.74, 0.22, 0.08, "ISTEX")
-
-# Middle pipeline
-draw_box(0.28, 0.62, 0.44, 0.08, "Merge into full-text database")
-
-# Web of Science square to the left of the "Add citation" step
-draw_box(0.08, 0.48, 0.08, 0.08, "WOS")
-
-# Add citation
-draw_box(0.28, 0.48, 0.44, 0.08, "Add citation")
-
-draw_box(0.28, 0.36, 0.44, 0.08, "Compute sentence vectors")
-draw_box(0.28, 0.24, 0.44, 0.08, "Compute representative vectors")
-
-# Intermediate outputs from representative vectors
-draw_box(0.12, 0.12, 0.28, 0.06, "Top 1% sentences")
-draw_box(0.6, 0.12, 0.28, 0.06, "Top 10% articles")
-
-# Bottom: clustering outputs
-draw_box(0.08, 0.00, 0.36, 0.08, "Semantic clusters")
-draw_box(0.56, 0.00, 0.36, 0.08, "Bibliometric community")
-
-# Arrows from "Collect full-texts" to sources
-draw_arrow(0.50, 0.88, 0.19, 0.82)
-draw_arrow(0.50, 0.88, 0.50, 0.82)
-draw_arrow(0.50, 0.88, 0.81, 0.82)
-
-# Arrows from sources to merged database
-draw_arrow(0.19, 0.74, 0.39, 0.70)
-draw_arrow(0.50, 0.74, 0.50, 0.70)
-draw_arrow(0.81, 0.74, 0.61, 0.70)
-
-# Pipeline arrows
-draw_arrow(0.50, 0.62, 0.50, 0.56)  # Merge -> Add citation
-draw_arrow(0.50, 0.48, 0.50, 0.44)  # Add citation -> Sentence vectors
-draw_arrow(0.50, 0.36, 0.50, 0.32)  # Sentence vectors -> Representative vector
-
-# Arrow from WoS square to "Add citation"
-draw_arrow(0.16, 0.52, 0.28, 0.52)
-
-# Arrows from representative vector to the two intermediate boxes
-draw_arrow(0.50, 0.24, 0.3, 0.185)  # to Top 1% sentences (left)
-draw_arrow(0.50, 0.24, 0.7, 0.185)  # to Top 10% articles (right)
-
-# Arrows from intermediate boxes to final outputs
-draw_arrow(0.25, 0.12, 0.25, 0.085)  # Top 1% sentences -> Semantic clusters
-draw_arrow(0.75, 0.12, 0.75, 0.085)  # Top 10% articles -> Bibliometric community
-
-par(op)
-dev.off()
-```
-
-![Workflow of the method.](images/method_schema.png){#fig-method-schema}
 
 ## Collecting data 
 
@@ -363,9 +580,9 @@ ids_istex <- readRDS(here::here(
 metadata_source <- metadata %>%
   mutate(
     source = case_when(
+      id %in% ids_istex ~ "ISTEX",
       str_detect(id, "jstor") ~ "JSTOR",
-      str_detect(id, "SCOPUS") & !(id %in% ids_istex) ~ "Elsevier",
-      id %in% ids_istex ~ "ISTEX"
+      str_detect(id, "Elsevier") ~ "Elsevier"
     )
   ) %>%
   group_by(source) %>%
@@ -407,10 +624,9 @@ table_source %>%
     align = c("l", "c", "c", "c", "c", "c"),
     escape = FALSE
   ) %>%
-  kable_styling(font_size = 9, latex_options = c("striped"))
-```
+  kable_styling(font_size = 9, latex_options = c("striped")) 
 
-ADD MORE INFORMATION ON DISTRIBUTION OVER TIME OF SOURCES, OF WOS MATCHING, etc.
+```
 
 ## Sentence embeddings 
 
@@ -544,8 +760,6 @@ dev.off()
 Networks were constructed using bibliographic coupling, where two publications are linked if they cite common references. This approach identifies articles that draw on similar intellectual foundations, revealing thematic communities within the literature. Raw common references counting can be misleading, as articles that cite many references overall are more likely to share citations by chance and references that are highly cited are also overall more likely to link to articles by chance. To weight shared references between two articles, we use the coupling strength method from [@shenRefinedMethodComputing2019]. Coupling strength weighs both the size of the reference list of articles and the number of overall citations of each reference to overweight significant co-occurrences of references.^[ Statistical determination of edges are best options but are computionally unfeasable given the size of our networks] 
 
 To study the evolution of networks over time, we employed a dynamic windowing approach:
-
-CHANGE TIME WINDOW AND JUSTIFY
 
 * Time window: 8 years 
 * Overlapping windows: windows overlap to allow smooth temporal transitions (1980-1987, 1981-1988, etc.)
