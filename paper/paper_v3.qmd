@@ -108,21 +108,11 @@ txt <- str_replace_all(txt, "\\\\([\\[\\]@>])", "\\1")
 writeLines(txt, md)
 ```
 
-{{< include gdoc.md >}}
-
-# References
-
-::: {#refs}
-:::
-
-\newpage
-
-# Figures  
-
 ```{r}
 #| echo: false
 #| message: false
 #| warning: false
+#| output: false
 
 nb_sentences_top_1_percent <- read_feather(
   here::here(
@@ -173,6 +163,17 @@ documents_tbl <- documents %>%
   arrange(desc(similarity_rv))
 ```
 
+{{< include gdoc.md >}}
+
+# References
+
+::: {#refs}
+:::
+
+\newpage
+
+# Figures  
+
 ```{r}
 #| label: fig-method-schema
 #| echo: false
@@ -180,10 +181,6 @@ documents_tbl <- documents %>%
 #| warning: false
 #| eval: false
 #| fig-pos: "H"
-
-#  [1] "#7E1700" "#8C360A" "#ac5f1f" "#A3651E" "#AD7B27" "#B99235" "#C4AB4A" "#CEC56C" "#D1DC94"
-# [10] "#C9E8B5" "#B4E9CC" "#95E0D6" "#73CED5" "#54B8D0" "#3DA2C9" "#2F8CBF" "#2677B7" "#1F61AD"
-# [19] "#164AA3" "#023198"
 
 out_path <- here::here("paper", "images", "method_schema.png")
 png(out_path, width = 1800, height = 2000, res = 300)
@@ -408,7 +405,7 @@ digraph rv_method {
     sk   [label='1910_sentence_k'];
     sd2  [label='...'];
     sn   [label='1910_sentence_N', style='rounded,filled', fillcolor='#2F8CBF'];
-    top1 [label='Top 1% selected', style='rounded,filled', fillcolor='#2F8CBF'];
+    top1 [label='Top 1% selected = Sentences-corpus', style='rounded,filled', fillcolor='#2F8CBF'];
 
     { rank = same; s1; s2; sd1; sk; sd2; sn; }
 
