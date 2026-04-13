@@ -108,7 +108,7 @@ p <- ggplot(
     breaks = seq(1900, max(df_filtered$year, na.rm = TRUE), by = 20),
     limits = c(1900, max(df_filtered$year, na.rm = TRUE) + 10) # marge pour les labels
   ) +
-  theme_light(base_size = 25) +
+  theme_light(base_size = 30) +
   theme(legend.position = "none", plot.margin = margin(5.5, 30, 5.5, 5.5)) +
   coord_cartesian(clip = "off") # autorise le débordement des labels à droite
 
@@ -118,6 +118,6 @@ print(p)
 
 ggsave(
   file.path(image_path, "relative_freq_rationality_and_rational.png"),
-  width = 12,
-  height = 9
+  width = 16,
+  height = 10
 )

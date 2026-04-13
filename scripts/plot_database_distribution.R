@@ -57,11 +57,11 @@ metadata <- bind_rows(metadata_jstor, metadata_scopus) |>
 gg <- metadata %>%
   count(year) %>%
   ggplot(aes(x = year, y = n)) +
-  geom_col(fill = "grey70", colour = "black", width = 0.8) +
+  geom_line(color = "black", linewidth = 1.5) +
   scale_x_continuous(breaks = seq(1900, 2009, by = 20), expand = c(0.01, 0)) +
   scale_y_continuous(expand = c(0.01, 0)) +
   labs(x = NULL, y = "Number of documents") +
-  theme_light(base_size = 25)
+  theme_light(base_size = 30)
 
 ggsave(
   plot = gg,
@@ -101,7 +101,7 @@ gg <- metadata |>
   ungroup() |>
   ggplot(aes(x = decade, y = pct, fill = fct_rev(languages))) +
   geom_col(position = "fill") +
-  scale_fill_grey(start = 0.8, end = 0.1) +
+  scale_fill_grey(start = 0.10, end = 0.92) +
   scale_y_continuous(
     labels = scales::percent_format(scale = 100),
     expand = c(0.01, 0)
@@ -112,7 +112,8 @@ gg <- metadata |>
     y = "Percentage of documents",
     fill = NULL
   ) +
-  theme_light(base_size = 25)
+  theme_light(base_size = 30) +
+  theme(legend.position = "bottom")
 
 
 # save the plot

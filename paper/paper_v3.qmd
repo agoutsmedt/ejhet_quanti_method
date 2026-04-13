@@ -12,7 +12,11 @@ biblio-style: tfcad
 # PDF output using Taylor & Francis Interact class
 format:
   pdf:
-    documentclass: interact 
+    documentclass: interact
+    include-in-header:
+      text: |
+        \usepackage{colortbl}
+        \usepackage{threeparttable}
 # Quarto execution defaults
 execute:
   echo: false
@@ -55,9 +59,9 @@ source(here::here(".", "scripts", "paths_and_packages.R"))
 
 # load kable 
 
-pacman::p_load(knitr, 
-               kableExtra, 
-               kableExtra)
+pacman::p_load(knitr,
+               kableExtra,
+               DiagrammeR, DiagrammeRsvg, rsvg)
 
 ```
 
@@ -151,16 +155,30 @@ documents <- read_feather(here::here(
 
 # --- prepare tables ---
 sentences_tbl <- sentences %>%
-  filter(year == 1910) %>%
+  filter(year %in% c(1910, 1950, 2000)) %>%
   mutate(similarity_rv = round(similarity_rv, 3)) %>%
-  select(sentence, similarity_rv) %>%
-  arrange(desc(similarity_rv))
+  arrange(year, desc(similarity_rv))
+
+sentences_grp <- sentences_tbl %>%
+  group_by(year) %>%
+  summarise(n = n()) %>%
+  mutate(end = cumsum(n), start = end - n + 1)
+
+sentences_tbl <- sentences_tbl %>%
+  select(sentence, similarity_rv)
 
 documents_tbl <- documents %>%
-  filter(year == 1910) %>%
+  filter(year %in% c(1910, 1950, 2000)) %>%
   mutate(similarity_rv = round(cosine_doc_with_rv, 3)) %>%
-  select(title, authors, journal, similarity_rv) %>%
-  arrange(desc(similarity_rv))
+  arrange(year, desc(similarity_rv))
+
+documents_grp <- documents_tbl %>%
+  group_by(year) %>%
+  summarise(n = n()) %>%
+  mutate(end = cumsum(n), start = end - n + 1)
+
+documents_tbl <- documents_tbl %>%
+  select(title, authors, journal, similarity_rv)
 ```
 
 {{< include gdoc.md >}}
@@ -173,275 +191,21 @@ documents_tbl <- documents %>%
 \newpage
 
 # Figures  
+::: {#fig-method-schema-general layout-nrow="2"}
 
-```{r}
-#| label: fig-method-schema
-#| echo: false
-#| message: false
-#| warning: false
-#| eval: false
-#| fig-pos: "H"
+![](images/method_schema.png)
 
-out_path <- here::here("paper", "images", "method_schema.png")
-png(out_path, width = 1800, height = 2000, res = 300)
+General workflow of the methods used in the paper. Orange boxes represent data sources. Blue boxes represent used corpora. White boxes are transformation steps. Arrows indicate the flow of data and transformations. @tbl-illustrative_sentences and @tbl-illustrative_documents give examples of sentences and documents in the sentences and documents corpora.
 
-op <- par(mar = c(0, 0, 0, 0))
-plot.new()
-plot.window(xlim = c(0, 1), ylim = c(0, 1))
+::: 
 
-inst_fill <- "#8C360A" # light red (institutional databases)
-corpus_fill <- "#2F8CBF" # light green (created corpora)
-proc_fill <- "white"
+::: {#fig-rv-method-diagram layout-nrow="1"}
 
-draw_box <- function(
-  x,
-  y,
-  w,
-  h,
-  label,
-  sub_label = "",
-  cex = 0.9,
-  sub_cex = 0.75,
-  fill = "white"
-) {
-  rect(x, y, x + w, y + h, lwd = 1.2, col = fill, border = "grey30")
-  text(x + w / 2, y + h * 0.62, label, cex = cex)
-  if (nzchar(sub_label)) {
-    text(x + w / 2, y + h * 0.30, sub_label, cex = sub_cex)
-  }
-}
+![](images/rv_method_diagram_bis.png)
 
-draw_arrow <- function(x0, y0, x1, y1) {
-  arrows(x0, y0, x1, y1, length = 0.07, lwd = 1.0)
-}
+Zoom on the construction of the representative vector of rationality. We identify sentences that contain "rational" or "rationality" and compute the centroid of their embeddings to obtain a single vector by year. We then apply an unweighted centered moving average over an 11-year window to produce the final representative vector series. The unweighted procedure—averaging each year's vectors before averaging across the 11-year window—is used to smooth potential short-term fluctuations. @tbl-illustrative_sentences and @tbl-illustrative_documents give examples of sentences and documents in the sentences and documents corpora.
 
-# Top row
-draw_box(
-  0.07,
-  0.90,
-  0.24,
-  0.07,
-  "JSTOR economics\njournals",
-  cex = 0.80,
-  fill = inst_fill
-)
-draw_box(
-  0.37,
-  0.90,
-  0.56,
-  0.07,
-  "Scopus economics journals",
-  cex = 0.85,
-  fill = inst_fill
-)
-
-# Sources (no extra JSTOR box)
-draw_box(0.39, 0.78, 0.22, 0.07, "Elsevier API", fill = inst_fill)
-draw_box(0.70, 0.78, 0.22, 0.07, "ISTEX", fill = inst_fill)
-
-# Main pipeline
-draw_box(
-  0.27,
-  0.64,
-  0.46,
-  0.10,
-  "Merge and clean",
-  sub_label = "English articles,\nwithout headings, bibliography, etc.",
-  cex = 0.88,
-  sub_cex = 0.72,
-  fill = proc_fill
-)
-draw_box(
-  0.27,
-  0.53,
-  0.46,
-  0.08,
-  "Meta-corpus",
-  sub_label = glue("{nb_articles_meta_corpus} full-text documents"),
-  cex = 0.86,
-  sub_cex = 0.70,
-  fill = corpus_fill
-)
-draw_box(
-  0.05,
-  0.42,
-  0.18,
-  0.07,
-  "Web of\nScience",
-  cex = 0.84,
-  fill = inst_fill
-)
-draw_box(0.27, 0.42, 0.46, 0.07, "Add citation data", fill = proc_fill)
-
-# Reduced heights
-draw_box(0.27, 0.33, 0.46, 0.06, "Compute sentence vectors", fill = proc_fill)
-draw_box(
-  0.27,
-  0.25,
-  0.46,
-  0.06,
-  "Compute representative vectors",
-  fill = proc_fill
-)
-
-# Give more space to these two
-draw_box(
-  0.12,
-  0.12,
-  0.28,
-  0.09,
-  "Sentences-corpus",
-  sub_label = glue("Top 1% sentences\n{nb_sentences_top_1_percent} sentences"),
-  cex = 0.85,
-  sub_cex = 0.70,
-  fill = corpus_fill
-)
-draw_box(
-  0.60,
-  0.12,
-  0.28,
-  0.09,
-  "Articles-corpus",
-  sub_label = glue("Top 10% articles\n{nb_articles_top_10_percent} articles (post-1960)"),
-  cex = 0.85,
-  sub_cex = 0.70,
-  fill = corpus_fill
-)
-
-# Reduced heights at bottom
-draw_box(0.08, 0.03, 0.36, 0.055, "Semantic clusters", fill = proc_fill)
-draw_box(0.56, 0.03, 0.36, 0.055, "Bibliometric communities", fill = proc_fill)
-
-# Arrows: top -> sources/merge
-draw_arrow(0.19, 0.90, 0.38, 0.74) # JSTOR economics journals -> Merge
-draw_arrow(0.50, 0.90, 0.50, 0.85) # Scopus economics journals -> Elsevier
-draw_arrow(0.81, 0.90, 0.81, 0.85) # Scopus economics journals -> ISTEX
-
-# Arrows: sources -> merge
-draw_arrow(0.50, 0.78, 0.50, 0.74) # Elsevier -> Merge
-draw_arrow(0.81, 0.78, 0.62, 0.74) # ISTEX -> Merge
-
-# Arrows: internal pipeline
-draw_arrow(0.50, 0.64, 0.50, 0.61) # Merge -> Meta-corpus
-draw_arrow(0.50, 0.53, 0.50, 0.49) # Meta-corpus -> Add citation
-draw_arrow(0.23, 0.455, 0.27, 0.455) # WoS -> Add citation
-draw_arrow(0.50, 0.42, 0.50, 0.39) # Add citation -> Compute sentence vectors
-draw_arrow(0.50, 0.33, 0.50, 0.31) # Sentence vectors -> Representative vectors
-
-# Arrows: to outputs
-draw_arrow(0.50, 0.25, 0.30, 0.21)
-draw_arrow(0.50, 0.25, 0.70, 0.21)
-draw_arrow(0.26, 0.12, 0.26, 0.085)
-draw_arrow(0.74, 0.12, 0.74, 0.085)
-
-par(op)
-dev.off()
-```
-
-![Workflow of the method.](images/method_schema.png){#fig-method-schema}
-
-```{r}
-#| label: fig-rv-method-diagram
-#| fig-cap: "Construction and use of time-specific representative vectors."
-#| echo: false
-#| warning: false
-#| message: false
-
-pacman::p_load(DiagrammeR, DiagrammeRsvg, rsvg)
-
-g <- grViz(
-  "
-digraph rv_method {
-  graph [layout = dot, rankdir = TB, fontsize = 18]
-
-  node [shape = box, style = rounded, fontname = Helvetica, fontsize = 11]
-  edge [fontname = Helvetica, fontsize = 9]
-
-  subgraph cluster_left {
-    label = 'A. Build representative vector for 1910 (window 1905–1915)';
-    color = gray70;
-    style = rounded;
-
-    y1915 [label='1915 embeddings of sentences\\nwith rational/rationality'];
-    c1915 [label='Centroid 1915'];
-    yd2   [label='...'];
-    cd2   [label='...'];
-    y1910 [label='1910 embeddings of sentences\\nwith rational/rationality'];
-    c1910 [label='Centroid 1910'];
-    yd1   [label='...'];
-    cd1   [label='...'];
-    y1906 [label='1906 embeddings of sentences\\nwith rational/rationality'];
-    c1906 [label='Centroid 1906'];
-    y1905 [label='1905 embeddings of sentences\\nwith rational/rationality'];
-    c1905 [label='Centroid 1905'];
-
-    rv1910 [label='Representative vector 1910\\n= mean(1905 ... 1915)', shape = box, style='rounded,filled', fillcolor='#8C360A'];
-
-    y1915 -> c1915;
-    yd2   -> cd2;
-    y1910 -> c1910;
-    yd1   -> cd1;
-    y1906 -> c1906;
-    y1905 -> c1905;
-
-    c1905 -> rv1910;
-    c1906 -> rv1910;
-    cd1   -> rv1910;
-    c1910 -> rv1910;
-    cd2   -> rv1910;
-    c1915 -> rv1910;
-  }
-
-  subgraph cluster_right {
-    label = 'B. Score all 1910 sentences and keep top 1%';
-    color = gray70;
-    style = rounded;
-    labelloc = b;
-    labeljust = l;
-
-    s1   [label='1910_sentence_1'];
-    s2   [label='1910_sentence_2', style='rounded,filled', fillcolor='#2F8CBF'];
-    sd1  [label='...'];
-    sk   [label='1910_sentence_k'];
-    sd2  [label='...'];
-    sn   [label='1910_sentence_N', style='rounded,filled', fillcolor='#2F8CBF'];
-    top1 [label='Top 1% selected = Sentences-corpus', style='rounded,filled', fillcolor='#2F8CBF'];
-
-    { rank = same; s1; s2; sd1; sk; sd2; sn; }
-
-    s1  -> s2  [style=invis, weight=10, constraint=false];
-    s2  -> sd1 [style=invis, weight=10, constraint=false];
-    sd1 -> sk  [style=invis, weight=10, constraint=false];
-    sk  -> sd2 [style=invis, weight=10, constraint=false];
-    sd2 -> sn  [style=invis, weight=10, constraint=false];
-
-    rv1910 -> s1;
-    rv1910 -> s2;
-    rv1910 -> sd1;
-    rv1910 -> sk  [label='cosine similarity', fontsize=14, fontcolor='#4A4A4A'];
-    rv1910 -> sd2;
-    rv1910 -> sn;
-
-    s2 -> top1 [color=gray40];
-    sn -> top1 [color=gray40];
-  }
-}
-"
-)
-
-out_path <- here::here("paper", "images", "rv_method_diagram.png")
-svg_txt <- DiagrammeRsvg::export_svg(g)
-rsvg::rsvg_png(
-  charToRaw(svg_txt),
-  file = out_path,
-  width = 2400,
-  height = 1500
-)
-
-out_path
-```
-
-![Construction and use of time-specific representative vectors.](images/rv_method_diagram.png){#fig-rv-method-diagram width="95%"}
+::: 
 
 ::: {#fig-distribution layout-nrow="2"}
 
@@ -452,20 +216,10 @@ out_path
 Distribution of documents and languages in the full-text database over time (1900-2009).
 ::: 
 
-::: {#fig-relative-frequency}
-
-![](images/relative_freq_rationality_and_rational.png)
-
-Relative frequency of terms "rational" and "rationality" in the jstor database (1900-2009). Points are the empirical data. Lines are the loess smoothed trends.
-::: 
-
-![Most frequent neighbor terms of "rational" and "rationality" by decade](images/top_neighbor_words_decades.png){#fig-co-occurence}
-
-![Relative citation of a selection of seminal papers on behavioral economics](images/citation_patterns_square.jpg){#fig-rationality-paper-citations}
 
 ```{r}
 #| label: tbl-illustrative_sentences
-#| tbl-cap: "Sentences from the corpus closest to the representative vector in 1910."
+#| tbl-cap: "Sentences from the corpus closest to the representative vector in 1910, 1950, and 2000."
 #| echo: false
 #| message: false
 #| warning: false
@@ -479,15 +233,18 @@ sentences_tbl %>%
     align = c("l", "c"),
     escape = FALSE
   ) %>%
-  kable_styling(font_size = 9, latex_options = c("striped")) %>%
+  kable_styling(font_size = 8, latex_options = c("striped")) %>%
   column_spec(1, width = "11cm") %>%
-  column_spec(2, width = "2cm") 
+  column_spec(2, width = "2cm") %>%
+  pack_rows("1910", sentences_grp$start[1], sentences_grp$end[1]) %>%
+  pack_rows("1950", sentences_grp$start[2], sentences_grp$end[2]) %>%
+  pack_rows("2000", sentences_grp$start[3], sentences_grp$end[3])
 
 ```
 
 ```{r}
 #| label: tbl-illustrative_documents
-#| tbl-cap: "Documents from the corpus closest to the representative vector in 1910."
+#| tbl-cap: "Documents from the corpus closest to the representative vector in 1910, 1950, and 2000."
 #| echo: false
 #| message: false
 #| warning: false
@@ -500,22 +257,46 @@ documents_tbl %>%
     align = c("l", "l", "l", "c"),
     escape = FALSE
   ) %>%
-  kable_styling(font_size = 9, latex_options = c("striped")) %>%
+  kable_styling(font_size = 8, latex_options = c("striped")) %>%
   column_spec(1, width = "5cm") %>%
   column_spec(2, width = "2.5cm") %>%
   column_spec(3, width = "3cm") %>%
   column_spec(4, width = "1.5cm") %>%
-  # add footnote
-  footnote(general = "Documents vectors are vector centroids of all sentences in the document.",
-           general_title = "Note:")
+  pack_rows("1910", documents_grp$start[1], documents_grp$end[1]) %>%
+  pack_rows("1950", documents_grp$start[2], documents_grp$end[2]) %>%
+  pack_rows("2000", documents_grp$start[3], documents_grp$end[3]) 
 
 ```
 
-\newpage
+::: {#fig-relative-frequency}
+
+![](images/relative_freq_rationality_and_rational.png)
+
+Relative frequency of terms "rational" and "rationality" in the jstor database (1900-2009). Points are the empirical data. Lines are the loess smoothed trends.
+::: 
+
+
+::: {#fig-co-occurence}
+
+![](images/top_neighbor_words_decades.png)
+
+Five most frequent neighbor terms of "rational" and "rationality" by decade. We search and select $n-1$ and $n+1$ neighbors of "rational" and "rationality" in each sentence. We remove stop words and compute the most frequent neighbors by decade. We merge 1900 and 1910 decades because of the low number of sentences containing "rational" or "rationality" before 1910. 
+
+::: 
+
+::: {#fig-rationality-paper-citations}
+
+![](images/citation_patterns_square.jpg)
+
+Relative citation of a selection of seminal papers on behavioral economics. 
+
+::: 
+
+\clearpage 
 
 # Appendix 
 
-We provide here an overview of the data and methods used to build our databases and our methods to build intertemporal semantic clusters and bibliometric communities. @fig-method-schema summarizes the general workflow. We describe the construction of the full-text database, the computation of sentence embeddings and representative vectors of rationality, and the clustering methods used to build our semantic clusters and bibliometric communities.
+We provide here an overview of the data and methods used to build our databases and our methods to build intertemporal semantic clusters and bibliometric communities. @fig-method-schema-general summarizes the general workflow. We describe the construction of the full-text database, the computation of sentence embeddings and representative vectors of rationality, and the clustering methods used to build our semantic clusters and bibliometric communities.
 
 ## Collecting data 
 
@@ -528,8 +309,8 @@ We provide here an overview of the data and methods used to build our databases 
 path <- file.path(data_path, "metadata_maintext.feather")
 metadata <- read_feather(path)
 
-metadata_1950_2009 <- metadata %>%
-  filter(year >= 1950)
+metadata_1960_2009 <- metadata %>%
+  filter(year >= 1960)
 ```
 
 ```{r}
@@ -555,11 +336,11 @@ xlsx::write.xlsx(
 
 The full-text database is built from three main sources: JSTOR, Elsevier and ISTEX. The main source is JSTOR, which provides the largest coverage of historical economics journals. However, some important economics journals published by Elsevier are missing from JSTOR. We therefore complement JSTOR with documents from SCOPUS journals using two supplementary sources: Elsevier and ISTEX. We used Elsevier API to access Elsevier's economics journals full-texts after 1997; we used ISTEX to retrieve older Elsevier documents.
 
-To identify economics documents, we first created a list of economic journals to query these databases. We built a list of journals classified as economics in our sources and in Econlit and then review them manually to ensure they are economics and academic journals. We also filtered out very recent journals (less than 20 years old). The rationale is to focus on journals with a sufficiently long publication history to allow meaningful intertemporal comparisons. This criterion primarily aims to reduce short time-series effects. We end up with `r n_distinct(metadata$journal)` unique journals. The list of journals is available in the supplementary material. Once we have the list of journals, we queried each source to retrieve all available documents published by these journals between 1900 and 2009. We keep only documents classified as research articles (i.e., we remove editorials, book reviews, etc.) and written in English. 
+To identify economics documents, we first created a list of economic journals to query these databases. We built a list of journals classified as economics in our sources and in Econlit and then review them manually to ensure they are economics and academic journals. We also filtered out very recent journals (less than 20 years old). The rationale is to focus on journals with a sufficiently long publication history to allow meaningful intertemporal comparisons. This criterion primarily aims to reduce short time-series effects. We end up with `r dplyr::n_distinct(metadata$journal)` unique journals. The list of journals is available in the supplementary material. Once we have the list of journals, we queried each source to retrieve all available documents published by these journals between 1900 and 2009. We keep only documents classified as research articles (i.e., we remove editorials, book reviews, etc.) and written in English. 
 
 This results in a total of `r nrow(metadata)` documents that represent our curated metadata. @tbl-database-sources summarizes the sources of our full-text database.  Each source provides documents at different levels of granularity: Elsevier provides paragraph-level data, JSTOR page-level data, while ISTEX provides no such segmentation. Quality also varies across sources. While JSTOR and ISTEX provide raw OCR full-texts, Elsevier provides structured full-texts divided into paragraphs, which we parse to extract paragraphs. It is a higher quality of text segmentation compared to raw OCR that do not distinguish main text from other elements (headings, footnotes, *etc*.). 
 
-We enrich our full-text database with citation data from Web of Science (WOS). The main challenge is to match documents from our full-text database with WOS records. To match the fulltexts to WOS citation data, we apply a series of deterministic matching strategies, starting with strict combinations of metadata (title, journal, volume, issue, year, and page ranges, etc.). @tbl-database-sources indicates the proportion of documents successfully matched to WOS records for each source. After 1950---citation data are rare before this date---we achieve an overall match rate of `r round(mean(!is.na(metadata_1950_2009$id_wos_matched)) * 100, 1)`\%. 
+We enrich our full-text database with citation data from Web of Science (WOS). The main challenge is to match documents from our full-text database with WOS records. To match the fulltexts to WOS citation data, we apply a series of deterministic matching strategies, starting with strict combinations of metadata (title, journal, volume, issue, year, and page ranges, etc.). @tbl-database-sources indicates the proportion of documents successfully matched to WOS records for each source. After 1960---citation data are rare before this date---we achieve an overall match rate of `r round(mean(!is.na(metadata_1960_2009$id_wos_matched)) * 100, 1)`\%. 
 
 ```{r}
 #| echo: false
@@ -579,7 +360,7 @@ metadata_source <- metadata %>%
     source = case_when(
       id %in% ids_istex ~ "ISTEX",
       str_detect(id, "jstor") ~ "JSTOR",
-      str_detect(id, "Elsevier") ~ "Elsevier"
+      str_detect(id, "SCOPUS") ~ "Elsevier"
     )
   ) %>%
   group_by(source) %>%
@@ -599,7 +380,7 @@ table_source <- metadata_source %>%
   group_by(source) %>%
   summarise(
     n_documents = n(),
-    n_journals = n_distinct(journal),
+    n_journals = dplyr::n_distinct(journal),
     `Unit of text` = first(`Unit of text`),
     Format = first(Format),
     pct_wos_matched = mean(!is.na(id_wos_matched)) * 100,
@@ -623,6 +404,55 @@ table_source %>%
   ) %>%
   kable_styling(font_size = 9, latex_options = c("striped")) 
 
+```
+
+## Overlap between the two corpora
+
+```{r}
+#| echo: false
+#| label: load-overlap-stats
+
+ov <- readRDS(file.path(data_path, "corpus_overlap_stats.rds"))
+```
+
+
+@tbl-corpus-overlap reports the size of each corpus and the extent of their overlap. The two corpora are constructed from the same meta-corpus but capture different dimensions of proximity to the representative vector: the sentences-corpus selects the most semantically similar _sentences_ within each year, whereas the articles-corpus selects the most semantically similar _documents_, ranked by their average sentence embedding. The two selection criteria are related but not equivalent: an article contributing a single highly similar sentence may not rank high enough on its document-level average. The-corpus and the articles-corpus share `r formatC(ov$n_overlap_articles, format = "d", big.mark = ",")` articles. Almost all documents in the articles-corpus are also in the sentences-corpus (i.e., `r ov$pct_overlap_in_articles_corpus`\%) but documents with sentences in the sentences-corpus are much less likely to be in the articles-corpus (i.e., `r ov$pct_overlap_in_sentences_corpus`\%). This is expected given the different selection criteria: the sentences-corpus captures a broader range of sentences that are semantically close to the representative vector and are drawn from a larger set of documents. Despite representing only `r ov$pct_overlap_in_sentences_corpus`% of the articles in the sentences-corpus, these shared articles account for `r ov$pct_overlap_sentences`% of its sentences — suggesting that articles with a high document-level similarity to the representative vector also tend to concentrate a disproportionate share of top-ranked sentences.
+
+```{r}
+#| echo: false
+#| label: tbl-corpus-overlap
+#| tbl-cap: "Overlap between the sentences-corpus and the articles-corpus."
+
+tibble(
+  Corpus = c(
+    "Sentences-corpus (top 1\\%)",
+    "Articles-corpus (top 10\\%)",
+    "Intersection"
+  ),
+  Articles = c(
+    formatC(ov$n_sentences_corpus_articles,  format = "d", big.mark = ","),
+    formatC(ov$n_articles_corpus,            format = "d", big.mark = ","),
+    formatC(ov$n_overlap_articles,           format = "d", big.mark = ",")
+  ),
+  Sentences = c(
+    formatC(ov$n_sentences_corpus_sentences, format = "d", big.mark = ","),
+    "---",
+    formatC(ov$n_overlap_sentences,          format = "d", big.mark = ",")
+  ),
+  `Shared articles` = c(
+    glue("{formatC(ov$n_overlap_articles, format = 'd', big.mark = ',')} ({ov$pct_overlap_in_sentences_corpus}\\%)"),
+    glue("{formatC(ov$n_overlap_articles, format = 'd', big.mark = ',')} ({ov$pct_overlap_in_articles_corpus}\\%)"),
+    "---"
+  )
+) %>%
+  kbl(
+    format    = "latex",
+    booktabs  = TRUE,
+    col.names = c("Corpus", "Articles", "Sentences", "Shared articles"),
+    align     = c("l", "c", "c", "c"),
+    escape    = FALSE
+  ) %>%
+  kable_styling(font_size = 9, latex_options = c("striped"))
 ```
 
 ## Sentence embeddings 
@@ -650,36 +480,7 @@ This section details the text clustering methods used to identify semantic clust
 #| fig-cap: "Semantic clustering workflow."
 
 
-out_path <- here::here("paper", "images", "text_clustering_schema.png")
-png(out_path, width = 1600, height = 1000, res = 200)
-op <- par(mar = c(0, 0, 0, 0))
-plot.new()
-plot.window(xlim = c(0, 1), ylim = c(0, 1))
-
-draw_box <- function(x, y, w, h, label) {
-  rect(x, y, x + w, y + h, lwd = 1.2)
-  text(x + w / 2, y + h / 2, label, cex = 0.9)
-}
-
-draw_arrow <- function(x0, y0, x1, y1) {
-  arrows(x0, y0, x1, y1, length = 0.08, lwd = 1.0)
-}
-
-draw_box(0.28, 0.72, 0.44, 0.08, "Representative vector")
-draw_box(0.28, 0.60, 0.44, 0.08, "Select top 1% sentences")
-draw_box(0.28, 0.48, 0.44, 0.08, "Project with UMAP (100 Dimensions)")
-draw_box(0.28, 0.36, 0.44, 0.08, "Cluster with HDBSCAN")
-draw_box(0.28, 0.24, 0.44, 0.08, "Merge clusters over time")
-draw_box(0.28, 0.12, 0.44, 0.08, "Intertemporal semantic clusters")
-
-draw_arrow(0.50, 0.712, 0.50, 0.688)
-draw_arrow(0.50, 0.592, 0.50, 0.568)
-draw_arrow(0.50, 0.472, 0.50, 0.448)
-draw_arrow(0.50, 0.352, 0.50, 0.328)
-draw_arrow(0.50, 0.232, 0.50, 0.208)
-
-par(op)
-dev.off()
+# See scripts/generate_diagrams.R — section 3
 ```
 
 ![Text clustering workflow.](images/text_clustering_schema.png){#fig-text-clustering-schema}
@@ -720,34 +521,7 @@ This section details the bibliographic coupling and community detection workflow
 #| eval: false
 #| fig-cap: "Bibliometric community detection workflow."
 
-out_path <- here::here("paper", "images", "biblio_coupling_schema.png")
-png(out_path, width = 1600, height = 1000, res = 200)
-op <- par(mar = c(0, 0, 0, 0))
-plot.new()
-plot.window(xlim = c(0, 1), ylim = c(0, 1))
-
-draw_box <- function(x, y, w, h, label) {
-  rect(x, y, x + w, y + h, lwd = 1.2)
-  text(x + w / 2, y + h / 2, label, cex = 0.9)
-}
-
-draw_arrow <- function(x0, y0, x1, y1) {
-  arrows(x0, y0, x1, y1, length = 0.08, lwd = 1.0)
-}
-
-draw_box(0.28, 0.74, 0.44, 0.08, "Representative vectors")
-draw_box(0.28, 0.59, 0.44, 0.08, "Select closest documents")
-draw_box(0.28, 0.44, 0.44, 0.08, "Leiden community detection")
-draw_box(0.28, 0.29, 0.44, 0.08, "Merge communities over time")
-draw_box(0.28, 0.14, 0.44, 0.08, "Intertemporal bibliometric communities")
-
-draw_arrow(0.50, 0.732, 0.50, 0.67)
-draw_arrow(0.50, 0.582, 0.50, 0.52)
-draw_arrow(0.50, 0.432, 0.50, 0.37)
-draw_arrow(0.50, 0.282, 0.50, 0.22)
-
-par(op)
-dev.off()
+# See scripts/generate_diagrams.R — section 4
 ```
 
 ![Bibliographic coupling and community detection workflow.](images/biblio_coupling_schema.png){#fig-biblio-coupling-schema}

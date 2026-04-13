@@ -40,10 +40,12 @@ cluster_distribution <- df %>%
 p1 <- ggplot(cluster_distribution, aes(x = window, y = n, fill = is_noise)) +
   geom_col(position = "dodge") +
   theme_light(base_size = 25) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "bottom"
+  ) +
   labs(
     title = "Distribution of sentences clusterised by decades",
-    subtitle = "Noise are sentences that were not assigned to any cluster by HDBSCAN algorithm",
     x = NULL,
     y = "Number of Sentences",
     fill = "Cluster"
