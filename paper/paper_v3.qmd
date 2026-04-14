@@ -402,8 +402,36 @@ table_source %>%
     align = c("l", "c", "c", "c", "c", "c"),
     escape = FALSE
   ) %>%
-  kable_styling(font_size = 9, latex_options = c("striped")) 
+  kable_styling(font_size = 9, latex_options = c("striped"))
 
+```
+
+```{r}
+#| echo: false
+#| label: load-wos-match
+
+wos_decade <- readRDS(file.path(data_path, "wos_match_by_decade.rds"))
+```
+
+@tbl-wos-match-decade details the WOS match rate by decade. Coverage is near zero before 1940, as WOS records are sparse for this period. From the 1950s onwards, match rates stabilise between 60% and 68%. 
+
+```{r}
+#| echo: false
+#| label: tbl-wos-match-decade
+#| tbl-cap: "WOS match rate by decade (articles from the full-text database, 1940--2009)."
+
+wos_decade %>%
+  mutate(n_articles  = formatC(n_articles, format = "d", big.mark = ","),
+         n_matched   = formatC(n_matched,  format = "d", big.mark = ","),
+         pct_matched = paste0(pct_matched, "\\%")) %>%
+  kbl(
+    format    = "latex",
+    booktabs  = TRUE,
+    col.names = c("Decade", "Articles", "WOS matched", "Match rate"),
+    align     = c("l", "r", "r", "r"),
+    escape    = FALSE
+  ) %>%
+  kable_styling(font_size = 9, latex_options = c("striped"))
 ```
 
 ## Overlap between the two corpora
@@ -416,7 +444,7 @@ ov <- readRDS(file.path(data_path, "corpus_overlap_stats.rds"))
 ```
 
 
-@tbl-corpus-overlap reports the size of each corpus and the extent of their overlap. The two corpora are constructed from the same meta-corpus but capture different dimensions of proximity to the representative vector: the sentences-corpus selects the most semantically similar _sentences_ within each year, whereas the articles-corpus selects the most semantically similar _documents_, ranked by their average sentence embedding. The two selection criteria are related but not equivalent: an article contributing a single highly similar sentence may not rank high enough on its document-level average. The-corpus and the articles-corpus share `r formatC(ov$n_overlap_articles, format = "d", big.mark = ",")` articles. Almost all documents in the articles-corpus are also in the sentences-corpus (i.e., `r ov$pct_overlap_in_articles_corpus`\%) but documents with sentences in the sentences-corpus are much less likely to be in the articles-corpus (i.e., `r ov$pct_overlap_in_sentences_corpus`\%). This is expected given the different selection criteria: the sentences-corpus captures a broader range of sentences that are semantically close to the representative vector and are drawn from a larger set of documents. Despite representing only `r ov$pct_overlap_in_sentences_corpus`% of the articles in the sentences-corpus, these shared articles account for `r ov$pct_overlap_sentences`% of its sentences — suggesting that articles with a high document-level similarity to the representative vector also tend to concentrate a disproportionate share of top-ranked sentences.
+@tbl-corpus-overlap reports the size of our sentences and documents corpora and the extent of their overlap. The two corpora are constructed from the same meta-corpus but capture different dimensions of proximity to the representative vector: the sentences-corpus selects the most semantically similar _sentences_ within each year, whereas the articles-corpus selects the most semantically similar _documents_, ranked by their average sentence embedding. The two selection criteria are related but not equivalent: an article contributing a single highly similar sentence may not rank high enough on its document-level average. The-corpus and the articles-corpus share `r formatC(ov$n_overlap_articles, format = "d", big.mark = ",")` articles. Almost all documents in the articles-corpus are also in the sentences-corpus (i.e., `r ov$pct_overlap_in_articles_corpus`\%) but documents with sentences in the sentences-corpus are much less likely to be in the articles-corpus (i.e., `r ov$pct_overlap_in_sentences_corpus`\%). This is expected given the different selection criteria: the sentences-corpus captures a broader range of sentences that are semantically close to the representative vector and are drawn from a larger set of documents. Despite representing only `r ov$pct_overlap_in_sentences_corpus`% of the articles in the sentences-corpus, these shared articles account for `r ov$pct_overlap_sentences`% of its sentences — suggesting that articles with a high document-level similarity to the representative vector also tend to concentrate a disproportionate share of top-ranked sentences.
 
 ```{r}
 #| echo: false
