@@ -718,7 +718,7 @@ to our annual representative vectors of sentences with "rationality" and
 we want a method that groups together our observations , here the
 sentences, that employ similar meanings of rationality. We draw on the
 literature on semantic drift [@kutuzovDiachronic2018;
-montanelliSurvey2024] and take inspiration from
+@montanelliSurvey2024] and take inspiration from
 @giulianelliAnalysing2020. We therefore cluster the sentence embeddings
 using the HDBSCAN algorithm, a widely used unsupervised method for
 clustering LLM embeddings.
