@@ -91,27 +91,38 @@ rationality_prop_filter <- 0.10
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
 # matching bd
-jstor_matched <- read_rds(here(
-  data_path,
-  "jstor_constellate_merged_metadata.rds"
-))
-jstor_matched <- jstor_matched[
-  !is.na(id_wos_matched),
-  .(id = url, id_wos_matched)
-]
-
-scopus_matched <- read_rds(here(
-  data_path,
-  "scopus_economics_articles.rds"
-))
-scopus_matched <- scopus_matched[
-  !is.na(id_wos_matched),
-  .(id = scopus_id, id_wos_matched)
-]
-matching <- rbind(jstor_matched, scopus_matched)
+# jstor_matched <- read_rds(here(
+#   data_path,
+#   "jstor_constellate_merged_metadata.rds"
+# ))
+# jstor_matched <- jstor_matched[
+#   !is.na(id_wos_matched),
+#   .(id = url, id_wos_matched)
+# ]
+# 
+# scopus_matched <- read_rds(here(
+#   data_path,
+#   "scopus_economics_articles.rds"
+# ))
+# scopus_matched <- scopus_matched[
+#   !is.na(id_wos_matched),
+#   .(id = scopus_id, id_wos_matched)
+# ]
+# matching <- rbind(jstor_matched, scopus_matched)
 
 # Similarity scores
 # rationality_score <- readRDS(here(data_path, "rationality_similarity_scores.RDS"))
+
+meta_data <- arrow::read_feather(here(
+  data_path,
+  "metadata_maintext.feather"
+)) %>%
+  as.data.table()
+
+matching <- meta_data[
+  !is.na(id_wos_matched),
+  .(id, id_wos_matched)
+]
 
 # rationality_score_original <- arrow::read_feather(here(data_path, "similarities_by_document.feather")) %>% as.data.table()
 rationality_score_original <- arrow::read_feather(here(
@@ -183,6 +194,7 @@ wos_refs <- wos_refs[ID_Art %in% wos_art$ID_Art]
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
 nodes <- copy(wos_art)
+nodes[Code_Revue==8607]
 edges <- copy(wos_refs)
 
 coup_network <- networkflow::build_dynamic_networks(
