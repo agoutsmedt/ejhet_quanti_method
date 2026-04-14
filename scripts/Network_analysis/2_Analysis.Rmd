@@ -72,24 +72,38 @@ rationality_prop_filter <- 0.10
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
 # matching bd
-jstor_matched <- read_rds(here(
-  data_path,
-  "jstor_constellate_merged_metadata.rds"
-))
-jstor_matched <- jstor_matched[
-  !is.na(id_wos_matched),
-  .(id = url, id_wos_matched)
-]
+# jstor_matched <- read_rds(here(
+#   data_path,
+#   "jstor_constellate_merged_metadata.rds"
+# ))
+# jstor_matched <- jstor_matched[
+#   !is.na(id_wos_matched),
+#   .(id = url, id_wos_matched)
+# ]
+# 
+# scopus_matched <- read_rds(here(
+#   data_path,
+#   "scopus_economics_articles.rds"
+# ))
+# scopus_matched <- scopus_matched[
+#   !is.na(id_wos_matched),
+#   .(id = scopus_id, id_wos_matched)
+# ]
+# matching <- rbind(jstor_matched, scopus_matched)
 
-scopus_matched <- read_rds(here(
+# Similarity scores
+# rationality_score <- readRDS(here(data_path, "rationality_similarity_scores.RDS"))
+
+meta_data <- arrow::read_feather(here(
   data_path,
-  "scopus_economics_articles.rds"
-))
-scopus_matched <- scopus_matched[
+  "metadata_maintext.feather"
+)) %>%
+  as.data.table()
+
+matching <- meta_data[
   !is.na(id_wos_matched),
-  .(id = scopus_id, id_wos_matched)
+  .(id, id_wos_matched)
 ]
-matching <- rbind(jstor_matched, scopus_matched)
 
 # Similarity scores
 rationality_score_original <- arrow::read_feather(here(
@@ -108,7 +122,10 @@ filter_mean_score_ids <- rationality_score %>%
   .[[1]]
 
 rationality_score[,ID_Art:=id]
-# filter_mean_score_ids <- append(filter_mean_score_ids)
+# Filtering
+ids_rationality <- matching[id %in% filter_mean_score_ids]
+ids_rationality <- ids_rationality %>% na.omit() %>% unique()
+ids_rationality <- ids_rationality$id_wos_matched
 
 # corpus
 corpus <- arrow::read_parquet(here(general_data_path,"all_art.parquet"), arrow.unsafe_metadata = TRUE)
@@ -178,7 +195,7 @@ list_ids_networks <- combined_nodes[,.N,"ID_Art"]
 
 # Filtering
 corpus <- corpus[Annee_Bibliographique>=year_low & Annee_Bibliographique<=year_high]
-corpus <- corpus[ID_Art %in% filter_mean_score_ids]
+corpus <- corpus[ID_Art %in% ids_rationality]
 
 refs <- refs[ID_Art %in% corpus$ID_Art]
 
