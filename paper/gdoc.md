@@ -671,15 +671,11 @@ representative vectors for "rationality" and "rational." To make sense
 of this large corpus, we want a method that groups together the
 documents employing similar meanings of rationality. We use a method
 commonly employed in the history of economic thought: bibliographic
-coupling [see e.g., @claveauMacrodynamics2016; trucForty2022]. In a
-coupling network, documents are represented as nodes, and connections
-between them depend on the number of shared references in their
-bibliographies. The more references two articles share, the stronger
-their link---and the closer they appear in a two-dimensional network
-visualization. The underlying premise is that shared references serve as
-a proxy for intellectual proximity. These maps help delineate the
-boundaries of disciplines, fields, or sub-specialties and reveal
-core--periphery structures.
+coupling [see e.g., @claveauMacrodynamics2016; trucForty2022]. The
+underlying premise is simple: articles that cite similar references
+share a similar intellectual background. Two articles are therefore
+connected when they cite the same references, and groups of
+densely-connected articles form a "bibliometric community."
 
 However, citation practices tend to favor more recent works, which makes
 it unhelpful for historians to construct a single citation network
@@ -688,19 +684,15 @@ in the field [@claveauMacrodyanmics2016; @goutsmedtIndependent2023;
 @camilottoNavigating2023], we therefore split our corpus into
 overlapping eight-year windows, starting in 1960 (1960--1967;
 1961--1968; ... ; 2002--2009), and built a series of 43 separate
-networks. Using community-detection algorithms [@traagLouvain2019], we
-identify groups of documents that share a substantial fraction of
-references and therefore have a similar intellectual background; we
-refer to these groups as "bibliometric communities." Our next step is to
-identify communities that persist over time. When two communities from
-consecutive networks share many of the same nodes (i.e. articles), we
-treat them as instances of the same underlying group---an "intertemporal
-bibliometric community." In this way, our bibliometric communities bring
-together documents from different periods of time but that are likely to
-engage with rationality in similar ways, based on their shared citation
-patterns. This method allows us both to *zoom in* on specific
+networks. Within each window, we identify groups of articles sharing a
+substantial fraction of references. Our next step is to identify
+communities that persist over time: when two communities from
+consecutive windows share many of the same articles, we treat them as
+instances of the same underlying group---an "intertemporal bibliometric
+community." This method allows us both to *zoom in* on specific
 communities at a given period and to *zoom out* by reconstructing the
-broader picture of a dynamic intellectual field.[^21]
+broader picture of a dynamic intellectual field (see Appendix for full
+technical details).[^21]
 
 For textual data, historians of economics frequently rely on topic
 modeling [bakeevAcademic2023; fontanaFragmentation2023;
@@ -712,27 +704,26 @@ most representative words and expressions. While topic modeling is a
 convenient tool for historical analysis, our research question pushed us
 toward a more targeted approach.
 
-The sentences-corpus are the top 1% of sentences that are most similar
-to our annual representative vectors of sentences with "rationality" and
-"rational."[^22] To analyse this corpus, as with bibliographic coupling,
-we want a method that groups together our observations , here the
-sentences, that employ similar meanings of rationality. We draw on the
-literature on semantic drift [@kutuzovDiachronic2018;
-@montanelliSurvey2024] and take inspiration from
-@giulianelliAnalysing2020. We therefore cluster the sentence embeddings
-using the HDBSCAN algorithm, a widely used unsupervised method for
-clustering LLM embeddings.
+Our unit of analysis is a *sentences-corpus*: the top 1% of sentences
+most similar to our annual representative vectors of "rationality" and
+"rational."[^22] To analyse this corpus, we group together sentences
+that discuss rationality in similar ways---as with bibliographic
+coupling, but at the sentence level rather than the article level. We
+cluster sentence embeddings within each decade separately, to avoid
+over-representing recent periods (@fig-distribution).[^23] This yields a
+set of decade-specific clusters, each gathering sentences that discuss
+rationality in a comparable way.
 
-Again, historical perspective matters. Because the distribution of
-identified sentences is strongly present-biased (@fig-distribution),
-clustering all sentences at once would risk over-representing recent
-periods. We therefore perform clustering separately for each decade from
-1900 onward (merging the first two decades due to fewer sentences).[^23]
-As in our bibliographic approach, we then seek to form larger groups
-over time, allowing us to "zoom in" and "zoom out" depending on what we
-are searching for. Using the cosine similarity between clusters across
-decades, we merge the closest ones into 17 "intertemporal semantic
-clusters."[^24]
+To connect these clusters across time, we build a network where each
+node is a decade-specific cluster---sized proportionally to the number
+of sentences it contains---and each edge reflects how semantically close
+two clusters are. We retain only the most significant connections and
+apply community detection to identify 17 *intertemporal semantic
+clusters*: groups of decade-specific clusters that address rationality
+in comparable ways across time.[^24] As in our bibliographic approach,
+this allows us to both *zoom in* on a specific decade and *zoom out* to
+follow how a topic evolves over more than a century (see Appendix for
+full technical details).
 
 With both methods, we thus obtain a list of "intertemporal bibliometric
 communities" (from 1960 to 2009) and "intertemporal semantic clusters"

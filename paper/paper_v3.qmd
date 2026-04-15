@@ -188,7 +188,8 @@ documents_tbl <- documents_tbl %>%
 ::: {#refs}
 :::
 
-\newpage
+\clearpage 
+
 
 # Figures  
 ::: {#fig-method-schema-general layout-nrow="2"}
@@ -268,6 +269,8 @@ documents_tbl %>%
 
 ```
 
+
+
 ::: {#fig-relative-frequency}
 
 ![](images/relative_freq_rationality_and_rational.png)
@@ -291,6 +294,24 @@ Five most frequent neighbor terms of "rational" and "rationality" by decade. We 
 Relative citation of a selection of seminal papers on behavioral economics. 
 
 ::: 
+
+
+::: {#fig-capture-dynamic-textual-network layout-nrow="1"}
+
+![](images/temporal_network_plot.png)
+
+Each node is a group of sentences discussing rationality in a similar way, identified within a given decade. Node size reflects how many sentences belong to that group. Colors indicate broader thematic clusters that persist across decades — nodes sharing the same color address rationality in comparable ways across time. See the appendix for the full methodology. In this visualisation, we group clusters by decade along the x-axis (1900–1919, 1920–1929, ..., 2000–2009) and group thematically similar clusters along the y-axis, making it easier to follow how topics evolve over time. We strongly advise readers to explore all time windows interactively via the [companion application](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/).
+::: 
+
+
+
+::: {#fig-capture-dynamic-bibliometric-network layout-nrow="1"}
+
+![](images/citation_network_1994_2001.png)
+
+Each node is an article from the 1994–2001 time window. Articles are connected when they cite similar references — a proxy for shared intellectual background. Colors indicate communities of articles that recurrently cluster together across consecutive 8-year time windows. Uncolored nodes belong to communities that are too small or too short-lived to be considered substantive. The spatial layout positions articles with similar citation profiles in close proximity. See the appendix for the full methodology. We strongly advise readers to explore all time windows interactively via the [companion application](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/).
+::: 
+
 
 \clearpage 
 
