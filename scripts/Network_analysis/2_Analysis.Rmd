@@ -163,6 +163,14 @@ names_ai <- names_ai %>% rename(dynamic_cluster_leiden=id_col)
 names_ai[, value_col := str_replace_all(value_col, "\\.", "")]
 names_ai[, value_col := make.unique(value_col, sep = " ")]
 
+manual_names_bibliometric_communities <- fread(here(data_path,"Networks", "manual_names_bibliometric_communities.csv"))
+names_ai <- merge(names_ai, manual_names_bibliometric_communities[,.(dynamic_cluster_leiden, new_names)], by.x = "value_col", by.y = "dynamic_cluster_leiden", all.x = TRUE) 
+
+names_ai <- names_ai %>% rename(
+  old_names = value_col, 
+  value_col = new_names
+)
+
 # tf_idf_networks
 tf_idf_networks <- networkflow::extract_tfidf(tbl_networks, "Titre", "dynamic_cluster_leiden", grouping_across_list = TRUE, clean_word_method = "lemmatize", nb_terms = 20)
 
