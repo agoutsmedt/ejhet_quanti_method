@@ -117,7 +117,6 @@ writeLines(txt, md)
 #| message: false
 #| warning: false
 #| output: false
-
 nb_sentences_top_1_percent <- read_feather(
   here::here(
     data_path,
@@ -127,16 +126,22 @@ nb_sentences_top_1_percent <- read_feather(
 ) %>%
   nrow()
 
-nb_articles_meta_corpus <- read_feather(here::here(
-  data_path,
-  "metadata_maintext.feather"
-), as_data_frame = FALSE) %>%
+nb_articles_meta_corpus <- read_feather(
+  here::here(
+    data_path,
+    "metadata_maintext.feather"
+  ),
+  as_data_frame = FALSE
+) %>%
   nrow()
 
-nb_articles_top_10_percent <- read_feather(here::here(
-  data_path,
-  "fulltexts_cosine_sim_with_rv.feather"
-), as_data_frame = FALSE) %>%
+nb_articles_top_10_percent <- read_feather(
+  here::here(
+    data_path,
+    "fulltexts_cosine_sim_with_rv.feather"
+  ),
+  as_data_frame = FALSE
+) %>%
   slice_max(cosine_doc_with_rv, prop = 0.1, with_ties = FALSE) %>%
   collect() %>%
   nrow()
@@ -152,6 +157,9 @@ documents <- read_feather(here::here(
   data_path,
   "illustrative_table_closest_documents_to_rv.feather"
 ))
+
+wos_decade <- readRDS(file.path(data_path, "wos_match_by_decade.rds"))
+ov <- readRDS(file.path(data_path, "corpus_overlap_stats.rds"))
 
 # --- prepare tables ---
 sentences_tbl <- sentences %>%
@@ -204,7 +212,7 @@ General workflow of the methods used in the paper. Orange boxes represent data s
 
 ![](images/rv_method_diagram_bis.png)
 
-Zoom on the construction of the representative vector of rationality. We identify sentences that contain "rational" or "rationality" and compute the centroid of their embeddings to obtain a single vector by year. We then apply an unweighted centered moving average over an 11-year window to produce the final representative vector series. The unweighted procedure—averaging each year's vectors before averaging across the 11-year window—is used to smooth potential short-term fluctuations. @tbl-illustrative_sentences and @tbl-illustrative_documents give examples of sentences and documents in the sentences and documents corpora.
+Zoom on the construction of the representative vector of rationality and how it is used to build a corpus (here the sentences-corpus). White boxes are transformation steps. Arrows indicate the flow of data and transformations. @tbl-illustrative_sentences and @tbl-illustrative_documents give examples of sentences and documents in the sentences and documents corpora.
 
 ::: 
 
@@ -214,7 +222,7 @@ Zoom on the construction of the representative vector of rationality. We identif
 
 ![Languages](images/language_distribution_by_year_fulltext_database.png){#fig-fulltextdistribution_b width="86%"}
 
-Distribution of documents and languages in the full-text database over time (1900-2009).
+Distribution of documents and languages in the meta-corpus over time (1900-2009).
 ::: 
 
 
@@ -309,17 +317,17 @@ Each node is a group of sentences discussing rationality in a similar way, ident
 
 ![](images/citation_network_1994_2001.png)
 
-Each node is an article from the 1994–2001 time window. Articles are connected when they cite similar references — a proxy for shared intellectual background. Colors indicate communities of articles that recurrently cluster together across consecutive 8-year time windows. Uncolored nodes belong to communities that are too small or too short-lived to be considered substantive. The spatial layout positions articles with similar citation profiles in close proximity. See the appendix for the full methodology. We strongly advise readers to explore all time windows interactively via the [companion application](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/).
+Each node is an article from the 1994–2001 time window. Articles are connected when they cite similar references---a proxy for shared intellectual background. Colors indicate communities of articles that recurrently cluster together across consecutive 8-year time windows. Uncolored nodes belong to communities that are too small or too short-lived to be considered substantive. The spatial layout positions articles with similar citation profiles in close proximity. See the appendix for the full methodology. We strongly advise readers to explore all time windows interactively via the [companion application](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/).
 ::: 
 
 
 \clearpage 
 
-# Appendix 
+# Appendix
 
-We provide here an overview of the data and methods used to build our databases and our methods to build intertemporal semantic clusters and bibliometric communities. @fig-method-schema-general summarizes the general workflow. We describe the construction of the full-text database, the computation of sentence embeddings and representative vectors of rationality, and the clustering methods used to build our semantic clusters and bibliometric communities.
+@fig-method-schema-general summarizes the general workflow of our method. The goal of this appendix is to provide the general rationale and workflow of our methods. Since fulltexts are not publicly available, we cannot share a full replication package and, in particular, the data and the code to build the meta-corpus are not available. The rest of the code --- building the sentences and documents corpora, building the representative vector, clustering methods, bibliometric methods --- is available in the GitHub repository: [https://github.com/agoutsmedt/ejhet_quanti_method](https://github.com/agoutsmedt/ejhet_quanti_method). We refer to the companion application for the detailed results of the clustering analyses. A public access is provide at the following link: [https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/). 
 
-## Collecting data 
+## Building the meta-corpus
 
 ```{r}
 #| label: load-metadata
@@ -355,225 +363,78 @@ xlsx::write.xlsx(
 
 ```
 
-The full-text database is built from three main sources: JSTOR, Elsevier and ISTEX. The main source is JSTOR, which provides the largest coverage of historical economics journals. However, some important economics journals published by Elsevier are missing from JSTOR. We therefore complement JSTOR with documents from SCOPUS journals using two supplementary sources: Elsevier and ISTEX. We used Elsevier API to access Elsevier's economics journals full-texts after 1997; we used ISTEX to retrieve older Elsevier documents.
+The meta-corpus is built from three main sources: JSTOR, Elsevier and ISTEX. The main source is JSTOR, which provides the largest coverage of historical economics journals. However, some important economics journals published by Elsevier are missing from JSTOR. We therefore complement JSTOR with documents from SCOPUS journals using two supplementary sources: Elsevier and ISTEX. We used Elsevier API to access Elsevier's economics journals full-texts after 1997. We used ISTEX because Elsevier documents were not available via the Elsevier API before 1997. 
 
-To identify economics documents, we first created a list of economic journals to query these databases. We built a list of journals classified as economics in our sources and in Econlit and then review them manually to ensure they are economics and academic journals. We also filtered out very recent journals (less than 20 years old). The rationale is to focus on journals with a sufficiently long publication history to allow meaningful intertemporal comparisons. This criterion primarily aims to reduce short time-series effects. We end up with `r dplyr::n_distinct(metadata$journal)` unique journals. The list of journals is available in the supplementary material. Once we have the list of journals, we queried each source to retrieve all available documents published by these journals between 1900 and 2009. We keep only documents classified as research articles (i.e., we remove editorials, book reviews, etc.) and written in English. 
+To identify economics documents, we use a journal-based approach. We build a list of economics journals and then retrieve all documents published by these journals in our sources. To build this list, we first retrieve all journals classified as economics in our sources and in the Econlit database---a bibliographic database of economics literature maintained by the American Economic Association. We review them manually to ensure they are (i) economic oriented journals and (ii) peer-reviewed journals. We also filtered out very recent journals (less than 20 years old). The rationale was to limit the short-time effect of small journals and focus on journals that have a long-term influence on the field. We end up with `r dplyr::n_distinct(metadata$journal)` unique journals. The list of journals is available in the supplementary material. 
 
-This results in a total of `r nrow(metadata)` documents that represent our curated metadata. @tbl-database-sources summarizes the sources of our full-text database.  Each source provides documents at different levels of granularity: Elsevier provides paragraph-level data, JSTOR page-level data, while ISTEX provides no such segmentation. Quality also varies across sources. While JSTOR and ISTEX provide raw OCR full-texts, Elsevier provides structured full-texts divided into paragraphs, which we parse to extract paragraphs. It is a higher quality of text segmentation compared to raw OCR that do not distinguish main text from other elements (headings, footnotes, *etc*.). 
+We then queried each source to retrieve all available documents published by these journals between 1900 and 2009. We keep only documents classified as research articles (i.e., we remove editorials, book reviews, etc.) and written in English. This results in a total of `r nrow(metadata) |> formatC(format = "d", big.mark = ",") ` documents that represent our curated data. @tbl-database-sources summarizes the sources of our meta-corpus. Each source provides documents at different levels of granularity: Elsevier provides paragraph-level data, JSTOR page-level data, while ISTEX provides no such segmentation. We thus paste together the full-texts from each source at the document level to harmonize the unit of analysis. 
 
-We enrich our full-text database with citation data from Web of Science (WOS). The main challenge is to match documents from our full-text database with WOS records. To match the fulltexts to WOS citation data, we apply a series of deterministic matching strategies, starting with strict combinations of metadata (title, journal, volume, issue, year, and page ranges, etc.). @tbl-database-sources indicates the proportion of documents successfully matched to WOS records for each source. After 1960---citation data are rare before this date---we achieve an overall match rate of `r round(mean(!is.na(metadata_1960_2009$id_wos_matched)) * 100, 1)`\%. 
+The full-texts from JSTOR and ISTEX are obtained through OCR, which introduces noise in the text. In contrast, Elsevier provides structured full-texts with minimal noise. We apply basic cleaning steps to the OCR-based full-texts based on RegEx patterns to remove paratextual material (e.g., affiliations, acknowledgements, headers, references) that introduce important noise. However, cleaning full-texts at scale is computationally intensive and not easily scalable and some noise is likely to remain in the data. 
 
-```{r}
-#| echo: false
-#| label: tbl-database-sources
-#| tbl-cap: "Sources of the full-text database."
+To perform our bibliometric analysis, we enrich our fulltexts with citations from Web of Science (WOS). We match our fulltexts database and WOS data based on their metadata (e.g., journal, year, volume, first page). We use metadata-based matching rather than DOIs because many documents, especially older ones, do not have DOIs. Because metadata might slightly differ across our sources, we also applied combinations of metadata rather than exact matches on all metadata fields. Our algorithm also includes fuzzy matching to account for OCR errors in titles and journals. We achieve an overall match rate of `r round(mean(!is.na(metadata$id_wos_matched)) * 100, 1)`\% across the full database. Column "WOS matched (%)" in @tbl-database-sources indicates the proportion of documents successfully matched to WOS records for each source and each decade. @tbl-wos-match-decade details the WOS match rate by decade. Coverage is near zero before 1940, as WOS records are sparse for this period. From the 1950s onwards, match rates stabilise between 60% and 68%. 
 
-# we did not save the source in the metadata, so we reconstruct it here using ids
-ids_istex <- readRDS(here::here(
-  elsevier_data_path,
-  "istex_ids_from_doi.rds"
-)) %>%
-  distinct(dc_identifier) %>%
-  pull(dc_identifier)
+## Building the sentences and documents corpora
 
-metadata_source <- metadata %>%
-  mutate(
-    source = case_when(
-      id %in% ids_istex ~ "ISTEX",
-      str_detect(id, "jstor") ~ "JSTOR",
-      str_detect(id, "SCOPUS") ~ "Elsevier"
-    )
-  ) %>%
-  group_by(source) %>%
-  mutate(
-    "Format" = case_when(
-      source == "Elsevier" ~ "structured",
-      TRUE ~ "raw OCR"
-    ),
-    "Unit of text" = case_when(
-      source == "JSTOR" ~ "page",
-      source == "Elsevier" ~ "paragraph",
-      TRUE ~ "full text"
-    )
-  )
+### Cleaning sentences before computation
 
-table_source <- metadata_source %>%
-  group_by(source) %>%
-  summarise(
-    n_documents = n(),
-    n_journals = dplyr::n_distinct(journal),
-    `Unit of text` = first(`Unit of text`),
-    Format = first(Format),
-    pct_wos_matched = mean(!is.na(id_wos_matched)) * 100,
-    pct_wos_matched = round(pct_wos_matched, 1)
-  )
+In order to compute sentence embeddings, we first need to split the full-texts into sentences. We use `sent_tokenize` from the NLTK Python library. While there are more advanced models for sentence segmentation (e.g., `spacy`), they are computationally intensive and not easily scalable to a corpus of millions of sentences. 
 
-table_source %>%
-  kbl(
-    format = "latex",
-    booktabs = TRUE,
-    col.names = c(
-      "Source",
-      "Documents",
-      "Journals",
-      "Unit of text",
-      "Format",
-      "WOS matched"
-    ),
-    align = c("l", "c", "c", "c", "c", "c"),
-    escape = FALSE
-  ) %>%
-  kable_styling(font_size = 9, latex_options = c("striped"))
+Sentence segmentation may amplify noise in OCR-based texts from JSTOR and ISTEX, which often contain punctuation and capitalization errors. Given the size of the corpus, errors from the OCR or sentence segmentation cannot be fully removed at scale. We only remove sentences for which the segmentation is almost certainly incorrect and provide no information, i.e., sentences that contain less than 20 characters, less than three words, or contain more than 50\% digits. Remaining errors are expected to be averaged out by the clustering analysis.
 
-```
-
-```{r}
-#| echo: false
-#| label: load-wos-match
-
-wos_decade <- readRDS(file.path(data_path, "wos_match_by_decade.rds"))
-```
-
-@tbl-wos-match-decade details the WOS match rate by decade. Coverage is near zero before 1940, as WOS records are sparse for this period. From the 1950s onwards, match rates stabilise between 60% and 68%. 
-
-```{r}
-#| echo: false
-#| label: tbl-wos-match-decade
-#| tbl-cap: "WOS match rate by decade (articles from the full-text database, 1940--2009)."
-
-wos_decade %>%
-  mutate(n_articles  = formatC(n_articles, format = "d", big.mark = ","),
-         n_matched   = formatC(n_matched,  format = "d", big.mark = ","),
-         pct_matched = paste0(pct_matched, "\\%")) %>%
-  kbl(
-    format    = "latex",
-    booktabs  = TRUE,
-    col.names = c("Decade", "Articles", "WOS matched", "Match rate"),
-    align     = c("l", "r", "r", "r"),
-    escape    = FALSE
-  ) %>%
-  kable_styling(font_size = 9, latex_options = c("striped"))
-```
-
-## Overlap between the two corpora
-
-```{r}
-#| echo: false
-#| label: load-overlap-stats
-
-ov <- readRDS(file.path(data_path, "corpus_overlap_stats.rds"))
-```
+A more serious issue is the presence of paratextual sentences (e.g., affiliations, acknowledgements, headers, references) in JSTOR and ISTEX OCR full-texts. These sentences introduce systematic noise that can affect clustering analysis. For instance, because references often contain similar wording (e.g., "Journal of...", "Vol.", "pp.", etc.), they tend to cluster together in the embedding space. We use this property at our advantage to remove such noise. Because paratextual sentences tend to be semantically similar, they form dense regions in the embedding space, which we exploit to identify and remove them. We first define four categories of noisy sentences: affiliations, acknowledgements, headers, references. For each category, we use regular expressions to identify a set of sentences that likely belong to this category. We compute (i) the centroid vector of these noisy sentences and (ii) the cosine similarity between those centroids and each sentence embeddings from our meta-corpus. We remove sentences from our corpus that are above a certain similarity threshold with any of the four noisy centroids. We determine the threshold using Youden's J statistic and by manually inspect sentences around the threshold. We exclude sentences flagged as noise from all subsequent analyses.
 
 
-@tbl-corpus-overlap reports the size of our sentences and documents corpora and the extent of their overlap. The two corpora are constructed from the same meta-corpus but capture different dimensions of proximity to the representative vector: the sentences-corpus selects the most semantically similar _sentences_ within each year, whereas the articles-corpus selects the most semantically similar _documents_, ranked by their average sentence embedding. The two selection criteria are related but not equivalent: an article contributing a single highly similar sentence may not rank high enough on its document-level average. The-corpus and the articles-corpus share `r formatC(ov$n_overlap_articles, format = "d", big.mark = ",")` articles. Almost all documents in the articles-corpus are also in the sentences-corpus (i.e., `r ov$pct_overlap_in_articles_corpus`\%) but documents with sentences in the sentences-corpus are much less likely to be in the articles-corpus (i.e., `r ov$pct_overlap_in_sentences_corpus`\%). This is expected given the different selection criteria: the sentences-corpus captures a broader range of sentences that are semantically close to the representative vector and are drawn from a larger set of documents. Despite representing only `r ov$pct_overlap_in_sentences_corpus`% of the articles in the sentences-corpus, these shared articles account for `r ov$pct_overlap_sentences`% of its sentences — suggesting that articles with a high document-level similarity to the representative vector also tend to concentrate a disproportionate share of top-ranked sentences.
+### Compute sentence embeddings 
 
-```{r}
-#| echo: false
-#| label: tbl-corpus-overlap
-#| tbl-cap: "Overlap between the sentences-corpus and the articles-corpus."
+We compute sentence embeddings with Sentence-BERT, using the pretrained model [\texttt{sentence-transformers/all-mpnet-base-v2}](https://huggingface.co/sentence-transformers/all-mpnet-base-v2). This model is widely used in natural language processing applications and has been shown to perform well for semantic similarity tasks. We use the `sentence-transformers` Python library to compute the embeddings. This model yields a single 768-dimensional vector per sentence. Let's denote the set of sentences in our meta-corpus as $\mathcal{S}$. For each sentence $s \in \mathcal{S}$, we compute its embedding $v_s \in \mathbb{R}^{768}$ using the Sentence-BERT model.
 
-tibble(
-  Corpus = c(
-    "Sentences-corpus (top 1\\%)",
-    "Articles-corpus (top 10\\%)",
-    "Intersection"
-  ),
-  Articles = c(
-    formatC(ov$n_sentences_corpus_articles,  format = "d", big.mark = ","),
-    formatC(ov$n_articles_corpus,            format = "d", big.mark = ","),
-    formatC(ov$n_overlap_articles,           format = "d", big.mark = ",")
-  ),
-  Sentences = c(
-    formatC(ov$n_sentences_corpus_sentences, format = "d", big.mark = ","),
-    "---",
-    formatC(ov$n_overlap_sentences,          format = "d", big.mark = ",")
-  ),
-  `Shared articles` = c(
-    glue("{formatC(ov$n_overlap_articles, format = 'd', big.mark = ',')} ({ov$pct_overlap_in_sentences_corpus}\\%)"),
-    glue("{formatC(ov$n_overlap_articles, format = 'd', big.mark = ',')} ({ov$pct_overlap_in_articles_corpus}\\%)"),
-    "---"
-  )
-) %>%
-  kbl(
-    format    = "latex",
-    booktabs  = TRUE,
-    col.names = c("Corpus", "Articles", "Sentences", "Shared articles"),
-    align     = c("l", "c", "c", "c"),
-    escape    = FALSE
-  ) %>%
-  kable_styling(font_size = 9, latex_options = c("striped"))
-```
+### Compute the representative vectors 
 
-## Sentence embeddings 
+The computation of the representative vectors is summarized in @fig-rv-method-diagram. Starting from the embedded sentences of the meta-corpus, we first keep the sentences whose text matches "rational" or "rationality".^[We filter the text using the RegEx: `\brational(?:ity)?\b`.] Then, for each year, we compute the centroid of these embeddings to obtain a year-specific embedding. We then compute an unweighted centered moving average over an 11-year window (year $t\pm5$) to produce the final representative vector series used in subsequent similarity calculations. We rely on an unweighted average to give equal importance to all years rather than giving more to years with more sentences. 
 
-We compute sentence embeddings with Sentence-BERT, using the pretrained model [\texttt{sentence-transformers/all-mpnet-base-v2}](https://huggingface.co/sentence-transformers/all-mpnet-base-v2). This model yields a single 768-dimensional dense vector per sentence. It has been shown to perform well on various semantic textual similarity tasks and is widely used in natural language processing applications. We use the `sentence-transformers` Python library to compute the embeddings. 
+Let $\mathcal{S}_t^R$ denote the set of sentences in year $t$ that contain "rational" or "rationality". We compute the centroid $\bar{v}_t^R$ of the embeddings of these sentences as follows:
+$$\bar{v}_t^R = \frac{1}{|\mathcal{S}_t^R|} \sum_{s \in \mathcal{S}_t^R} v_s^R$$
 
-In order to split textual units into sentences, we first use the `sent_tokenize` from the NLTK Python library. This function applied basic rules to split text into sentences based on punctuation and capitalization. While there are more advanced models for sentence segmentation (e.g., `spacy`), they are computationally intensive and not easily scalable to a corpus of millions of sentences. This rule-based segmentation may amplify noise in OCR-based texts such as those from JSTOR and ISTEX, which often contain punctuation and capitalization errors. One important issue with OCR texts is page break. When a sentence is split across two pages, the tokenizer may fail to recognize it as a single sentence. For instance, page breaks or footnotes may lead to the erroneous merging of unrelated textual fragments. Such errors cannot be fully corrected at scale; however, given the size of the corpus, their impact is expected to average out in aggregate analysis. We only remove sentences for which the segmentation is almost certainly incorrect and provide no information, i.e., sentences that contain less than 20 characters, less than three words, or contain more than 50\% digits. 
+We define the representative vector for year $t$, denoted as $RV_t$, as the unweighted average of the centroids of the 11-year window centered on $t$:
 
-A more serious issue is the presence of paratextual sentences (e.g., affiliations, acknowledgements, headers, references) in JSTOR and ISTEX OCR full-texts. These sentences introduce important noise. For instance, because references often contain similar wording (e.g., "Journal of...", "Vol.", "pp.", etc.), they tend to cluster together in the embedding space. We use this property at our advantage. Because paratextual sentences tend to be semantically similar, they form dense regions in the embedding space, which we exploit to identify and remove them. We first define four categories of noisy sentences: affiliations, acknowledgements, headers, references. For each category, we use regular expressions to identify a set of sentences that likely belong to this category. We compute (i) the centroid vector of these sentences and (ii) the cosine similarity between those centroids and each sentence embedding. Sentences that are above a certain similarity threshold are flagged as noisy and removed from the document. We determine the similarity threshold using Youden’s J statistic, computed by contrasting regex-identified noisy sentences with a random sample of other sentences. Because the filtering operates at the sentence level and targets dense regions associated with paratextual material, occasional false positives are unlikely to affect aggregate semantic trends.
+$$RV_t = \frac{1}{11} \sum_{i=-5}^{5} \bar{v}_{t+i}^R$$
 
-## Representative vectors 
 
-For each year, we keep sentences whose text matches "rational" or "rationality", (regex: `\brational(?:ity)?\b`) excluding any sentences flagged as noise and any records outside the curated metadata. We compute the mean of these sentence embeddings to obtain a year-specific representative vector of rationality. We compute an unweighted centered moving average over an 11-year window (year $t\pm5$) to produce the final representative vector series used in subsequent similarity calculations. We rely on an unweighted procedure—averaging each year’s vectors before averaging across the 11-year window—in order to smooth short-term fluctuations while avoiding an overemphasis on more recent conceptions of rationality.
+
+### Building the sentences-corpus and the articles-corpus
+
+To build the sentences-corpus, we select sentences that are semantically close to the representative vector of their year, in terms of cosine similarity. For each year $t$, we thus compute the cosine similarity between the vector of sentences in $\mathcal{S}_t$ and the representative vector $RV_t$. For each year $t$, we then retain the top 1\% most similar sentences. We thus obtain, the sentences-corpus, a set of sentence $\mathcal{S}_t^{RV}$ for each year $t$ that are the most semantically similar to the representative vector of their year. _Importantly, $\mathcal{S}_t^{RV}$ and $\mathcal{S}_t^R$ are distinct sets._ The sentences in $\mathcal{S}_t^{RV}$ are likely to contain "rational" or "rationality" but this is not a requirement. 
+
+Similarly, to build the articles-corpus, we select documents that are semantically close to the representative vector of their year, in terms of cosine similarity. Because $v_s$ is a sentence-level embedding, we first compute a document-level embedding by averaging the embeddings of all sentences in the document. Let's denote $\mathcal{D}$ as the set of documents $d$ in our meta-corpus, and $\mathcal{S}_d$ the set of sentences in document $d$. We compute the embedding of each document $d$ as follows:
+$$v_d = \frac{1}{|\mathcal{S}_d|} \sum_{s \in \mathcal{S}_d} v_s$$
+
+**This results in $v_d$, a single 768-dimensional vector for each document. This vector represents the overall semantic content of the document. We then compute the cosine similarity between every $v_d$ document in year $t$ and the representative vector $RV_t$. For each year, we retain the top 10\% most similar documents. This results is the articles-corpus, a set of documents $\mathcal{D}_t^{RV}$ for each year $t$ that are the most semantically similar to the representative vector of their year.**
+
+The 1\% and 10\% threshold are of course debatable. It balances competing objectives. On the one hand, we want to capture a sufficient number of sentences and documents to represent the diversity of ways rationality is discussed in each year. On the other hand, we want to focus on sentences and documents that are strongly related to rationality and we want to limit the computational cost of subsequent analyses. There is clear room for improvement to choose less arbitrary thresholds.^[For instance, defining a null model to determine a similarity threshold above which sentences or documents are significantly more similar to the representative vector than expected by chance.]
+
+### Overlap between sentences and documents corpora
+
+@tbl-corpus-overlap reports the size of $\mathcal{S}_t^{RV}$, the sentence-corpus, and $D_t^{RV}$ the articles-corpus, as well as the extent of their overlap. By overlap, we mean the number of articles that are in both corpora. An article is in the sentences-corpus if at least one of its sentences is in $\mathcal{S}_t^{RV}$ and an article is in the articles-corpus if it is in $D_t^{RV}$. The sentences-corpus and the articles-corpus share `r formatC(ov$n_overlap_articles, format = "d", big.mark = ",")` articles. Almost all documents in the articles-corpus are also in the sentences-corpus (i.e., `r ov$pct_overlap_in_articles_corpus`\%) but documents with sentences in the sentences-corpus are much less likely to be in the articles-corpus (i.e., `r ov$pct_overlap_in_sentences_corpus`\%). This is expected given the different selection criteria: the sentences-corpus are drawn from any documents, not only the 10\% most similar to the representative vector. However, despite representing only `r ov$pct_overlap_in_sentences_corpus`% of the articles in the sentences-corpus, these shared articles account for `r ov$pct_overlap_sentences`% of its sentences. In other words, sentences from articles in the article-corpus are over-represented in the sentences-corpus.
 
 ## Semantic clusters 
 
-This section details the text clustering methods used to identify semantic clusters related to rationality over time. @fig-text-clustering-schema shows the workflow. We describe each step in detail.
+This section details the text clustering methods used on the sentences-corpus, $\mathcal{S}_t^{RV}$. @fig-text-clustering-schema summarizes the steps schematically. We describe each step in detail. Regarding the choice of clustering methods, we followed the workflow of @alammarHandsOn2024 and used UMAP and HDBSCAN. However, we adopt a dynamic approach: we apply HDBSCAN for each decade and then we link clusters across decades to recover intertemporal semantic clusters. This is a common approach in the literature on semantic shift since most corpora are growing over time [@montanelliSurvey2024]. Applying a clustering algorithm on the whole corpus would lead to clusters that are mostly driven by recent years.
 
-```{r}
-#| label: fig-text-clustering-schema
-#| echo: false
-#| message: false
-#| warning: false
-#| eval: false
-#| fig-cap: "Semantic clustering workflow."
+### UMAP and HDBSCAN
 
+UMAP is a dimensionality reduction technique that project the high-dimensional sentence embeddings into a lower-dimensional space while preserving their information. Intuitively, the rationale for using UMAP is that high-dimensional spaces are often sparse, making clustering algorithms like HDBSCAN less effective. Dimensionality reduction techniques like UMAP are standard practice to improve the performance of clustering algorithms [e.g., @benzMapping2025]. We first project the 768-dimensional sentence embeddings to a 100-dimensional UMAP space (metric = cosine, n_neighbors = 15, min_dist = 0.0). From each $v_s \in \mathbb{R}^{768}$ and $s \in \mathcal{S}_t^{RV}$, we obtain $u_s \in \mathbb{R}^{100}$. To fit UMAP, we use a sampling strategy that keeps all pre-1980 sentences and caps the post-1980 years at 30,000 sentences each. The rationale is to avoid over-representing recent years in the UMAP fit. 
 
-# See scripts/generate_diagrams.R — section 3
-```
-
-![Text clustering workflow.](images/text_clustering_schema.png){#fig-text-clustering-schema}
-
-### Selecting sentences related to rationality
-
-To identify the sentences most closely related to rationality, we compare every sentence embedding to the year-specific representative vector (RV). For each year, we compute cosine similarity between each sentence vector and the RV of the same year. We retain the top 1% most similar sentences. This threshold balances two competing objectives. On the one hand, we want to capture a sufficient number of sentences to represent the diversity of ways rationality is discussed in each year. On the other hand, we want to focus on sentences that are strongly related to rationality to avoid diluting the analysis with less relevant content. 
-
-### Clustering with HDBSCAN
-
-We cluster the top 1\% sentences within temporal windows using HDBSCAN. To make clustering tractable while preserving semantic structure, we first project the 768-dimensional sentence embeddings to a 100-dimensional UMAP space (metric = cosine, n_neighbors = 15, min_dist = 0.0). Intuitively, the rationale for using UMAP is that high-dimensional spaces are often sparse, making distance-based clustering less effective. UMAP finds a lower-dimensional representation of the data that preserves information of the original high-dimensional space. This is a standard practice in text clustering workflows [e.g., @benzMapping2025].
-
-The UMAP fit uses a sampling strategy that keeps all pre-1980 sentences and caps the post-1980 years at 30,000 sentences each, then we transform the full dataset with the fitted model. This approach aims to avoid over-representing recent years in the UMAP fit while retaining their semantic structure. We define time windows as 1900--1919 (merged) followed by standard decades from 1920--1929 through 2000--2009. Within each window, we run HDBSCAN on the UMAP coordinates. HDBSCAN's hyperparameters, in particular `min_cluster_size` and `min_samples`, influence the granularity of the clusters and have to be chosen given the data and research question. We set `min_cluster_size = max(20, 1% of total sentences in the window)` and `min_samples = 1`. These parameters were selected based on empirical inspection of cluster interpretability. @fig-hdbscan_cluster_distribution_over_time shows the distribution of noisy vs clustered sentences and the number of clusters identified per time window by HDBSCAN.
-
-::: {#fig-hdbscan_cluster_distribution_over_time layout-nrow="2"}
-
-![Noisy and clustered sentences](images/hdbscan_cluster_distribution_over_time.png){width="90%"}
-
-![Number of clusters by period](images/hdbscan_number_of_clusters_per_window.png){width="90%"}
-
-Distribution of noisy vs clustered sentences and number of clusters per time window.
-
-::: 
+We then apply HDBSCAN to identify clusters in the UMAP space for each decade.^[We define a first time windows of two decades (1900--1919)---because of the low number of sentences before 1920---followed by standard decades until 2009.] For each window, we run HDBSCAN on the UMAP coordinates. HDBSCAN's hyperparameters, in particular `min_cluster_size` and `min_samples`, influence the granularity of the clusters. We set `min_cluster_size = max(20, 1% of total sentences in the window)` and `min_samples = 1`. These parameters were selected after manual inspection of cluster interpretability. @fig-hdbscan_cluster_distribution_over_time shows the distribution of noisy vs clustered sentences and the number of clusters identified per time window by HDBSCAN.
 
 ### Merging clusters over time
 
-We link the clusters across time windows to recover intertemporal semantic clusters. Several strategies could be used to link clusters across time windows. We could, for instance, merge clusters that are very close in the embedding space. However, the choice of distance threshold is arbitrary and clusters may be close to multiple other clusters, making one-to-one merging too restrictive. We instead chose a network-based approach. We compute a centroid for each HDBSCAN cluster (the mean of sentence embeddings). Next, we compute cosine similarity between all cluster centroids. This gives us a weighted network where nodes are decade specific clusters and edges are cosine similarities between their centroids. We keep only the most significant links using a backbone extraction [@domagalskiBackbone2021], using the LANS (Local Adaptive Network Sparsification, `alpha = 0.02`). LANS retains edges that represent statistically significant similarities relative to a null model in which the weights are randomly distributed among the node's edges. We apply the Leiden community detection (resolution = 2) on the backbone network. Intuitively, clusters that are strongly connected in the backbone network are grouped into intertemporal meta-clusters. 
+We choose a network-based approach to link clusters across decades. This approach handles many-to-many relationships between decade-level clusters--- a semantic cluster may gradually merge with or split into multiple clusters over time. It is also consistent with the network-based approach applied to the articles-corpus. 
+
+We represent each cluster identified by HDBSCAN as a node in a network and edges are the cosine similarity between all cluster centroids. This gives us a weighted network where nodes are decade specific clusters and edges are cosine similarities between their centroids. We keep only the most significant links using a backbone extraction [@domagalskiBackbone2021], using the LANS (Local Adaptive Network Sparsification, `alpha = 0.02`). LANS retains edges that represent statistically significant similarities relative to a null model in which the weights are randomly distributed among the node's edges. We apply the Leiden community detection (resolution = 2) on the backbone network. Intuitively, clusters that are strongly connected in the backbone network are grouped into intertemporal meta-clusters. @fig-capture-dynamic-textual-network is an example of the resulting network. 
 
 ## Bibliometric data and methods
 
 This section details the bibliographic coupling and community detection workflow. @fig-biblio-coupling-schema summarizes the steps schematically. We describe each step in detail.
-
-```{r}
-#| label: fig-biblio-coupling-schema
-#| echo: false
-#| message: false
-#| warning: false
-#| eval: false
-#| fig-cap: "Bibliometric community detection workflow."
-
-# See scripts/generate_diagrams.R — section 4
-```
-
-![Bibliographic coupling and community detection workflow.](images/biblio_coupling_schema.png){#fig-biblio-coupling-schema}
 
 ### Dynamic coupling networks 
 
@@ -612,3 +473,132 @@ As a way to have a first exploratory labels for clusters, names were generated u
 * The 20 highest TF-IDF terms
 
 The model was prompted to generate concise labels capturing the thematic focus of each cluster. Note that these labels are not definitive but serve as starting points for interpretation.
+
+\clearpage
+
+## Appendix Tables and Figures
+
+```{r}
+#| echo: false
+#| label: tbl-database-sources
+#| tbl-cap: "Sources of the meta-corpus (1900--2009)."
+
+metadata_source <- metadata %>%
+  mutate(
+    source = case_when(
+      str_detect(id, "jstor")                ~ "JSTOR",
+      str_detect(id, "SCOPUS") & year > 1996 ~ "Elsevier",
+      TRUE                                   ~ "ISTEX"
+    )
+  ) %>%
+  group_by(source) %>%
+  mutate(
+    "Format" = case_when(
+      source == "Elsevier" ~ "XML",
+      TRUE ~ "raw OCR"
+    ),
+    "Unit of text" = case_when(
+      source == "JSTOR" ~ "page",
+      source == "Elsevier" ~ "paragraph",
+      TRUE ~ "full text"
+    )
+  )
+
+table_source <- metadata_source %>%
+  group_by(source) %>%
+  summarise(
+    n_documents = n(),
+    n_journals = dplyr::n_distinct(journal),
+    `Unit of text` = first(`Unit of text`),
+    Format = first(Format),
+    pct_wos_matched = mean(!is.na(id_wos_matched)) * 100,
+    pct_wos_matched = round(pct_wos_matched, 1)
+  )
+
+table_source %>%
+  kbl(
+    format = "latex",
+    booktabs = TRUE,
+    col.names = c(
+      "Source",
+      "Documents",
+      "Journals",
+      "Unit of text",
+      "Format",
+      "WOS matched (\\%)"
+    ),
+    align = c("l", "c", "c", "c", "c", "c"),
+    escape = FALSE
+  ) %>%
+  kable_styling(font_size = 9, latex_options = c("striped"))
+```
+
+```{r}
+#| echo: false
+#| label: tbl-wos-match-decade
+#| tbl-cap: "WOS match rate by decade in the meta-corpus (1940--2009)."
+
+wos_decade %>%
+  mutate(n_articles  = formatC(n_articles, format = "d", big.mark = ","),
+         n_matched   = formatC(n_matched,  format = "d", big.mark = ","),
+         pct_matched = paste0(pct_matched, "\\%")) %>%
+  kbl(
+    format    = "latex",
+    booktabs  = TRUE,
+    col.names = c("Decade", "Articles", "WOS matched", "Match rate"),
+    align     = c("l", "r", "r", "r"),
+    escape    = FALSE
+  ) %>%
+  kable_styling(font_size = 9, latex_options = c("striped"))
+```
+
+```{r}
+#| echo: false
+#| label: tbl-corpus-overlap
+#| tbl-cap: "Overlap between the sentences-corpus and the articles-corpus."
+
+tibble(
+  Corpus = c(
+    "Sentences-corpus (top 1\\%)",
+    "Articles-corpus (top 10\\%)",
+    "Intersection"
+  ),
+  Articles = c(
+    formatC(ov$n_sentences_corpus_articles,  format = "d", big.mark = ","),
+    formatC(ov$n_articles_corpus,            format = "d", big.mark = ","),
+    formatC(ov$n_overlap_articles,           format = "d", big.mark = ",")
+  ),
+  Sentences = c(
+    formatC(ov$n_sentences_corpus_sentences, format = "d", big.mark = ","),
+    "---",
+    formatC(ov$n_overlap_sentences,          format = "d", big.mark = ",")
+  ),
+  `Shared articles` = c(
+    glue("{formatC(ov$n_overlap_articles, format = 'd', big.mark = ',')} ({ov$pct_overlap_in_sentences_corpus}\\%)"),
+    glue("{formatC(ov$n_overlap_articles, format = 'd', big.mark = ',')} ({ov$pct_overlap_in_articles_corpus}\\%)"),
+    "---"
+  )
+) %>%
+  kbl(
+    format    = "latex",
+    booktabs  = TRUE,
+    col.names = c("Corpus", "Articles", "Sentences", "Shared articles"),
+    align     = c("l", "c", "c", "c"),
+    escape    = FALSE
+  ) %>%
+  kable_styling(font_size = 9, latex_options = c("striped"))
+```
+
+![Text clustering workflow.](images/text_clustering_schema.png){#fig-text-clustering-schema}
+
+::: {#fig-hdbscan_cluster_distribution_over_time layout-nrow="2"}
+
+![Noisy and clustered sentences](images/hdbscan_cluster_distribution_over_time.png){width="90%"}
+
+![Number of clusters by period](images/hdbscan_number_of_clusters_per_window.png){width="90%"}
+
+Distribution of noisy vs clustered sentences and number of clusters per time window.
+
+:::
+
+![Bibliographic coupling and community detection workflow.](images/biblio_coupling_schema.png){#fig-biblio-coupling-schema}

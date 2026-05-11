@@ -5,7 +5,7 @@ import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
 
 import paths
-from scripts.python.function import detect_noise_category
+from scripts.python.function import regex_guess
 
 # ======================================================
 # PARAMETERS
@@ -74,7 +74,7 @@ for fname in all_files:
 
     for sent, emb in zip(sentences, embs):
         # regex category
-        regex_cat = detect_noise_category(sent)
+        regex_cat = regex_guess(sent)
 
         # similarity to each centroid
         scores = {
