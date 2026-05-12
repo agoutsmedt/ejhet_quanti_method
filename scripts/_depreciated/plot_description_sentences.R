@@ -3,9 +3,9 @@ source(file.path("scripts", "paths_and_packages.R"))
 pacman::p_load(patchwork)
 
 # Loading Data
-sentences <- readRDS(file.path(
+sentences <- read_feather(file.path(
   data_path,
-  "closest_sentences_0.01_rationality_score_filtered_with_embeddings.rds"
+  "closest_sentences_0.01_rationality_score_filtered_with_embeddings.feather"
 ))
 
 
@@ -55,7 +55,7 @@ p2 <- sentences %>%
     labels = c("Average", "Median")
   ) +
   labs(
-    title = "Average and Median Similarity of Top 1% Cited Sentences by Year",
+    title = "Average and median similarity of top 1% cited sentences to rationality vector by year",
     x = "",
     y = "Similarity"
   ) +
@@ -77,7 +77,7 @@ plot <- p1_clean / p2 + plot_layout(heights = c(1, 1))
 # Saving plot
 ggsave(
   filename = file.path(
-    image_path,
+    image_path_temp,
     "description_sentences_over_time.png"
   ),
   plot = plot,

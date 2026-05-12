@@ -38,15 +38,19 @@ df_top <- decadal %>%
   mutate(word = reorder_within(word, N_decade, decade))
 
 p <- ggplot(df_top, aes(x = word, y = N_decade)) +
-  geom_col(fill = "grey50", color = "grey20") +
+  geom_col(fill = color_roma_blue) +
   facet_wrap(~decade, scales = "free") +
   coord_flip() +
   scale_x_reordered() +
+  scale_y_continuous(
+    labels = scales::label_number(scale_cut = scales::cut_short_scale())
+  ) +
   labs(x = NULL, y = "Frequency") +
-  theme_light(base_size = 20) +
+  theme_custom() +
   theme(
-    strip.background = element_blank(),
-    strip.text = element_text(colour = "black")
+    axis.text.x = element_text(size = 18),
+    # text of facet labels
+    strip.text = element_text(size = 18)
   )
 
 print(p)

@@ -1,18 +1,15 @@
 source(file.path("scripts", "paths_and_packages.R"))
 
-pacman::p_load(fs)
+# load metadata from DuckDB
 
-# load metadata
-
-# load metadata
-metadata_jstor <- read_rds(file.path(
-  jstor_raw_data,
-  "jstor_constellate_merged_metadata.rds"
-)) %>%
-  filter(to_keep == TRUE)
-
-# keep only relevant lines, columns and rename them for consistency
-metadata_jstor_clean <- metadata_jstor %>%
+# JSTOR
+con_jstor <- dbConnect(
+  duckdb(),
+  file.path(jstor_raw_data, "jstor.duckdb"),
+  read_only = TRUE
+)
+metadata_jstor_clean <- tbl(con_jstor, "metadata") %>%
+  filter(to_keep == TRUE) %>%
   select(
     url,
     is_part_of,
@@ -22,24 +19,26 @@ metadata_jstor_clean <- metadata_jstor %>%
     refined_sub_type,
     doi,
     id_wos_matched,
-    languages
+    languages,
+    full_text
   ) %>%
+  collect() %>%
   rename(
     year = publication_year,
     id = url,
     journal = is_part_of,
     authors = creators_string,
     type = refined_sub_type
-  ) %>%
-  mutate(full_text = TRUE)
+  )
+dbDisconnect(con_jstor)
 
-# same for scopus metadata
-metadata_scopus <- read_rds(file.path(
-  elsevier_data,
-  "scopus_economics_articles.rds"
-))
-
-metadata_scopus_clean <- metadata_scopus %>%
+# Scopus
+con_scopus <- dbConnect(
+  duckdb(),
+  file.path(elsevier_data, "scopus.duckdb"),
+  read_only = TRUE
+)
+metadata_scopus_clean <- tbl(con_scopus, "articles") %>%
   select(
     scopus_id,
     dc_title,
@@ -47,10 +46,11 @@ metadata_scopus_clean <- metadata_scopus %>%
     prism_publication_name,
     prism_cover_date,
     subtype_description,
-    full_text,
+    elsevier_full_text,
     id_wos_matched,
     prism_doi
   ) %>%
+  collect() %>%
   rename(
     id = scopus_id,
     title = dc_title,
@@ -58,10 +58,14 @@ metadata_scopus_clean <- metadata_scopus %>%
     journal = prism_publication_name,
     year = prism_cover_date,
     type = subtype_description,
+    full_text = elsevier_full_text,
     doi = prism_doi
   ) %>%
-  mutate(year = as.integer(str_sub(year, 1, 4))) %>%
-  mutate(languages = "eng") # all articles in scopus metadata are in english
+  mutate(
+    year = as.integer(str_sub(year, 1, 4)),
+    languages = "eng"
+  )
+dbDisconnect(con_scopus)
 
 metadata_all_texts <- bind_rows(
   metadata_jstor_clean,

@@ -7,47 +7,12 @@ library(scales) # pour breaks/labels si besoin
 df <- arrow::read_parquet(file.path(
   embeddings_data,
   "vocab_embeddings.parquet"
-))
-
-# check the columns types
-df <- df %>%
+)) %>%
   mutate(
     year = as.integer(year),
     token = as.character(token)
   )
 
-plot_unigram <- function(df, token_query) {
-  query <- tolower(token_query)
-
-  df <- df %>%
-    mutate(token_lower = str_to_lower(token)) %>%
-    filter(token_lower == query) %>%
-    arrange(year)
-
-  if (nrow(df) == 0) {
-    message(sprintf("❌ Token '%s' not found.", tq))
-    return(invisible(NULL))
-  }
-
-  yr_min <- min(df$year, na.rm = TRUE)
-  yr_max <- max(df$year, na.rm = TRUE)
-
-  p <- ggplot(df, aes(x = year, y = relative_freq)) +
-    geom_point() +
-    labs(
-      title = sprintf("Relative Frequency of '%s' over Time", query),
-      x = NULL,
-      y = "Relative Frequency"
-    ) +
-    scale_x_continuous(breaks = seq(yr_min, yr_max, by = 5)) +
-    theme_minimal()
-
-  print(p)
-  invisible(p)
-}
-
-# Exemple
-plot_unigram(df = df, token_query = "colonies")
 
 # plot and save a search query of "rationality" and "rational" in a same graph
 
@@ -103,14 +68,14 @@ p <- ggplot(
     x = NULL,
     y = "Relative Frequency"
   ) +
-  ggsci::scale_color_npg() +
   scale_x_continuous(
     breaks = seq(1900, max(df_filtered$year, na.rm = TRUE), by = 20),
     limits = c(1900, max(df_filtered$year, na.rm = TRUE) + 10) # marge pour les labels
   ) +
-  theme_light(base_size = 30) +
-  theme(legend.position = "none", plot.margin = margin(5.5, 30, 5.5, 5.5)) +
-  coord_cartesian(clip = "off") # autorise le débordement des labels à droite
+  scale_color_manual(values = c(color_roma_red, color_roma_blue)) +
+  coord_cartesian(clip = "off") + # autorise le débordement des labels à droite
+  theme_custom() +
+  theme(legend.position = "none", plot.margin = margin(5.5, 30, 5.5, 5.5))
 
 print(p)
 
@@ -119,5 +84,7 @@ print(p)
 ggsave(
   file.path(image_path, "relative_freq_rationality_and_rational.png"),
   width = 16,
-  height = 10
+  height = 10,
+  units = "in",
+  dpi = 300
 )

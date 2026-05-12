@@ -18,6 +18,8 @@ scripts/analyse_sbert_sentences_backbone_cluster_cache
 scripts/analyse_sbert_sentences_backbone_cluster_files
 scripts/analysing_sentences_cluster_cache
 scripts/analysing_sentences_cluster_files
+scripts/_depreciated/**/*_cache
+scripts/_depreciated/**/*_files
 renv/
 rsconnect/
 .secrets

@@ -8,6 +8,7 @@ pacman::p_load(
   here,
   RSQLite,
   DBI,
+  duckdb,
   dbplyr,
   data.table,
   tidyverse,
@@ -25,7 +26,6 @@ pacman::p_load(
   hrbrthemes, # nice themes for ggplot
   igraph,
   tidygraph,
-  #  DescTools,
   jsonlite,
   progress,
   tictoc,
@@ -77,25 +77,25 @@ if (str_detect(getwd(), "goutsmed")) {
 } else {
   if (str_detect(getwd(), "github_p")) {
     data_path <- "C:/cloud/data/ejhet_project"
-    jstor_raw_data <- "C:/cloud/data/jstor"
-    jstor_data_path <- "C:/cloud/data/jstor"
-    wos_data_path <- "C:/cloud/data/wos"
-    istex_data <- "C:/cloud/data/istex"
-    istex_data_path <- "C:/cloud/data/istex"
-    elsevier_data <- "C:/cloud/data/elsevier"
-    elsevier_data_path <- "C:/cloud/data/elsevier"
-    embeddings_data <- "C:/cloud/data/econ_embeddings"
+    jstor_raw_data <- "D:/jstor"
+    jstor_data_path <- "D:/jstor"
+    wos_data_path <- "D:/wos"
+    istex_data <- "D:/istex"
+    istex_data_path <- "D:/istex"
+    elsevier_data <- "D:/elsevier"
+    elsevier_data_path <- "D:/elsevier"
+    embeddings_data <- "D:/econ_embeddings"
   } else {
     if (str_detect(getwd(), "github_w")) {
       data_path <- "C:/cloud/data/ejhet_project"
-      jstor_raw_data <- "C:/cloud/data/jstor"
-      jstor_data_path <- "C:/cloud/data/jstor"
-      wos_data_path <- "C:/cloud/data/wos"
-      istex_data <- "C:/cloud/data/istex"
-      istex_data_path <- "C:/cloud/data/istex"
-      elsevier_data <- "C:/cloud/data/elsevier"
-      elsevier_data_path <- "C:/cloud/data/elsevier"
-      embeddings_data <- "C:/cloud/data/econ_embeddings"
+      jstor_raw_data <- "D:/jstor"
+      jstor_data_path <- "D:/jstor"
+      wos_data_path <- "D:/wos"
+      istex_data <- "D:/istex"
+      istex_data_path <- "D:/istex"
+      elsevier_data <- "D:/elsevier"
+      elsevier_data_path <- "D:/elsevier"
+      embeddings_data <- "D:/econ_embeddings"
     }
   }
 }
@@ -109,4 +109,11 @@ setDTthreads(percent = 20)
 
 # load functions file
 
-source(here::here("scripts", "_functions.R"))
+invisible(lapply(
+  sort(list.files(
+    here::here("scripts", "_functions"),
+    full.names = TRUE,
+    pattern = "\\.R$"
+  )),
+  source
+))

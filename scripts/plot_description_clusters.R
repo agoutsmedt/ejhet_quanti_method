@@ -20,8 +20,8 @@ window_counts <- df %>%
   count(window)
 
 p0 <- ggplot(window_counts, aes(x = window, y = n)) +
-  geom_col(fill = "#2c7fb8") +
-  theme_light(base_size = 16) +
+  geom_col(fill = color_roma_blue) +
+  theme_custom() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   labs(
     title = "Number of Sentences per Time Window",
@@ -39,24 +39,26 @@ cluster_distribution <- df %>%
 
 p1 <- ggplot(cluster_distribution, aes(x = window, y = n, fill = is_noise)) +
   geom_col(position = "dodge") +
-  theme_light(base_size = 25) +
+  theme_custom() +
+  scale_fill_manual(
+    values = c("Clustered" = color_roma_blue, "Noise" = color_roma_red)
+  ) +
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1),
     legend.position = "bottom"
   ) +
   labs(
-    title = "Distribution of sentences clusterised by decades",
     x = NULL,
-    y = "Number of Sentences",
-    fill = "Cluster"
-  ) +
-  scale_fill_manual(values = c("grey20", "grey70"))
+    y = "Number of sentences",
+    fill = "HDBSCAN Classification"
+  )
 
 ggsave(
   file.path(image_path, "hdbscan_cluster_distribution_over_time.png"),
   p1,
-  width = 12,
-  height = 9,
+  width = 16,
+  height = 10,
+  units = "in",
   dpi = 300
 )
 
@@ -68,19 +70,19 @@ num_clusters_per_window <- df %>%
   count(window, name = "num_clusters")
 
 p2 <- ggplot(num_clusters_per_window, aes(x = window, y = num_clusters)) +
-  geom_col(fill = "grey50", color = "grey20") +
-  theme_light(base_size = 25) +
+  geom_col(fill = color_roma_blue) +
+  theme_custom() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   labs(
-    title = "Number of HDBSCAN clusters by decades",
     x = NULL,
-    y = "Number of Clusters"
+    y = "Number of clusters"
   )
 
 ggsave(
   file.path(image_path, "hdbscan_number_of_clusters_per_window.png"),
   p2,
-  width = 12,
-  height = 9,
+  width = 16,
+  height = 10,
+  units = "in",
   dpi = 300
 )

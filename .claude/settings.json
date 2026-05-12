@@ -2,7 +2,15 @@
   "permissions": {
     "allow": [
       "Bash(python3 -c ' *)",
-      "Bash(python -c ' *)"
+      "Bash(python -c ' *)",
+      "Read(//c/github_p/econ_embeddings/**)",
+      "Read(//c/Users/Admin/**)",
+      "Bash(python -c \"from sentence_transformers import SentenceTransformer; m = SentenceTransformer\\('all-mpnet-base-v2'\\); cfg = m[0].auto_model.config; print\\('num_hidden_layers:', cfg.num_hidden_layers\\); print\\('hidden_size:', cfg.hidden_size\\); print\\('pooling:', m[1].get_config_dict\\(\\)\\)\")",
+      "Read(//d//**)",
+      "Read(//d/jstor/**)",
+      "Read(//d/elsevier/**)",
+      "Read(//d/istex/**)",
+      "WebFetch(domain:www.tandfonline.com)"
     ]
   }
 }

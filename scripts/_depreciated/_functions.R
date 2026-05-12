@@ -75,7 +75,7 @@
 #' build_year_centroid_mat(df, year_col = "year", embedding_col = "embedding")
 #'
 #' # edge case: no rows in requested years -> returns 0 x 0 matrix
-#' df_empty <- tibble::tibble(year = integer(0), embedding = list())
+#' df_empty < - tibble::tibble(year = integer(0), embedding = list())
 #' build_year_centroid_mat(df_empty, years = 2000:2001)
 #'
 #' @keywords internal
@@ -4744,3 +4744,32 @@ choose_role_thresholds <- function(
 
   list(hub_z = hub_thr, nonhub_P = nonhub_brks, hub_P = hub_brks)
 }
+
+# ===========================================================================
+# Shared figure theme and default palette (all paper plots)
+# base_size = 30 matches ggsave(width=16, height=10, dpi=300) → ~9pt at 12cm
+# ===========================================================================
+
+theme_custom <- function(base_size = 30, base_family = "sans") {
+  ggplot2::theme_light(
+    base_size = base_size,
+    base_family = base_family
+  ) %+replace%
+    ggplot2::theme(
+      panel.grid.minor = ggplot2::element_blank(),
+      strip.background = ggplot2::element_blank(),
+      strip.text = ggplot2::element_text(colour = "black"),
+      legend.background = ggplot2::element_blank(),
+      legend.key = ggplot2::element_blank()
+    )
+}
+
+ggplot2::theme_set(theme_custom())
+
+options(
+  ggplot2.discrete.colour = function(n) scico::scico(n, palette = "roma"),
+  ggplot2.discrete.fill = function(n) scico::scico(n, palette = "roma")
+)
+
+# Single accent colour from roma (position 0.2 = warm red, used for unfaceted bars)
+roma_accent <- scico::scico(10, palette = "roma")[2]
