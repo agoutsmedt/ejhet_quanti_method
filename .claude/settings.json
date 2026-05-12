@@ -10,7 +10,15 @@
       "Read(//d/jstor/**)",
       "Read(//d/elsevier/**)",
       "Read(//d/istex/**)",
-      "WebFetch(domain:www.tandfonline.com)"
+      "WebFetch(domain:www.tandfonline.com)",
+      "Bash(git ls-tree *)",
+      "Bash(sort -k4 -rn)",
+      "Bash(git config *)",
+      "Bash(git ls-remote *)",
+      "Bash(git rm *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)"
     ]
   }
 }
