@@ -468,13 +468,20 @@ To visualize individual networks, articles (nodes) are color-coded by intertempo
 
 ### Characterizing Research Communities
 
-As a way to have a first exploratory labels for clusters, names were generated using a local open large language model (Gemma 3 27B) through the Ollama framework. For each community, we provided the model with:
+We generated an automated exploratory dashboard in addition to our app to bridge the gap between the large-scale quantitative network analysis and the qualitative interpretation of research communities.
 
-* The 20 most frequently cited references (with titles when available)
-* The 20 most productive authors
-* The 20 highest TF-IDF terms
+An Alluvial Diagram is generated to map the flow of these clusters over time. This visualization allows us to trace the genesis, growth, merging, splitting, and decline of specific intellectual communities across decades. We also track this transformations in our app.
 
-The model was prompted to generate concise labels capturing the thematic focus of each cluster. Note that these labels are not definitive but serve as starting points for interpretation.
+For each intertemporal clusters and also for each clusters in each temporal windows, we compiled: 
+
+* The most distinctive words in the articles of the clusters in titles with TF-IDF. The TF-IDF algorithm identifies the most distinctive unigrams and bigrams for each cluster relative to the rest of the network.
+* The most cited articles in the network by other articles in the network
+* The most cited references (articles and books separately)
+* The journals in which the articles are published 
+* The most cited journals in references
+* The most productive authors
+
+Finally, while we are able to approximate how clusters are related to each others by their spatial position, we also generates a network overview and heat maps of inter-cluster relationships for each time window. Instead of looking at individual articles, the heat map treats entire clusters as nodes, calculating the normalized edge weight (cosine measure) between them based on the similarity of their shared references.
 
 \newpage 
 
