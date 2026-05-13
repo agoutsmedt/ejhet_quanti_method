@@ -1,7 +1,13 @@
 source(file.path("scripts", "paths_and_packages.R"))
 pacman::p_load(fs)
 
-# load metadata from DuckDB
+# this list of documents is used to filter the metadata df, to keep only the documents for which we have the full text and the embedding vector.
+documents_vectorised <- read_feather(file.path(
+  data_path,
+  "metadata_maintext.feather"
+))
+
+# load row metadata from DuckDB
 
 # JSTOR
 con_jstor <- dbConnect(
@@ -9,6 +15,7 @@ con_jstor <- dbConnect(
   file.path(jstor_raw_data, "jstor.duckdb"),
   read_only = TRUE
 )
+
 metadata_jstor_clean <- tbl(con_jstor, "metadata") %>%
   filter(to_keep == TRUE) %>%
   select(
@@ -33,7 +40,7 @@ metadata_jstor_clean <- tbl(con_jstor, "metadata") %>%
   )
 dbDisconnect(con_jstor)
 
-# Scopus
+# Scopus + istex
 con_scopus <- dbConnect(
   duckdb(),
   file.path(elsevier_data, "scopus.duckdb"),
@@ -70,42 +77,37 @@ metadata_scopus_clean <- tbl(con_scopus, "articles") %>%
 dbDisconnect(con_scopus)
 
 # load id from fulltexts_embeddings folders
+# ISTEX <- dir_ls(
+#   file.path(embeddings_data, "istex_vectors"),
+#   recurse = TRUE,
+#   glob = "*.feather"
+# )
+# JSTOR <- dir_ls(
+#   file.path(embeddings_data, "jstor_vectors"),
+#   recurse = TRUE,
+#   glob = "*.feather"
+# )
+# ELSEVIER <- dir_ls(
+#   file.path(embeddings_data, "elsevier_vectors"),
+#   recurse = TRUE,
+#   glob = "*.feather"
+# )
 
-ISTEX <- dir_ls(
-  file.path(embeddings_data, "istex_vectors"),
-  recurse = TRUE,
-  glob = "*.feather"
-)
-JSTOR <- dir_ls(
-  file.path(embeddings_data, "jstor_vectors"),
-  recurse = TRUE,
-  glob = "*.feather"
-)
-ELSEVIER <- dir_ls(
-  file.path(embeddings_data, "elsevier_vectors"),
-  recurse = TRUE,
-  glob = "*.feather"
-)
+# FILES <- c(ISTEX, JSTOR, ELSEVIER)
 
-FILES <- c(ISTEX, JSTOR, ELSEVIER)
+# # extraction légère des IDs
+# ids_in_embeddings_folders <- lapply(FILES, function(f) {
+#   # détecter la source à partir du chemin
+#   source <- case_when(
+#     grepl("istex_vectors", f) ~ "ISTEX",
+#     grepl("jstor_vectors", f) ~ "JSTOR",
+#     grepl("elsevier_vectors", f) ~ "ELSEVIER",
+#     TRUE ~ "UNKNOWN"
+#   )
 
-# extraction légère des IDs
-ids_in_embeddings_folders <- lapply(FILES, function(f) {
-  # détecter la source à partir du chemin
-  source <- case_when(
-    grepl("istex_vectors", f) ~ "ISTEX",
-    grepl("jstor_vectors", f) ~ "JSTOR",
-    grepl("elsevier_vectors", f) ~ "ELSEVIER",
-    TRUE ~ "UNKNOWN"
-  )
-
-  read_feather(f, col_select = c("id")) %>%
-    mutate(source = source)
-})
-
-ids_in_embeddings_folders <- bind_rows(ids_in_embeddings_folders) %>%
-  distinct(id, source)
-
+#   read_feather(f, col_select = c("id")) %>%
+#     mutate(source = source)
+# })
 
 metadata_all_texts <- bind_rows(
   metadata_jstor_clean,
@@ -115,9 +117,7 @@ metadata_all_texts <- bind_rows(
 
 metadata_maintext <- metadata_all_texts %>%
   filter(
-    id %in% ids_in_embeddings_folders$id,
-    type %in% c("Article", "research-article"),
-    languages == "eng"
+    id %in% documents_vectorised$id
   )
 
 
