@@ -2,9 +2,9 @@
 
 In the last decade, the number of history of economics papers employing
 quantitative methods has increased [see e.g.,
-@goutsmedtQuantitative2023 special issue]. Several essays have adopted
-a reflexive stance, examining the implications of using quantitative
-methods in the history of economics [@cherrierQuantitative2018;
+@goutsmedtQuantitative2023]. Several essays have adopted a reflexive
+stance, examining the implications of using quantitative methods in the
+history of economics [@cherrierQuantitative2018;
 @edwardsQuantitative2018]. These contributions provided broad
 discussions on the use of such methods. However, given the virtually
 unlimited variety of quantitative approaches potentially relevant to
@@ -504,8 +504,8 @@ to @tbl-illustrative_sentences but for documents,
 @tbl-illustrative_documents displays the five closest documents to the
 corresponding representative vectors for years 1910, 1950 and 2000.
 
-In the appendix, @fig-method-schema-general summarises this whole
-process of building our two corpora from our different meta-corpus and
+@fig-method-schema-general summarises this whole process of building
+our two corpora from our different meta-corpus and
 @fig-rv-method-diagram summarises the construction of the
 representative vectors.
 
@@ -1581,9 +1581,7 @@ discovery within the corpus.
     value may appear as the most obvious.
 
 [^3]: The application is available in the GitHub repository:
-    [[https://github.com/tdelcey/ejhet_quanti_method_app]{.underline}](https://github.com/tdelcey/ejhet_quanti_method_app%5D(https://github.com/tdelcey/ejhet_quanti_method_app)).
-    For non technical-users, a public version is available at the
-    following url:
+    [anonymized]. A public version is available at the following url:
     [[https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/]{.underline}](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/%5D(https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/))
 
 [^4]: One of the main challenges for a quantitative history of economics
