@@ -61,7 +61,10 @@ source(here::here(".", "scripts", "paths_and_packages.R"))
 
 pacman::p_load(knitr,
                kableExtra,
-               DiagrammeR, DiagrammeRsvg, rsvg)
+              #  DiagrammeR, 
+              #  DiagrammeRsvg, 
+              #  rsvg,
+               xlsx)
 
 ```
 
@@ -436,7 +439,7 @@ We represent each cluster identified by HDBSCAN as a node in a network and edges
 
 ## Bibliometric data and methods
 
-This section details the bibliographic coupling and community detection workflow. The approach is similar to recent studies in the history of economics [@claveauMacrodyanmics2016; @goutsmedtIndependent2023; @camilottoNavigating2023] and consist in building overlapping bibliographic coupling networks over time, applying community detection to identify research communities, and then linking communities across time to identify intertemporal research communities. We apply this approach to the articles-corpus, $\mathcal{D}^{RV}$, which is a subset of our meta-corpus that contains the 10\% most semantically similar documents to the representative vector of their year.
+This section details the bibliographic coupling and community detection workflow. The approach is similar to recent studies in the history of economics [@claveauMacrodynamics2016; @goutsmedtIndependent2023; @camilottoNavigating2023] and consist in building overlapping bibliographic coupling networks over time, applying community detection to identify research communities, and then linking communities across time to identify intertemporal research communities. We apply this approach to the articles-corpus, $\mathcal{D}^{RV}$, which is a subset of our meta-corpus that contains the 10\% most semantically similar documents to the representative vector of their year.
 
 ### Dynamic coupling networks 
 
