@@ -21,15 +21,18 @@ gg <- metadata %>%
   geom_line(linewidth = 1, color = color_roma_blue) +
   geom_point(
     color = color_roma_blue,
-    size = 3,
+    size = 3.5,
     shape = 21,
     fill = "white",
-    stroke = 1.2
+    stroke = 1.5
   ) +
   scale_x_continuous(breaks = seq(1900, 2009, by = 20), expand = c(0.01, 0)) +
-  scale_y_continuous(expand = c(0.01, 0)) +
+  scale_y_continuous(
+    expand = c(0.01, 0),
+    breaks = scales::pretty_breaks(n = 5)
+  ) +
   labs(x = NULL, y = "Number of documents") +
-  theme_custom()
+  theme_custom(base_size = 25)
 
 ggsave(
   plot = gg,
@@ -84,7 +87,7 @@ gg <- metadata |>
       "German" = "#2c7fb8",
       "French" = "#41b6c4",
       "Italian" = "#a1dab4",
-      "Other" = "#f0f0f9a6"
+      "Other" = "#808080"
     )
   ) +
   labs(
@@ -92,7 +95,7 @@ gg <- metadata |>
     y = "Percentage of documents",
     fill = NULL
   ) +
-  theme_custom() +
+  theme_custom(base_size = 25) +
   theme(legend.position = "bottom")
 
 

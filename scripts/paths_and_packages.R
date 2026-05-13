@@ -67,6 +67,7 @@ if (str_detect(getwd(), "goutsmed")) {
     jstor_raw_data <- jstor_data_path
     wos_data_path <- file.path(path.expand("~"), "data", "wos")
     elsevier_data_path <- file.path(path.expand("~"), "data", "elsevier")
+    embeddings_data <- file.path(path.expand("~"), "data", "econ_embeddings")
   }
 } else if (str_detect(getwd(), "D:/Dropbox/8")) {
   data_path <- "D:/Dropbox/8-Projets Quanti/1-R_Projects/Data/ejhet_quanti_method"

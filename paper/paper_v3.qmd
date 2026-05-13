@@ -61,10 +61,7 @@ source(here::here(".", "scripts", "paths_and_packages.R"))
 
 pacman::p_load(knitr,
                kableExtra,
-              #  DiagrammeR, 
-              #  DiagrammeRsvg, 
-              #  rsvg,
-               xlsx)
+               DiagrammeR, DiagrammeRsvg, rsvg)
 
 ```
 
@@ -207,17 +204,32 @@ documents_tbl <- documents_tbl %>%
 
 ::: {#fig-distribution layout-nrow="2"}
 
-![Documents](images/documents_distribution_fulltext_database.png){#fig-fulltextdistribution_a width="100%"}
+![Documents](images/documents_distribution_fulltext_database.png){#fig-fulltextdistribution_a width="90%"}
 
-![Languages](images/language_distribution_by_year_fulltext_database.png){#fig-fulltextdistribution_b width="100%"}
+![Languages](images/language_distribution_by_year_fulltext_database.png){#fig-fulltextdistribution_b width="90%"}
 
 Distribution of documents and languages in the meta-corpus over time (1900-2009). Languages are identified by the sources. 
+::: 
+
+::: {#fig-rv-method-diagram layout-nrow="1"}
+
+![](images/rv_method_diagram_bis.png){width="100%"}
+
+Zoom on the construction of the representative vector of rationality for year 1910 and how it is used to build a corpus (here the sentences-corpus). White boxes are transformation steps. Arrows indicate the flow of data and transformations. 
+
+::: 
+
+::: {#fig-method-schema-general layout-nrow="2"}
+
+![](images/method_schema.png){width="100%"}
+
+General workflow of the methods used in the paper. Orange boxes represent data sources. Blue boxes represent used corpora. White boxes are transformation steps. Arrows indicate the flow of data and transformations. 
 ::: 
 
 
 ```{r}
 #| label: tbl-illustrative_sentences
-#| tbl-cap: "Sentences from the corpus closest to the representative vector in 1910, 1950, and 2000."
+#| tbl-cap: "Sentences from the meta-corpus closest to the representative vectors of 1910, 1950, and 2000."
 #| echo: false
 #| message: false
 #| warning: false
@@ -242,7 +254,7 @@ sentences_tbl %>%
 
 ```{r}
 #| label: tbl-illustrative_documents
-#| tbl-cap: "Documents from the corpus closest to the representative vector in 1910, 1950, and 2000."
+#| tbl-cap: "Documents from the meta-corpus closest to the representative vectors of 1910, 1950, and 2000."
 #| echo: false
 #| message: false
 #| warning: false
@@ -297,7 +309,7 @@ Five most frequent neighbor terms of "rational" and "rationality" by decade. We 
 
 ![](images/backbone_communities_network.png){width="100%"}
 
-Network of sentence clusters discussing rationality in economics journals (1900–2009), with a force-directed layout emphasizing thematic proximity. Each node is a group of sentences discussing rationality in a similar way, identified within a given decade. Node size reflects how many sentences belong to that group. Colors indicate broader thematic clusters that persist across decades — nodes sharing the same color address rationality in comparable ways across time. See the appendix for the full methodology. Labels are manually assigned by the authors after qualitative inspection of each cluster. In this visualisation, we applied a force-directed layout to position nodes with similar connections closer together, which helps to visually identify clusters of related discussions. We strongly advise readers to explore the networks via the [companion application](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/).
+Network of sentence clusters discussing rationality in economics journals (1900–2009), with a force-directed layout emphasizing thematic proximity. Each node is a group of sentences discussing rationality in a similar way, identified within a given decade. Node size reflects the share of sentences gathered by this cluster in its corresponding decade. Colors indicate broader thematic clusters that persist across decades — nodes sharing the same color address rationality in comparable ways across time. These are the "intertemporal semantic clusters". See the appendix for in-depth details on the methodology. Labels are manually assigned by the authors after qualitative inspection of each cluster. In this visualisation, we applied a force-directed layout to position nodes with similar connections closer together, which helps to visually identify clusters of related discussions. We strongly advise readers to explore the networks via the [companion application](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/).
 ::: 
 
 ::: {#fig-capture-dynamic-textual-network layout-nrow="1"}
@@ -307,16 +319,11 @@ Network of sentence clusters discussing rationality in economics journals (1900�
 Temporal evolution of sentence clusters discussing rationality in economics journals (1900–2009).This figure is similar to @fig-capture-static-textual-network but with a different layout to emphasize the temporal dimension. In this visualisation, we group clusters by decade along the x-axis (1900–1919, 1920–1929, ... , 2000–2009) and group thematically similar clusters along the y-axis, making it easier to follow how topics evolve over time. We strongly advise readers to explore the networks via the [companion application](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/).
 ::: 
 
-
-
-
-
-
 ::: {#fig-capture-dynamic-bibliometric-network layout-nrow="1"}
 
 ![](images/citation_network_1994_2001.png){width="100%"}
 
-A bibliographic coupling network of articles discussing rationality in economics journals (1994–2001). This figure shows a snapshot of the dynamic bibliographic coupling networks built on the articles-corpus. Each node is an article from the 1994–2001 time window. Articles are connected when they cite similar references---a proxy for shared intellectual background. Colors indicate communities of articles that recurrently cluster together across consecutive 8-year time windows. Uncolored nodes belong to communities that are too small or too short-lived to be considered substantive. Labels are manually assigned by the authors after qualitative inspection of each cluster. The spatial layout positions articles with similar citation profiles in close proximity. See the appendix for the full methodology. We strongly advise readers to explore the networks via the [companion application](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/).
+A bibliographic coupling network of articles discussing rationality in economics journals (1994–2001). This figure shows a snapshot of the dynamic bibliographic coupling networks built on the articles-corpus. Each node is an article from the 1994–2001 time window. Articles are connected when they cite similar references---a proxy for shared intellectual content. Colors indicate communities of articles that recurrently cluster together across consecutive 8-year time windows. Uncolored nodes belong to communities that are too small or too short-lived to be considered substantive. Labels are manually assigned by the authors after qualitative inspection of each cluster. The spatial layout positions articles with similar citation profiles in close proximity. See the appendix for the full methodology. We strongly advise readers to explore the networks via the [companion application](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/).
 ::: 
 
 
@@ -324,7 +331,10 @@ A bibliographic coupling network of articles discussing rationality in economics
 
 # Appendix
 
-@fig-method-schema-general summarizes the general workflow of our method. The goal of this appendix is to provide the general rationale and workflow of our methods. It requires technical knowledge of natural language processing and bibliometric methods. Since fulltexts are not publicly available, we cannot share a full replication package and, in particular, the data and the code to build the meta-corpus are not available. The rest of the code is available in the GitHub repository: [https://github.com/agoutsmedt/ejhet_quanti_method](https://github.com/agoutsmedt/ejhet_quanti_method). We refer to the companion application for the detailed results of the clustering analyses. The application can be downloaded from the GitHub repository: [https://github.com/tdelcey/ejhet_quanti_method_app](https://github.com/tdelcey/ejhet_quanti_method_app) and run locally. However, to facilitate access for non-technical users, we also provide a public access to the application at the following link: [https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/). 
+@fig-method-schema-general summarizes the general workflow of our method. The goal of this appendix is to provide the general rationale and workflow of our methods. It requires technical knowledge of natural language processing and bibliometric methods. Since fulltexts are not publicly available and are submitted to copyright, we cannot share a full replication package and, in particular, the data and the code to build the meta-corpus are not available. The rest of the code is available in the GitHub repository: [anonymized]. We refer to the companion application for the detailed results of the clustering analyses. The application can be downloaded from the GitHub repository: [anonymized] and run locally. However, to facilitate access for all users, we also provide a public access to the application at the following link: [https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/). 
+
+<!-- Links to add after publication: [https://github.com/agoutsmedt/ejhet_quanti_method](https://github.com/agoutsmedt/ejhet_quanti_method) 
+[https://github.com/tdelcey/ejhet_quanti_method_app](https://github.com/tdelcey/ejhet_quanti_method_app)-->
 
 ## Building the meta-corpus
 
@@ -364,11 +374,11 @@ xlsx::write.xlsx(
 
 ### Sources 
 
-The meta-corpus is built from three main sources: JSTOR, Elsevier and ISTEX. The main source is JSTOR, which provides the largest coverage of historical economics journals including journals from various private editors and associations (e.g., _American Economic Review_). However, important economics journals published by Elsevier are missing from JSTOR. We therefore complement JSTOR with documents from SCOPUS journals using two supplementary sources: Elsevier and ISTEX. We used the Elsevier API to access the full-texts of documents from Elsevier journals, that were available from 1997 onwards. We used the ISTEX API to access the full-texts of documents from Elsevier journals that were available before 1997.
+The meta-corpus is built from three main sources: JSTOR, Elsevier and ISTEX. The main source is JSTOR, which provides the largest coverage of historical economics journals including journals from various private editors and associations (e.g., the American Economic Association). However, important economics journals are missing from JSTOR (notably journals published by Elsevier). We therefore complement JSTOR with documents from a curated list of economics journals in SCOPUS, using two supplementary sources: Elsevier and ISTEX. We used the Elsevier API to access the full-texts of documents from Elsevier journals, that were available from 1997 onwards. We used the ISTEX API to access the full-texts of documents from Elsevier journals that were available before 1997, as well as full-texts from other economics journals identified from SCOPUS.
 
 ### Selecting economics documents
 
-To identify _economics_ documents, we use a journal-based approach. We build a list of economics journals and then retrieve all documents published by these journals in our sources. We identify `r dplyr::n_distinct(metadata$journal)` unique journals. The list of journals is available in the supplementary material. To build this list, we first use the sources' own classification of journals and retrieve all journals marked as economics. We review them manually to ensure they are (i) economic oriented journals and (ii) peer-reviewed journals. We also filtered out very recent journals (less than 20 years old). The rationale was to limit the short-time effect of small journals and focus on journals that have a long-term influence on the field. We then queried each source to retrieve all available documents published by these journals between 1900 and 2009. We keep only documents classified by our sources as (i) written in English and (ii) research articles (i.e., we remove editorials, book reviews, etc.). The filtering of research articles draws on JSTOR's and Scopus' own classifications, supplemented by some additional filtering from ourselves. Despite these safeguards, a perfectly clean restriction to research articles was not feasible, and some residual "non-article" items likely remain. This process results in a total of `r nb_articles_meta_corpus |> formatC(format = "d", big.mark = ",") ` documents that represent our meta-corpus. @tbl-database-sources summarizes the sources of our meta-corpus. 
+To identify _economics_ documents, we use a journal-based approach. We build a list of economics journals and then retrieve all documents published by these journals in our sources. We identify `r dplyr::n_distinct(metadata$journal)` unique journals. The list of journals is available in the supplementary material. To build this list, we first use the sources' own classification of journals (i.e. JSTOR and SCOPUS) and retrieve all journals marked as economics. We review them manually to ensure they are (i) economics-oriented journals and (ii) peer-reviewed journals. We also filtered out very recent journals (less than 20 years old). The rationale was to limit the short-time effect of small journals and focus on journals that have a long-term influence on the field. We then queried each source to retrieve all available documents published by these journals between 1900 and 2009. We keep only documents classified by our sources as (i) written in English and (ii) research articles (i.e., we remove editorials, book reviews, etc.). The filtering of research articles draws on JSTOR's and Scopus' own classifications, supplemented by some additional filtering from ourselves. Despite these safeguards, a perfectly clean restriction to research articles was not feasible, and some residual "non-article" items likely remain. This process results in a total of `r nb_articles_meta_corpus |> formatC(format = "d", big.mark = ",") ` documents that represent our meta-corpus. @tbl-database-sources summarizes the sources of our meta-corpus. 
 
 ### Cleaning the full-texts 
 
@@ -439,7 +449,7 @@ We represent each cluster identified by HDBSCAN as a node in a network and edges
 
 ## Bibliometric data and methods
 
-This section details the bibliographic coupling and community detection workflow. The approach is similar to recent studies in the history of economics [@claveauMacrodynamics2016; @goutsmedtIndependent2023; @camilottoNavigating2023] and consist in building overlapping bibliographic coupling networks over time, applying community detection to identify research communities, and then linking communities across time to identify intertemporal research communities. We apply this approach to the articles-corpus, $\mathcal{D}^{RV}$, which is a subset of our meta-corpus that contains the 10\% most semantically similar documents to the representative vector of their year.
+This section details the bibliographic coupling and community detection workflow. The approach is similar to recent studies in the history of economics [@claveauMacrodyanmics2016; @goutsmedtIndependent2023; @camilottoNavigating2023] and consist in building overlapping bibliographic coupling networks over time, applying community detection to identify research communities, and then linking communities across time to identify intertemporal research communities. We apply this approach to the articles-corpus, $\mathcal{D}^{RV}$, which is a subset of our meta-corpus that contains the 10\% most semantically similar documents to the representative vector of their year.
 
 ### Dynamic coupling networks 
 
@@ -491,23 +501,6 @@ Finally, while we are able to approximate how clusters are related to each other
 
 
 ## Appendix Tables and Figures
-
-
-::: {#fig-method-schema-general layout-nrow="2"}
-
-![](images/method_schema.png){width="100%"}
-
-General workflow of the methods used in the paper. Orange boxes represent data sources. Blue boxes represent used corpora. White boxes are transformation steps. Arrows indicate the flow of data and transformations. 
-::: 
-
-::: {#fig-rv-method-diagram layout-nrow="1"}
-
-![](images/rv_method_diagram_bis.png){width="100%"}
-
-Zoom on the construction of the representative vector of rationality and how it is used to build a corpus (here the sentences-corpus). White boxes are transformation steps. Arrows indicate the flow of data and transformations. 
-
-::: 
-
 
 ```{r}
 #| echo: false
