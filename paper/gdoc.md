@@ -164,7 +164,7 @@ For our study of rationality, the first step was to identify the best
 sources. For citation data, the Web of Science (WoS) provides a reliable
 and consistent coverage for our period and has been widely used in the
 history of economics
-[@culbertReference2025;@martin-martinGoogle2021;@claveauMacrodynamics2016].
+[@culbertReference2025;@martin-martinGoogleScholarMicrosoft2021;@claveauMacrodynamics2016].
 As for full text, we relied on three providers. First, JSTOR's full-text
 collection offers good-quality scans of most leading economics journals
 [@jstorText2025]. Second, we used Scopus to identify peer-reviewed
@@ -301,7 +301,7 @@ discipline as a whole [@claveauMacrodynamics2016; @ambrosinoWhat2018;
 definition of what are documents in "economics." This definitional issue
 becomes even more pronounced when the object of study is a specific
 "field" or "research specialty" [@morrisMapping2008;
-@lyutovMachine2021; ].
+@lyutovMachine2021].
 
 Non-quantitative historical approaches often address large objects by
 focusing on clearly identifiable cases or canonical contributions,
@@ -554,8 +554,8 @@ intellectual settings in which rationality is invoked.
 adjacent to "rational" or "rationality," showing how these associations
 shift over time. Before the 1930s, the picture was heterogeneous. The
 notion was tied to the marginalist idea of "calculation," but it
-referred not only to individual behavior but also to "systems" or
-"organizations." The discussion was explicitly methodological, as
+referred not only to individual behavior but also to "system" or
+"organization." The discussion was explicitly methodological, as
 indicated by the prominence of terms such as "method," "explanation,"
 "law," and "foundation." From the 1940s onward, the rise of choice
 theory places rationality at the center of economic modeling as a device
@@ -589,8 +589,8 @@ greater engagement---a dynamic that reflects the well-known Matthew
 effect [@mertonMatthew1968]. Recent work also shows that citations
 influence reading behavior and perceptions of quality: highly cited
 papers are more likely to be read thoroughly and treated as significant
-intellectual contributions [@teixeiraMatthew2021; @teplitskiyHow2022;
-@eikaStarstruck2022].
+intellectual contributions [@teixeiradasilvaMatthew2021;
+@teplitskiyHow2022; @eikaStarstruck2022].
 
 Historians routinely discuss scientific influence and recognition using
 proxies such as major grants, prizes, and honors. For example, Sent's
@@ -695,7 +695,7 @@ or research field.
 However, citation practices tend to favor more recent works, which makes
 it unhelpful for historians to construct a single citation network
 spanning an entire century. Following a method that has proven effective
-in the field [@claveauMacrodyanmics2016; @goutsmedtIndependent2023;
+in the field [@claveauMacrodynamics2016; @goutsmedtIndependent2023;
 @camilottoNavigating2023], we therefore split our corpus into
 overlapping eight-year windows,[^23] starting in 1960 (1960--1967;
 1961--1968; ... ; 2002--2009), and built a series of 43 separate
@@ -721,21 +721,20 @@ with bibliographic coupling, we want a method that groups together our
 observations (here the sentences) that employ similar meanings of
 rationality. We draw on the literature on semantic change that measures
 the change of meaning of words over time [@kutuzovDiachronic2018;
-@montanelliSurvey2024; @peritiSystematic2024a] and take inspiration
-from @giulianelliAnalysing2020. We therefore cluster the sentence
-embeddings using the HDBSCAN algorithm, a widely used unsupervised
-method for clustering LLM embeddings.
+@giulianelliAnalysing2020; @montanelliSurvey2024;
+@peritiSystematic2024a]. We therefore cluster the sentence embeddings
+using the HDBSCAN algorithm, a widely used unsupervised method for
+clustering LLM embeddings.
 
-Again, historical perspective matters. Because the distribution of
-identified sentences is strongly present-biased (@fig-distribution),
-clustering all sentences at once would risk over-representing recent
-periods. We therefore perform clustering separately for each decade from
-1900 onward (merging the first two decades due to fewer sentences).[^25]
-As in our bibliographic approach, we then seek to form larger groups
-over time, allowing us to "zoom in" and "zoom out" depending on what we
-are searching for. Using the cosine similarity between clusters across
-decades, we merge the closest ones into 17 "intertemporal semantic
-clusters."[^26]
+Because the distribution of identified sentences is strongly
+present-biased (@fig-distribution), clustering all sentences at once
+would risk over-representing recent periods. We therefore perform
+clustering separately for each decade from 1900 onward (merging the
+first two decades due to fewer sentences).[^25] As in our bibliographic
+approach, we then seek to form larger groups over time, allowing us to
+"zoom in" and "zoom out" depending on what we are searching for. Using
+the cosine similarity between clusters across decades, we merge the
+closest ones into 17 "intertemporal semantic clusters."[^26]
 
 With both methods, we thus obtain a list of "intertemporal bibliometric
 communities" (from 1960 to 2009) and "intertemporal semantic clusters"
@@ -776,12 +775,11 @@ study both the semantic and thematic contexts of the uses of rationality
 in economics and the channels through which these ideas circulated
 within the discipline. But how should such a "study" proceed? Unlike
 simpler quantitative tools, unsupervised methods do not produce
-ready-made results. In our case, they generate statistical
+ready-made results but reduce large and complex data to a smaller number
+of coherent groups. In our case, they generate statistical
 categories---bibliometric communities and semantic clusters---that lack
-predefined conceptual "labels." This strategy---reducing a large and
-complex corpus to a smaller number of coherent groups---is well
-established. Yet the groups themselves are created solely on the basis
-of statistical similarities, and their historical or conceptual
+predefined conceptual "labels." They are created solely on the basis of
+statistical similarities, and their historical or conceptual
 significance emerges only through subsequent "exploration"
 [@simonsLarge2026] and "validation" [@grimmerText2013]. To make
 sense of what brings texts together, we therefore need indicators that
@@ -791,45 +789,47 @@ relevant intellectual debates is indispensable for making sense of the
 raw computational results, even once they have been informed by a set of
 indicators.
 
-Therefore, whether at the stage of data construction or in the
-interpretation of statistical patterns, quantitative methods demand a
-continuous dialogue with qualitative interpretation, grounded in a close
-reading of the relevant secondary literature. Only through this
-iterative back-and-forth can we turn algorithmic groupings into
-meaningful historical insights. This is both a weakness and a strength.
-On the one hand, the analysis is not immediately transparent, as it
-requires the construction of intermediate tools---such as our
-interactive application---to guide interpretation. On the other hand, it
-is consistent with the practices of historians of economic thought, who
-likewise select, prioritise, and read texts in order to make sense of
-their corpus.
+This point illustrates again that, whether at the stage of data
+construction or in the interpretation of statistical patterns,
+quantitative methods demand a continuous dialogue with qualitative
+interpretation, grounded in a close reading of the relevant secondary
+literature. Only through this iterative back-and-forth can we turn
+statistical groupings into meaningful historical insights. This is both
+a weakness and a strength. On the one hand, the analysis is not
+immediately transparent, as it requires the construction of intermediate
+tools---such as our interactive application---to guide interpretation.
+On the other hand, it is consistent with the practices of historians of
+economic thought, who likewise select, prioritise, and read texts in
+order to make sense of their corpus.
 
-For the purpose of the exploration and interpretation of our results, we
-have built an [online interactive
-application]([[https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/]{.underline}](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/)),
-where one finds all the semantic clusters and bibliometric communities,
-and their corresponding indicators. Let us take as an example the
-semantic cluster "Rationality and its Limits," which gathers close to
-20,000 sentences from 1920 to 2009.[^27] How can we get a sense of what
-this cluster actually coalesces around? Before any qualitative
-interpretation or contextualization with the secondary literature, we
-must first produce a series of indicators to characterize the cluster.
-Such indicators include:
+A key step for the interpretation of our results is thus the process by
+which we *select* and *prioritise* observations that will make sense of
+them. To make this crucial step as transparent and replicable as
+possible, we have built an application, where readers can explore all
+the semantic clusters and bibliometric communities, together with their
+corresponding indicators.[^27] Let us take as an example the semantic
+cluster "Rationality and its Limits," which gathers close to 20,000
+sentences from 1920 to 2009.[^28] How can we get a sense of what this
+cluster actually coalesces around? Before any qualitative interpretation
+or contextualization with the secondary literature, we must first
+produce a series of indicators to help us at characterizing the cluster.
+We choose the following indicators:
 
-- The most identifying words of the cluster for each decade, based on
-  Term Frequency-Inverse Document Frequency (TF-IDF). While the first
-  period of the cluster (the 1920s) deals notably with "rationalisation"
-  and "human reason," the 1950s are more directly focused on
-  "rationalism," "rationality," and "rational behavior." After the 1970s
-  and until 2009, "bounded rationality" emerges as a core concept in
-  this cluster.
+- **The TF-IDF.** We identify words specific to the cluster for each
+  decade, based on Term Frequency-Inverse Document Frequency (TF-IDF).
+  For instance, while the first period of the cluster (the 1920s) deals
+  notably with "rationalisation" and "human reason," the 1950s are more
+  directly focused on "rationalism," "rationality," and "rational
+  behavior." After the 1970s and until 2009, "bounded rationality"
+  emerges as a core concept in this cluster.
 
-- The sentences within the semantic cluster that are closest to its
-  year-representative vector as well as the closest sentences from the
-  cluster's centroid itself for each period. The first category tends to
+- **The closest sentences.** We use two different definitions. First,
+  the sentences within the semantic cluster that are closest to its
+  year-representative vector. Second, the closest sentences from the
+  cluster's centroid itself for each period. The first tends to
   highlight how the concept of rationality is discussed, while the
-  second category centers more directly on the core semantic content of
-  the cluster, often offering clues about the topics and debates that
+  second centers more directly on the core semantic content of the
+  cluster, often offering clues about the topics and debates that
   animate it in different periods. For instance, in the 1950s, one of
   the sentences closest to the representative vectors is Simon's claim
   that "If man, according to this interpretation, makes decisions and
@@ -841,26 +841,29 @@ Such indicators include:
   definition of rationality is not an easy task," in his survey of the
   disequilibrium-theory literature in macroeconomics.
 
-- The articles with the most sentences in the cluster for each decade.
-  Here we find, for example, Terence Hutchison's "Expectation and
-  Rational Conduct" [@hutchisonExpectation1937]; Jacob Marschak's
-  "Rational Behavior, Uncertain Prospects, and Measurable Utility"
-  [@marschakRational1950]; Herbert Simon's 1978 Richard T. Ely Lecture
-  at the AEA meetings [@simonRationality1978] and his Nobel lecture
-  [@simonRational1979]; as well as Sugden's 1991 *Economic Journal*
-  survey on rational choice [@sugdenRational1991]. We also observe
-  that many of these articles are published in behavioral-economics
-  journals such as the *Journal of Socio-Economics* and the *Journal of
-  Economic Behavior and Organization*. From the representative sentences
-  and articles, we can also infer recurring authors.
+- **The closest articles**. We define the closest articles as those
+  containing the highest number of sentences belonging to the cluster
+  within each decade. Here we find, for example, Terence Hutchison's
+  "Expectation and Rational Conduct" [@hutchisonExpectation1937];
+  Jacob Marschak's "Rational Behavior, Uncertain Prospects, and
+  Measurable Utility" [@marschakRational1950]; Herbert Simon's 1978
+  Richard T. Ely Lecture at the AEA meetings [@simonRationality1978]
+  and his Nobel lecture [@simonRational1979]; as well as Sugden's 1991
+  *Economic Journal* survey on rational choice [@sugdenRational1991].
+  We also observe that many of these articles are published in
+  behavioral-economics journals such as the *Journal of Socio-Economics*
+  and the *Journal of Economic Behavior and Organization*. From the
+  representative sentences and articles, we can also infer recurring
+  authors.
 
-- From the 1950s onward, the most cited references (based on the number
-  of citations per article, whether the article has one or ten sentences
-  in the cluster). In the 1950s, one of the most important references
-  within this cluster is John von Neumann and Oskar Morgenstern's
-  *Theory of Games and Economic Behavior* [@vonneumannTheory1944],
-  while @kahnemanProspect1979 becomes the most cited reference in the
-  2000s.
+- **The most cited references.** From the 1950s onward, we compute the
+  most cited references in the cluster (based on the number of citations
+  per article, whether the article has one or ten sentences in the
+  cluster). For instance, in the 1950s, one of the most important
+  references within this cluster is John von Neumann and Oskar
+  Morgenstern's *Theory of Games and Economic Behavior*
+  [@vonneumannTheory1944], while @kahnemanProspect1979 becomes the
+  most cited reference in the 2000s.
 
 With all these indicators---and prior to any further qualitative
 investigation---we can already identify this semantic cluster as
@@ -881,14 +884,14 @@ from authors in close academic communities. In relation to the semantic
 cluster "Rationality and its Limits", we observe, for instance, the
 emergence of the community "Behavioral Economics: Risk & Uncertainty"
 community in the 1981-1988 window. As with the semantic clusters, for
-each bibliometric community in each temporal window we extract, notably,
-the sentences closest to the representative vectors---based on the
-articles belonging to the community---as well as the most cited
-references and the most identifying words. We also examine how each
-community in a given window originates (i.e., whether it derives
-primarily from the same or from different communities in preceding
-periods) and what it becomes in the following period (i.e., its
-subsequent "destiny").
+each bibliometric community in each temporal window we extract,
+equivalent indicators: the most identifying words, the sentences closest
+to the representative vectors---based on the articles belonging to the
+community---as well as the most cited references. We also examine the
+flows of each community in a given window: that is whether its nodes
+derive primarily from the same or from different communities in
+preceding periods ("origins") and what they become in the following
+period ("destinies").
 
 # **Discussion**
 
@@ -919,7 +922,7 @@ Our goal is also to show how we navigate the results and triangulate
 indicators to produce coherent historical narratives. While we rely on
 the secondary literature, the articles we foreground are those
 identified by our indicators as some of the most significant for
-understanding the semantic clusters or bibliometric communities.[^28] We
+understanding the semantic clusters or bibliometric communities.[^29] We
 provide two complementary discussions: a macro-level perspective that
 highlights broad patterns in the evolution of rationality, and a
 micro-level analysis that focuses on the emergence of a specific
@@ -941,13 +944,13 @@ In our first two decades, semantic cluster "Utility Theory" represents
 discussion centred on utility and brings together insights on marginal
 utility from, among others, Sidney. J. Chapman, Arthur Pigou, Francis Y.
 Edgeworth, and John M. Clark. Cluster "History of Economic Thought &
-Philosophy of Economics" also captures discussions about utility:
-arguments about utility were framed as interpretations, critiques, or
-extensions of classical authors---most notably Mill, Ricardo or Malthus.
-Yet, if anything, our results suggest that marginal utility theory
-appears mostly under severe criticism in this period, especially from
-institutionalist economists such as Thorstein Veblen, Wesley Mitchell,
-John Maurice Clark, and Rexford Tugwell.[^29]
+Philosophy of Economics" also captures discussions about utility that
+were framed as interpretations, critiques, or extensions of classical
+authors---most notably Mill, Ricardo or Malthus. Yet, if anything, our
+results suggest that marginal utility theory appears mostly under severe
+criticism in this period, especially from institutionalist economists
+such as Thorstein Veblen, Wesley Mitchell, John Maurice Clark, and
+Rexford Tugwell.[^30]
 
 The criticism was directed along two main lines. First, as
 @giocoliModeling2003[48--50] points out, institutionalist economists
@@ -955,9 +958,9 @@ rejected the "unfounded psychological underpinnings of neoclassical
 economics" and sought to replace them with sounder foundations [see
 also @yonayStruggle2001, 101-106]. They proposed instead to renew the
 economic method by drawing on psychology and its emerging "behaviorist"
-approach [@rutherfordInstitutional2001, 175--176]. Semantic cluster
-"Methodological Discussions" captures a significant share of sentences
-from 1900--1920 that articulate such institutionalist critiques.
+approach [@rutherfordInstitutional2001, 175--176]. From 1900--1920,
+the semantic cluster "Methodological Discussions" captures a significant
+share of sentences that address such institutionalist critiques.
 Institutionalists were energized by new developments in psychology. In
 his review of the literature on "Human Behavior and Economics," Mitchell
 emphasized the growing interest of economists in psychological matters,
@@ -966,7 +969,7 @@ unsound psychology, and that the economics of both Ricardo and Jevons
 originally rested on hedonistic preconceptions" [@mitchellHuman1914,
 1]. For economics, the crucial issue was thus to choose "between
 providing a sounder psychological basis for our analysis, and holding
-that its psychological basis does not concern the economist" (2).[^30]
+that its psychological basis does not concern the economist" (2).[^31]
 Such criticism did not falter in the 1920s. In the cluster "Rationality
 and its Limits"---centered at the time on "rationalisation" and "human
 reason"---@tugwellHuman1922[317] encouraged economists to move beyond
@@ -974,8 +977,8 @@ the "rigid classical *homo economicus*" and noted that "psychologists
 have already pretty well revolutionized the scientific definition of
 human nature."
 
-Second, for institutionalist economists, institutions were indispensable
-for understanding economic behavior, and different institutions implied
+A second line of criticism held that institutions were indispensable for
+understanding economic behavior, and different institutions implied
 different behaviors; there was no single, context-independent *homo
 oeconomicus*. In the cluster "Methodological Discussions", in his review
 of John Bates Clark's contribution, @veblenProfessor1908[159-160]
@@ -1032,33 +1035,34 @@ progressively distinguished from "reason" or "intelligence" and recast
 as a formal, axiomatic notion---"rigid rules that determine unique
 solutions" [@ericksonHow2013; see also @klaesConceptual2005].
 
-While intertemporal semantic cluster "Utility Theory" constituted only a
-tiny share of sentences between 1900 and 1919, and was absent in the
-1920s, it gains importance in the 1930s to the 1950s (though still
-representing less than 5% of all sentences). During this period, the
-heart of the debate concerned the measurability of utility and the
+These transformations are visible in the intertemporal semantic semantic
+cluster "Utility Theory". While it constituted only a tiny share of
+sentences between 1900 and 1919, and was absent in the 1920s, it gained
+importance in the 1930s to the 1950s (though still representing less
+than 5% of all sentences). During this period, the cluster captures the
+heart of the debate concerning the measurability of utility and the
 opposition between "cardinal" and "ordinal" utility. In the 1930s, the
 debate still bore on the psychological dimension of utility measurement.
 In 1933, John Hicks and Roy Allen [-@hicksReconsideration1934]
 coauthored an article on demand analysis that eliminated marginal
 utility by appealing to the concept of the marginal rate of
-substitution---the slope of the indifference curve [see
+substitution---the slope of the indifference curve [see also
 @moscatiMeasuring2019, 98--100]. Already in 1932, Allen had made this
 project explicit: by starting from "preferential discrimination," or
 individuals' preferences over different bundles of goods, it becomes
 unnecessary to "make any assumption about the existence of 'total
 utility' or about the measurability of 'utility'; the hedonistic
 hypothesis has been rendered superfluous" [@allenFoundations1932,
-207].[^31] In other words, "Subjective and psychological concepts have
+207].[^32] In other words, "Subjective and psychological concepts have
 been discarded from pure economic theory" (ibid.).
 
-Yet this position was not uncontested. Indeed, in these debates, terms
-such as "introspection," "satisfaction(s)," and "pleasure" recur
-frequently in the cluster during the 1930s and 1940s [see TF-IDF, and,
-for instance, @armstrongDeterminateness1939]. But they disappear from
-the top identifying words in the 1950s. During this period, debates on
-ordinal versus cardinal utility continued---with a renewed defense of
-the cardinalist position and ongoing disputes about the very meaning of
+Yet this position was not uncontested. Indeed, in the same cluster,
+terms such as "introspection," "satisfaction(s)," and "pleasure" recur
+frequently during the 1930s and 1940s [see TF-IDF, and, for instance,
+@armstrongDeterminateness1939]. But they disappeared from the top
+identifying words in the 1950s. During this period, debates on ordinal
+versus cardinal utility continued---with a renewed defense of the
+cardinalist position and ongoing disputes about the very meaning of
 "measuring utility" [@moscatiMeasuring2019, chapter 10]---yet these
 discussions had largely emancipated themselves from psychological or
 behaviorist considerations. These debates are also associated with a new
@@ -1071,18 +1075,18 @@ theory: "individual orderings," "preferences," "decisions,"
 "transitive," etc., and @vonneumannTheory1944, @friedmanUtility1948,
 and @savageFoundations1954 are the most cited references by the core
 articles of the cluster. To complete this panorama, a separate cluster
-"Game Theory" emerges in the 1950s, which ultimately comes to represent
+"Game Theory" emerged in the 1950s, which ultimately comes to represent
 nearly 15% of all sentences after 1990.
 
 Transformations in the conception of rationality are also visible in
 intertemporal semantic clusters that persist over time while reflecting
 profound shifts in the discipline's methodology and the growing
-centrality of rational choice theory*.* The cluster "Firm Theory &
-Entrepreneur" spans the period from 1900 to 1979 and therefore provides
-a useful vantage point from which to trace how changing conceptions of
-rationality reshaped the treatment of firms' decisions. In the 1920s,
-the cluster emphasizes entrepreneurial decision-making, understood
-primarily as prudence facing uncertainty rather than formal
+centrality of rational choice theory*.* For instance, the cluster "Firm
+Theory & Entrepreneur" spans the period from 1900 to 1979 and therefore
+provides a useful vantage point from which to trace how changing
+conceptions of rationality reshaped the treatment of firms' decisions.
+In the 1920s, the cluster emphasizes entrepreneurial decision-making,
+understood primarily as prudence facing uncertainty rather than formal
 optimization. From the 1940s, this cluster increasingly centers on
 "profit maximization." The cluster captures the core of the so-called
 "marginalist controversy" [@backhouseFriedmans2009], notably through
@@ -1093,7 +1097,7 @@ value of Lester's questionnaire-based surveys of entrepreneurs, while
 Lester replied that "at the heart of economic theory should be an
 adequate analysis and understanding of the psychology, policies, and
 practices of business management in modern industry"
-[@lesterMarginalism1947, 146].[^32] More generally, the marginalist
+[@lesterMarginalism1947, 146].[^33] More generally, the marginalist
 controversy provided a key intellectual background for Friedman's essay
 on positive economics [-@friedmanMethodology1953], in which he
 formulated the "as if" principle to justify, among other assumptions,
@@ -1101,7 +1105,7 @@ profit maximization. By the 1950s, the most cited articles within the
 cluster "Firm Theory & Entrepreneur" were Machlup's
 [-@machlupMarginal1946] and Friedman's [@friedmanUtility1948], both
 of which relied heavily on "as if" reasoning, notably to justify, in the
-latter, the behavior of agents regarding expected utility.[^33]
+latter, the behavior of agents regarding expected utility.[^34]
 
 Shifts in the discipline's methodology are also captured by the cluster
 "Methodological Discussion." While in the 1920s and 1930s economists
@@ -1138,15 +1142,15 @@ particularly in the cluster "Legislation, Regulation & Planning."
 
 As rationality increasingly came to be framed through modern
 microeconomics, the concept was extended to collective choice. In the
-intertemporal semantic cluster \"Decision Theory", the rational
-"decision making" is applied not only to individuals but also to firms
-and public policy. Social choice issues emerge in this cluster in the
-1970s, notably through debates on the implications of Arrow's
-impossibility theorem [-@arrowSocial1951; see e.g.
-@igersheimDeath2019].[^34] Arrow's contribution also stimulated the
-formation of the cluster "Voting & Public Choice" in the 1960s, where it
-appears as the primary reference, alongside works by @downsEconomic1957
-and @buchananCalculus1962. This cluster is closely associated with
+intertemporal semantic cluster "Decision Theory", the rational "decision
+making" is applied not only to individuals but also to firms and public
+policy. Social choice issues emerge in this cluster in the 1970s,
+notably through debates on the implications of Arrow's impossibility
+theorem [-@arrowSocial1951; see e.g. @igersheimDeath2019].[^35]
+Arrow's contribution also stimulated the formation of the cluster
+"Voting & Public Choice" in the 1960s, where it appears as the primary
+reference, alongside works by @downsEconomic1957 and
+@buchananCalculus1962. This cluster is closely associated with
 publications by *Public Choice* [see @cherrierEconomists2017].
 Welfare economics and public choice, as well as public finance
 [@desmarais-tremblayPublic2023], are also clearly visible in the
@@ -1165,7 +1169,7 @@ collective decision-making became central in the postwar period. So far,
 however, we have said little about macroeconomics. Macro-oriented issues
 constituted a relatively important semantic cluster from the beginning
 of our period, in 1900, notably with the intertemporal semantic cluster
-"Monetary Policy & Rational Expectations). This cluster grew in
+"Monetary Policy & Rational Expectations". This cluster grew in
 importance in the 1930s, in connection with debates surrounding Keynes's
 work, liquidity preference, and unemployment. It is only in the 1970s,
 however, that this cluster becomes dominant in our panorama of
@@ -1181,7 +1185,7 @@ academia into policy circles and the press, and was often described as a
 account for this rapid diffusion beyond controversial policy debates
 during the stagflation era. First, the results show no significant trace
 of rational expectations in the 1960s in either the bibliometric or
-textual outputs.[^35] But from the 1970s onward, it occupies a central
+textual outputs.[^36] But from the 1970s onward, it occupies a central
 place in the literature on rationality, reaching its apogee in the
 1980s, when it accounted for nearly 30% of all sentences in the textual
 analysis, as well as a comparable share of articles in the bibliometric
@@ -1195,7 +1199,7 @@ The origins of financial issues can be traced to the semantic cluster
 investment. Until the 1930s, the issue was framed around the returns of
 capital. For instance, the cluster includes the so-called Hayek-Knight
 controversy on the conception of capital [@cohenHayek2003]. After the
-1940s, decision-making under uncertainty becomes a central theme,
+1940s, decision-making under uncertainty became a central theme,
 crystallized by works such as George @shackleTheory1942 on investment
 under radical uncertainty, which figures among the most representative
 articles. One decade later, Jack @hirshleiferTheory1958 inscribed
@@ -1211,20 +1215,19 @@ decision-making within the firm" [@modiglianiCost1958, 296]. After the
 prominent, accounting for more than 10% of all sentences. In this
 period, rationality is increasingly framed in formal decision-theoretic
 terms and focused on appropriate investment choices under uncertainty.
-Hence, our analysis shows that rationality in finance enters primarily
-through corporate finance, rather than through asset-pricing issues such
-as market efficiency, where rationality long remains an implicit
-assumption, rarely discussed explicitly prior to the emergence of
-behavioral finance.
+Hence, our analysis suggests that rationality in finance enters
+primarily through corporate finance, rather than through asset pricing,
+where rationality seems to have remained an implicit assumption, rarely
+discussed explicitly prior to the emergence of behavioral finance.
 
-However, from the 1980s onward, modern asset pricing becomes dominant
+However, from the 1980s onward, modern asset pricing became dominant
 within the cluster "Capital & Investment Theory" as indicated by the
 growing prominence of terms such as "assets," "arbitrage," and "capital
 asset pricing". We also observe increasing proximities between the
 finance literature and the rational-expectations framework from the
 mid-1970s onward. This is visible both in the textual and bibliometric
 analysis, in particular with the "Finance: Market Information"
-bibliometric community, which emerges in the 1971-1978 window and
+bibliometric community, which emerged in the 1971-1978 window and
 focuses increasingly on rational expectations. A central contribution
 found in both semantic and bibliometric clusters is
 @grossmanImpossibility1980, which draws on Lucas's
@@ -1237,7 +1240,7 @@ macroeconomic context---became a central framework for analyzing the
 
 The 1970s and 1980s thus marked a relative dominance of macroeconomics
 and finance, with comparatively less weight given to debates on
-individual rationality. This situation begins to change gradually from
+individual rationality. This situation began to change gradually from
 the 1980s onward. In the 1981-1988 bibliometric network, the community
 "Behavioral Economics: Risk & Uncertainty" appears (representing around
 5% of the network), capturing the early emergence of behavioral
@@ -1252,17 +1255,22 @@ assumption embedded in theories and models to an object of direct
 investigation at the individual level.
 
 We have sought here to offer a broad panorama of the major
-transformations in the concept of "rationality" in economics. This
-approach allows us to identify large-scale changes when they become
-visible in the data---namely, when particular clusters come to represent
-a significant share of sentences (or of the bibliometric networks).
-However, historians of economic thought are often concerned with
-understanding how such transformations came about: which contributions,
-authors, and communities played a decisive role. Addressing these
-questions requires a more focused perspective, tracing the evolution of
-specific topics and literatures. This is the aim of the next section,
-which moves beyond the panoramic view to provide a more detailed
-narrative of the rise of behavioral economics outlined above.
+transformations in the concept of "rationality" in economics. These
+results are largely consistent with an established historiography,
+although this approach could be particularly useful in less studied
+areas or to assess more accurately the timing of change. Here, it allows
+us to identify large-scale changes when they become visible in the
+data---namely, when particular clusters come to represent a significant
+share of sentences (or of the bibliometric networks). For instance, we
+observe that the "social" dimension of rationality became prominent
+already in the 1930s, when the issue of "rationalising" economic
+processes and policy arose. Still, historians of economic thought are
+often concerned with uncovering how such transformations came about:
+which contributions, authors, and communities played a decisive role.
+Addressing these questions requires a more focused perspective, tracing
+the evolution of specific topics and literatures. This is the aim of the
+next section, which moves beyond the panoramic view to provide a more
+detailed narrative of the rise of behavioral economics outlined above.
 
 ## Under the Microscope: Simon's Reception and the Birth of Behavioural Economics
 
@@ -1281,16 +1289,15 @@ approaches and because it emerged in the 1980s, at a moment when
 economic theory faced multiple epistemological challenges, thereby
 creating an opportune context for alternative frameworks.
 
-The divergent fates of Simon's bounded rationality and Kahneman and
-Tversky's heuristics-and-biases approach thus present a striking puzzle
-in the history of economic thought. Both challenged standard assumptions
-of rationality under the banner of behavioral economics, and both were
-ultimately recognized with Nobel Prizes, yet their patterns of reception
-and adoption differed. While our methods cannot identify the precise
-epistemological mechanisms behind this divergence, they allow us to
-trace and compare the trajectories of reception and influence of these
-two approaches, shedding light on how and when they followed different
-paths.
+Why did these two closely conceptually-related research programs follow
+such different trajectories and levels of influence in economics? Both
+challenged standard assumptions of rationality under the banner of
+behavioral economics, and both were ultimately recognized with Nobel
+Prizes, yet their patterns of reception and adoption differed. While our
+methods cannot identify the comprehensive mechanisms behind this
+divergence, they allow us to trace and compare the trajectories of
+reception and influence of these two approaches, shedding light on how
+and when they followed different paths.
 
 Our analysis suggests that Simon's concept of "bounded rationality"
 stands as one of the most influential critiques of standard rationality
@@ -1300,15 +1307,16 @@ rationality itself. Simon's work dominated discussions in the 1960s and
 @simonTheories1959] and his Nobel lecture [@simonRational1979]
 appearing across a wide range of research areas, from social choice
 theory to the theory of the firm and price setting. The textual analysis
-highlights Simon's conceptual centrality. Semantic cluster "Rationality
-& its Limits" undergoes a marked transformation following the rise of
-Simon's influence. In the 1950s, the discourse was centered on terms
-such as "rational behavior," "rationalization," and "irrationality." By
-the 1970s, "bounded rationality" had become one the most prevalent
-expression in the cluster, and by the 1990s, references to "boundedly
-rational agents" and "procedural rationality" clearly positioned Simon's
-concepts at the core of economic discussions, reflecting a delayed but
-substantial integration into the discipline.
+highlights Simon's conceptual centrality. The semantic cluster
+"Rationality & its Limits" undergoes a marked transformation following
+the rise of Simon's influence. In the 1950s, the TF-IDF associated with
+this cluster was centered on terms such as "rational behavior,"
+"rationalization," and "irrationality." By the 1970s, "bounded
+rationality" had become one the most prevalent expressions in the
+cluster, and by the 1990s, references to "boundedly rational agents" and
+"procedural rationality" clearly positioned Simon's concepts at the core
+of economic discussions, reflecting a delayed but substantial
+integration into the discipline.
 
 Moreover, Simon's impact is visible not only in the changing language of
 rationality but also in the growing prominence of these debates within
@@ -1324,7 +1332,7 @@ peaks occurring only in the post-2000s period (see
 However, Simon's influence remained limited in two critical respects.
 First, the slow diffusion of his framework meant that, by the time it
 achieved broad conceptual prominence, it faced direct competition from
-"new" behavioral economics, present in semantic clusters "Decision
+"new" behavioral economics, present in the semantic clusters "Decision
 Theory" and "Decision Under Uncertainty", as well as in "Consumption,
 Savings & Intertemporal Choice" and "Game Theory". All of these four
 clusters expanded rapidly in the 1980s, with most of them individually
@@ -1336,10 +1344,10 @@ risk to experimental paradigms such as the ultimatum game in game theory
 [@gualaParadigmatic2008].
 
 Second, Simon\'s conceptual influence, spearheaded by bounded
-rationality, never translated into stable research communities. While
-his framework shaped how many economists approached rationality, very
-few actually developed the research program he initiated.
-Bibliometrically, only small, unstable communities formed around
+rationality, never translated into stable bibliometric communities.
+While his framework shaped how many economists approached rationality,
+very few actually developed the research program he initiated. In our
+bibliometric networks, only small, unstable communities formed around
 Simon\'s work. In the 1960s and early 1970s, his ideas appeared in
 *Public Economic* clusters, operations research circles and behavioral
 theories of the firm (*cl_165*) and critique of the standard
@@ -1354,14 +1362,14 @@ of how rationality, especially through profit maximization, is employed
 in economics. While this collective movement had some momentum, none of
 these research had an individual effect on economics structure [see
 also @sent_behavioral_2004]. After 1969-1976, these different research
-streams coalesced into small short-lived community (*cl_258*) before
+streams coalesced into a small short-lived community (*cl_258*) before
 fragmenting. References to Simon and critiques of profit maximization
 remained scattered, moving through several small communities (e.g.,
 *cl_793* on post-keynesian economics, *cl_755* on contract theory,
 *cl_773* and *cl_614* on institutionalist approaches) without ever
 achieving the critical mass. While Simon's influence in economics was
-conceptually enduring, it remained marginal as a structuring force,
-unable to generate coherent, large and stable research communities.
+conceptually enduring, it remained marginal and unable to generate
+coherent, large and stable bibliometric communities.
 
 "New" behavioral economics reception reveals a dramatic contrast. Unlike
 Simon's trajectory, the heuristics and biases research program of
@@ -1395,40 +1403,35 @@ rationality remained frequently invoked concepts, no subsequent research
 community clearly carried Simon's legacy as a stable bibliometric
 anchor.
 
-The contrast is stark and raises fundamental questions about
-disciplinary reception. Our quantitative study yields two particularly
-surprising results regarding the contrasting influence of Kahneman and
-Simon. First, the temporal patterns of adoption differ radically. For
-the historian @heukelomBehavioral2014, a pivotal moment in the history
-of behavioral economics was the explicit creation of research programs
-within the Sloan and Russell Sage Foundations between 1984 and 1992,
-notably fostering the Kahneman--Thaler collaboration that decisively
-transformed the field's trajectory. Our analysis, however, suggests that
-a distinctive dynamic was already underway by the early 1980s in the
-reception of Kahneman and Tversky's work. Despite the fact that
-@kahnemanProspect1979 was the duo's only publication in an economics
-journal until 1985---well before the Sloan--Russell Sage programs
-formally institutionalized behavioral economics---prospect theory
-experienced rapid and sustained citation growth
-(@fig-rationality-paper-citations). This aligns with a general finding
-in scientometrics that citations in the first two years after
-publication explain more than half of the variation in cumulative
-citations [@sternHighRanked2014]. While the institutional structures
-that came after played an important role in the subsequent reception of
-the research program as a whole, it is important to recognize how the
-reception of Kahneman and Tversky's differ greatly in the couple of
-years after publication. Moreover, as early as the 1978--1985
-bibliometric network, we identify an autonomous cluster structured
-around their work (cl_391), indicating that the article not only
-attracted citations but quickly catalyzed new research strands, in a way
-Simon's work never did within economics [@heukelom_sense_2012].
+Our quantitative study suggests two points regarding the contrasting
+influence of Kahneman and Simon. First, the temporal patterns of
+adoption differ radically. For the historian @heukelomBehavioral2014, a
+pivotal moment in the history of behavioral economics was the explicit
+creation of research programs within the Sloan and Russell Sage
+Foundations between 1984 and 1992, notably fostering the
+Kahneman--Thaler collaboration that decisively transformed the field's
+trajectory. Our analysis, however, suggests that a distinctive dynamic
+was already underway by the early 1980s in the reception of Kahneman and
+Tversky's work. Despite the fact that @kahnemanProspect1979 was the
+duo's only publication in an economics journal until 1985---well before
+the Sloan--Russell Sage programs formally institutionalized behavioral
+economics---prospect theory experienced rapid and sustained citation
+growth (@fig-rationality-paper-citations).[^37] Moreover, as early as
+the 1978--1985 bibliometric network, we identify an autonomous cluster
+structured around their work (cl_391), indicating that the article not
+only attracted citations but quickly catalyzed new research strands, in
+a way Simon's work never did within economics [@heukelom_sense_2012].
+Hence, while the institutional structures that came after played an
+important role in the subsequent reception of the research program as a
+whole, the reception of Kahneman and Tversky's seminal paper was already
+important just after its publication.
 
-The second surprising finding concerns the relationship between "old"
-and "new" behavioral economics. Contrary to narratives of rupture or
-forgetting, citations to @simonBehavioral1955 have never been as high
-as during the rise of new behavioral economics---a paradoxical pattern
-given recurrent claims that the field has neglected its intellectual
-roots. @earlPrinciples2022 criticizes this apparent amnesia:
+The second point concerns the relationship between "old" and "new"
+behavioral economics. Contrary to narratives of rupture or forgetting,
+citations to @simonBehavioral1955 have never been as high as during the
+rise of new behavioral economics---a paradoxical pattern given recurrent
+claims that the field has neglected its intellectual roots.
+@earlPrinciples2022 criticizes this apparent amnesia:
 
 > Neither Kahneman nor Thaler have sought to promote earlier behavioral
 economics alongside more recent work. Instead, they give the impression
@@ -1452,62 +1455,42 @@ at least three interpretations, each carrying distinct implications for
 how we understand the evolution of economic thought.
 
 A favorable interpretation holds that "new" behavioral economics has
-genuinely revived previously abandoned research directions, moving
-toward a reconciliation with earlier strands---a trajectory explicitly
-advocated by @sentRationality2008 and more recently by
-@earlPrinciples2022. A more critical reading emphasizes intellectual
-appropriation, whereby classic references are selectively reframed to
-fit the new agenda, renewing interest but through a biased and
-presentist lens, as Mongin has argued in the case of Allais
-[@monginAllais2019]. A third interpretation suggests that rising
-citation counts reflect a growing backlash against the "new" behavioral
-program, as defenders of "old" behavioral economics increasingly invoke
-Simon and others to challenge the heuristics-and-biases framework (see
-@vranasGigerenzers2000 for an analysis of Simon's inspired criticisms
-towards "new" behavioral economics).
+genuinely revived abandoned research directions, moving toward a
+reconciliation with earlier strands---a trajectory explicitly advocated
+by @sentRationality2008 and more recently by @earlPrinciples2022. A
+more critical reading emphasizes intellectual appropriation, whereby
+classic references are selectively reframed to fit the new agenda,
+renewing interest but through a biased and presentist lens, as Mongin
+has argued in the case of Allais [@monginAllais2019]. A third
+interpretation suggests that rising citation counts reflect a growing
+backlash against the "new" behavioral program, as defenders of "old"
+behavioral economics increasingly invoke Simon and others to challenge
+the heuristics-and-biases framework [@vranasGigerenzers2000].
 
-Although a definitive assessment would require closer qualitative
-analysis, our quantitative findings tentatively support the second
-interpretation. First, we find no evidence of a backlash against \"old\"
-behavioral economics, either qualitatively or quantitatively. The
-clearest example of negative citation patterns in our network is that of
-behavioral finance economists toward Eugene Fama\'s work, which
-functions as an explicit critical benchmark (e.g., the 2002--2009
-coupling cluster \"Finance: Behavioral Finance\"). We observe no such
-patterns in other behavioral economics clusters (see @trucForty2022 for
-more on this topic). Second, we find no evidence of a revival of "old"
-behavioral economics either. While citations to "old" behavioral
-economics references increased, they are not structurally central to any
-identified behavioral economics cluster (e.g., the 2002--2009 coupling
-cluster \"Behavioral Economics: Risk & Uncertainty\"). Nor do we
-identify any cluster organized around a distinct behavioral approach
-closer to "old" behavioral economics. We find no "old" behavioral
-economics sub-specialty analogous to game theory, behavioral finance, or
-pro-social behavior which suggests a widespread diffusion rather than
-the formation of a structured approach. Most concepts associated with
-\"old\" behavioral economics are absent from \"new\" behavioral
-economists\' vocabulary (e.g., the 2000--2009 semantic clusters \"Game
-Theory\" and \"Decision Theory\"), and where such concepts do appear,
-they are largely confined to institutionalist or heterodox clusters
-(e.g., the 2000--2009 semantic cluster \"Rationality and its Limits\").
-
-Taken together, the sparse and weakly structured citation patterns
-associated with "old" behavioral economics combined with the fact that
-contemporary discussions of rationality are increasingly framed through
-the concepts of "new" behavioral and experimental economics point toward
-appropriation rather than genuine integration. "Old" behavioral
-economists are invoked alongside canonical figures such as Adam Smith or
-Allais to anchor "new" behavioral economics within a longer tradition of
-criticism of standard rationality (e.g., the 2002--2009 coupling cluster
-\"Behavioral Economics: Social Preferences\"). Simon\'s influence thus
+A definitive assessment requires both closer qualitative analysis and
+targeted quantitative studies (such as tracing more precisely "old"
+behavioral economics influence). But our work already offers a roadmap
+for future research into the ambivalent relationship between "old" and
+"new" behavioral economics. The sparse and weakly structured citation
+patterns associated with "old" behavioral economics that we observed
+point toward appropriation rather than genuine integration. Our
+bibliometric networks show that neither Simon nor researchers associated
+with his ideas formed stable communities or structured those of "new"
+behavioral economics. Most concepts associated with "old" behavioral
+economics are absent from "new" behavioral economists' vocabulary (e.g.,
+the 2000--2009 semantic clusters "Game Theory" and "Decision Theory"),
+and where such concepts do appear, they are largely confined to
+institutionalist or heterodox clusters (e.g., the 2000--2009 semantic
+cluster "Rationality and its Limits"). "Old" behavioral economists are
+invoked alongside canonical figures such as Adam Smith or Allais to
+anchor "new" behavioral economics within a longer tradition of criticism
+of standard rationality (e.g., the 2002--2009 coupling cluster
+"Behavioral Economics: Social Preferences"). Simon's influence thus
 persists primarily as a symbolic and framing reference, useful for
 situating debates and reconstructing intellectual lineages, while his
-substantive framework remains only superficially incorporated. Although
-a definitive assessment requires both closer qualitative analysis and
-targeted quantitative studies (such as tracing more precisely "old"
-behavioral economics influence), our work offers a roadmap for future
-research into the complex, ambivalent relationship between \'old\' and
-\'new\' behavioral economics.
+substantive framework remains only superficially incorporated.
+
+.
 
 # **Conclusion**
 
@@ -1522,7 +1505,9 @@ study economic contributions in English. Second, this article
 constitutes the first application of quantitative methods to the study
 of "semantic change" within the history of economics, an area that
 represents an important and growing strand of the literature on
-quantitative text analysis [@montanelliSurvey2024].
+quantitative text analysis [@montanelliSurvey2024].Third, we also
+provide a LLM-base measure, with a time component, to select corpora
+that goes beyond raw set of keyword.
 
 Our approach allows us to identify, within this corpus, the sentences
 most closely associated with the words "rational" and "rationality" and,
@@ -1547,7 +1532,7 @@ developments. More generally, our approach allows the scale of analysis
 to be adjusted to the question at hand, rather than imposing it ex ante.
 
 We want to conclude by drawing several general methodological and
-historiographic claims from the approaches developed in this article.
+historiographic points from the approaches developed in this article.
 
 First, although quantitative methods in the history and philosophy of
 economics have been applied mainly to the postwar---and often
@@ -1582,11 +1567,9 @@ Finally, these methods are also "discovery tools." While they can be
 used to confirm or challenge existing claims in the history and
 philosophy of economics, they also help identify patterns that have so
 far been absent---or only marginally present---in the historical
-literature. We have briefly pointed to some of these patterns above. By
-making available an [interactive
-application](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/)
-to explore our results, we hope to encourage readers to pursue their own
-paths of discovery within the corpus and those methods.
+literature. By making available an interactive application to explore
+our results, we hope to encourage readers to pursue their own paths of
+discovery within the corpus.
 
 [^1]: The bibliometric communities, identified through network analysis,
     could also be called clusters. But we opted for "communities", a
@@ -1726,7 +1709,7 @@ paths of discovery within the corpus and those methods.
 
 [^23]: The eight-year window for bibliometric communities follows
     established practice in the quantitative history of economics
-    [@claveauMacrodyanmics2016], which is generally between 5 and 10
+    [@claveauMacrodynamics2016], which is generally between 5 and 10
     years [@abramoAssessing2011]. In our case, economics being a
     social science with longer citation spans of life
     [@lariviereLongterm2008; @aistleitnerCitation2019], and our
@@ -1739,18 +1722,22 @@ paths of discovery within the corpus and those methods.
 [^25]: We don't use overlapping windows in this case, notably for
     computational reasons: finding HDSBCAN clusters on a set of tens of
     thousands of sentences is much more computationally intensive than
-    finding bibliometric communities for at most five thousands of
+    finding bibliometric communities for at most a few thousands of
     articles.
 
-[^26]: Intertemporal semantic clusters are thus composed of several
-    intra-decade clusters that have been aggregated together. Refer to
-    the appendix for details.
+[^26]: Refer to the appendix for details.
 
-[^27]: One step in the discovery and interpretive process is often the
+[^27]: The application is available in the GitHub repository:
+    [[https://github.com/tdelcey/ejhet_quanti_method_app]{.underline}](https://github.com/tdelcey/ejhet_quanti_method_app%5D(https://github.com/tdelcey/ejhet_quanti_method_app)).
+    For non technical-users, a public version is available at the
+    following url:
+    [[https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/]{.underline}](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/%5D(https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/))
+
+[^28]: One step in the discovery and interpretive process is often the
     assignment of "labels" to clusters in order to facilitate the
     interpretation of visualizations.
 
-[^28]: Of course, as in any historical inquiry of this kind, we are not
+[^29]: Of course, as in any historical inquiry of this kind, we are not
     entirely protected from selective emphasis, all the more so given
     that the scope of our study is too broad to summarize every pattern
     revealed by our results. Other scholars could have, at various
@@ -1763,20 +1750,20 @@ paths of discovery within the corpus and those methods.
     historians of economic thought more generally---allows readers to
     assess the robustness and limits of our narrative.
 
-[^29]: However, because we focus on English, published articles, our
+[^30]: However, because we focus on English, published articles, our
     clusters are biased toward American journals, notably in the first
     decades.
 
-[^30]: Some years earlier, @mitchellRationality1910[97] already
+[^31]: Some years earlier, @mitchellRationality1910[97] already
     pushed forward similar claims, regretting that "few economists have
     regarded the study of psychology as a necessary part of the
     equipment of their work," often relying on "tacit preconceptions"
     rather than to seek to "psychologists to gain a knowledge of the
     mind and its modes of operation."
 
-[^31]: See closest sentences to the "Utility Theory" cluster's centroid.
+[^32]: See closest sentences to the "Utility Theory" cluster's centroid.
 
-[^32]: Machlup's position was that even if a "goodly portion of all
+[^33]: Machlup's position was that even if a "goodly portion of all
     business behavior may be non-rational, thoughtless, [or] blindly
     repetitive" [-@machlupMarginal1946, 520], questionnaire evidence
     and empirical findings more generally did not demonstrate the
@@ -1789,19 +1776,24 @@ paths of discovery within the corpus and those methods.
     "rational" once uncertainty and long-run effects are taken into
     account [see also @herfeldTheories2018].
 
-[^33]: The cluster "Firm Theory & Entrepreneur" nevertheless remained a
+[^34]: The cluster "Firm Theory & Entrepreneur" nevertheless remained a
     site for critiques of profit maximization. During the 1960s and
     1970s, contributions that proposed alternative frameworks for
     explaining firms' decisions were highly cited [such as
     @simonTheories1959] or appeared among closest articles from
     centroid [like @winterSatisficing1971].
 
-[^34]: This grouping of sentences in the 1970s actually took its origins
+[^35]: This grouping of sentences in the 1970s actually took its origins
     in the cluster "Utility Theory" (which ended in the 1960s) with a
     focus on welfare economics.
 
-[^35]: This highlights a key caveat of our methods. Because these
+[^36]: This highlights a key caveat of our methods. Because these
     methods foreground statistically "significant" patterns and
     indicators' prevalence, they are not always well suited to tracing
     and interpreting the origins of a concept or theory with the care
     that close historical study and archival research provide.
+
+[^37]: This aligns with a general finding in scientometrics that
+    citations in the first two years after publication explain more than
+    half of the variation in cumulative citations
+    [@sternHighRanked2014]
