@@ -440,7 +440,7 @@ This section details the bibliographic coupling and community detection workflow
 
 ### Dynamic coupling networks 
 
-Networks were constructed using bibliographic coupling, where two publications are linked if they cite common references. This approach identifies articles that draw on similar intellectual foundations, revealing thematic communities within the literature. Raw common references counting can be misleading, as articles that cite many references overall are more likely to share citations by chance and references that are highly cited are also overall more likely to link to articles by chance. To weight shared references between two articles, we use the coupling strength method from [@shenRefinedMethodComputing2019]. Coupling strength weighs both the size of the reference list of articles and the number of overall citations of each reference to overweight significant co-occurrences of references.^[ Statistical determination of edges are best options but are computionally unfeasable given the size of our networks] 
+Networks were constructed using bibliographic coupling, where two publications are linked if they cite common references. This approach identifies articles that draw on similar intellectual foundations, revealing thematic communities within the literature. Raw common references counting can be misleading, as articles that cite many references overall are more likely to share citations by chance and references that are highly cited are also overall more likely to link to articles by chance. To weight shared references between two articles, we use the coupling strength method from [@shenRefinedMethodComputing2019]. Coupling strength weighs both the size of the reference list of articles and the number of overall citations of each reference to overweight significant co-occurrences of references.^[ Statistical determination of edges are best options but are computationally unfeasible given the size of our networks] 
 
 To study the evolution of networks over time, we employed a dynamic windowing approach:
 
@@ -463,7 +463,7 @@ For visualization and interpretation, see the application.^[ [https://019adac8-8
 
 Smaller or more transient clusters are uncolored in visualizations to emphasize the major research streams.
 
-To visualize individual networks, articles (nodes) are color-coded by intertemporal clusters and spatiliazed in a two-dimensional space using the Force Atlas 2 algorithm [@jacomy_ForceAtlas2ContinuousGraph_2014]. This layout enhances readability by positioning similar articles in close proximity. However, these visualizations are intended as heuristic aids rather than primary analytical tools. The study’s findings are grounded in quantitative network metrics and detailed tables rather than visual analysis.
+To visualize individual networks, articles (nodes) are color-coded by intertemporal clusters and spatialized in a two-dimensional space using the Force Atlas 2 algorithm [@jacomy_ForceAtlas2ContinuousGraph_2014]. This layout enhances readability by positioning similar articles in close proximity. However, these visualizations are intended as heuristic aids rather than primary analytical tools. The study’s findings are grounded in quantitative network metrics and detailed tables rather than visual analysis.
 
 
 ### Characterizing Research Communities
