@@ -73,7 +73,7 @@ demonstration. First, many historians of economics engage with it in one
 way or another, which makes the exercise relevant for a broad audience.
 Second, because the concept is broad and pervasive in economics,
 applying quantitative methods to a very large corpus is particularly
-informative.[^2] We use a corpus of 259 165 articles in economics
+informative.[^2] We use a corpus of 259,165 articles in economics
 between 1900 and 2009 to show how these methods can handle long time
 horizons. Third, the multiple meanings attached to "rationality" and its
 uses applied to various subjects show how textual methods, coupled with
@@ -485,7 +485,7 @@ representative vector, ranked by cosine similarity for the years 1910,
 We built a first corpus, that we call the *sentences-corpus*. For each
 year, we select the 1% of sentences from our meta-corpus whose
 embeddings are closest to the corresponding representative vector.[^18]
-This sentences-corpus is composed of 499 157 sentences that will be used
+This sentences-corpus is composed of 499,157 sentences that will be used
 for subsequent textual analysis to identify *semantic clusters* on
 rationality.
 
@@ -497,7 +497,7 @@ set of vectors), we can also give a vectorial representation to the
 document by computing the centroid of its sentence vectors. We select
 the 10% of articles published after 1960 whose centroids are closest to
 the corresponding representative vector. This articles-corpus, composed
-of 25 916 articles, is then used in the bibliometric analysis to
+of 25,916 articles, is then used in the bibliometric analysis to
 identify *bibliographic communities* from 1960 onwards.[^19] Equivalent
 to @tbl-illustrative_sentences but for documents,
 @tbl-illustrative_documents displays the five closest documents to the
