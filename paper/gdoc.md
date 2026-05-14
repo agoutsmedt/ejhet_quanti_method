@@ -808,12 +808,12 @@ them. To make this crucial step as transparent and replicable as
 possible, we have built an application, where readers can explore all
 the semantic clusters and bibliometric communities, together with their
 corresponding indicators.[^27] Let us take as an example the semantic
-cluster "Rationality and its Limits," which gathers close to 20,000
-sentences from 1920 to 2009.[^28] How can we get a sense of what this
-cluster actually coalesces around? Before any qualitative interpretation
-or contextualization with the secondary literature, we must first
-produce a series of indicators to help us at characterizing the cluster.
-We choose the following indicators:
+cluster we labelled "Rationality and its Limits," which gathers close to
+20,000 sentences from 1920 to 2009.[^28] How can we get a sense of what
+this cluster actually coalesces around? Before any qualitative
+interpretation or contextualization with the secondary literature, we
+must first produce a series of indicators to help us at characterizing
+the cluster. We choose the following indicators:
 
 - **The TF-IDF.** We identify words specific to the cluster for each
   decade, based on Term Frequency-Inverse Document Frequency (TF-IDF).
@@ -1431,66 +1431,72 @@ behavioral economics. Contrary to narratives of rupture or forgetting,
 citations to @simonBehavioral1955 have never been as high as during the
 rise of new behavioral economics---a paradoxical pattern given recurrent
 claims that the field has neglected its intellectual roots.
-@earlPrinciples2022 criticizes this apparent amnesia:
+@earlPrinciples2022[2] criticizes this apparent amnesia:
 
 > Neither Kahneman nor Thaler have sought to promote earlier behavioral
 economics alongside more recent work. Instead, they give the impression
 that behavioral economics started around 1979--1980 with the publication
-of Kahneman and Tversky's (1979) article on prospect theory and that
-theory's use by Thaler (1980). All in all, this is a very curious state
-of affairs: a cynic might suggest that it looks rather as if the earlier
-work has been airbrushed from the history of economic thought by the
-strategic redefinition of what constitutes behavioral economics. A more
-charitable and reflexive view would see the situation as resulting from
-insufficient familiarity with the earlier literature
-[@earlPrinciples2022, 2]
+of Kahneman and Tversky's (1979) article on prospect theory ... a cynic
+might suggest that it looks rather as if the earlier work has been
+airbrushed from the history of economic thought by the strategic
+redefinition of what constitutes behavioral economics. A more charitable
+and reflexive view would see the situation as resulting from
+insufficient familiarity with the earlier literature.
 
-The rising citations to earlier work by Simon and Allais demonstrate
-that, while "new" behavioral economists may not consistently acknowledge
-the contributions of "old" behavioral economics, the rapid expansion and
-growing scale of the field have nevertheless drawn unprecedented
-attention to these earlier works, far exceeding the recognition they
-received at the time of their original publication. This pattern admits
-at least three interpretations, each carrying distinct implications for
-how we understand the evolution of economic thought.
+The surge in citations to earlier works by Simon and Allais reveal a
+striking tension: while "new" behavioral economists often overlook the
+contributions of their predecessors, the field's rapid expansion has
+paradoxically amplified attention to these earlier works---far beyond
+the recognition they received upon publication. This pattern supports
+three competing interpretations, each with distinct implications for the
+discipline's trajectory.
 
-A favorable interpretation holds that "new" behavioral economics has
-genuinely revived abandoned research directions, moving toward a
-reconciliation with earlier strands---a trajectory explicitly advocated
-by @sentRationality2008 and more recently by @earlPrinciples2022. A
-more critical reading emphasizes intellectual appropriation, whereby
-classic references are selectively reframed to fit the new agenda,
-renewing interest but through a biased and presentist lens, as Mongin
-has argued in the case of Allais [@monginAllais2019]. A third
-interpretation suggests that rising citation counts reflect a growing
-backlash against the "new" behavioral program, as defenders of "old"
-behavioral economics increasingly invoke Simon and others to challenge
-the heuristics-and-biases framework [@vranasGigerenzers2000].
+First, the trend may reflect a genuine revival of abandoned research
+directions, suggesting a long-overdue reconciliation between old and new
+behavioral economics. This aligns with calls by @sentRationality2008
+and @earlPrinciples2022 to reintegrate older insights into contemporary
+frameworks. Second, the citations could signal intellectual
+appropriation, where classic works are selectively reframed to serve
+modern agendas. As @monginAllais2019 argues, this risks distorting
+historical contributions through a presentist lens, prioritizing utility
+over fidelity. Third, the surge in citations may instead represent a
+backlash against the "new" behavioral program, with defenders of earlier
+traditions invoking Simon and Allais to challenge the hegemony of
+heuristics-and-biases frameworks [@vranasGigerenzers2000]. Here,
+citations function less as homage than as rhetorical weapons in an
+ongoing contest over the field's direction.
 
-A definitive assessment requires both closer qualitative analysis and
-targeted quantitative studies (such as tracing more precisely "old"
-behavioral economics influence). But our work already offers a roadmap
-for future research into the ambivalent relationship between "old" and
-"new" behavioral economics. The sparse and weakly structured citation
-patterns associated with "old" behavioral economics that we observed
-point toward appropriation rather than genuine integration. Our
-bibliometric networks show that neither Simon nor researchers associated
-with his ideas formed stable communities or structured those of "new"
-behavioral economics. Most concepts associated with "old" behavioral
-economics are absent from "new" behavioral economists' vocabulary (e.g.,
-the 2000--2009 semantic clusters "Game Theory" and "Decision Theory"),
-and where such concepts do appear, they are largely confined to
-institutionalist or heterodox clusters (e.g., the 2000--2009 semantic
-cluster "Rationality and its Limits"). "Old" behavioral economists are
-invoked alongside canonical figures such as Adam Smith or Allais to
-anchor "new" behavioral economics within a longer tradition of criticism
-of standard rationality (e.g., the 2002--2009 coupling cluster
-"Behavioral Economics: Social Preferences"). Simon's influence thus
-persists primarily as a symbolic and framing reference, useful for
-situating debates and reconstructing intellectual lineages, while his
-substantive framework remains only superficially incorporated.
+A definitive assessment of this dynamic will require both deeper
+qualitative analysis---such as archival work or interviews to uncover
+latent influences---and targeted quantitative studies, including
+finer-grained tracing of "old" behavioral economics' intellectual
+footprint. This goes beyond the scope of this article. Yet our findings
+provide a roadmap for future research, one that highlights the
+ambivalent relationship between the field's past and present. The sparse
+and fragmented citation patterns we observed for "old" behavioral
+economics suggest appropriation rather than integration. Our
+bibliometric networks reveal that neither Simon nor researchers
+associated with his ideas formed stable or influential communities
+within the broader landscape of "new" behavioral economics. Instead,
+their ideas appear as isolated echoes, rarely shaping the field's core
+structures.
 
-.
+This disconnection becomes even clearer in the last years of our study.
+Key concepts from "old" behavioral economics are largely absent from the
+dominant vocabularies of "new" behavioral economists, particularly in
+clusters "Game Theory" and "Decision Theory." Where such ideas *do*
+appear, they are marginalized---confined to heterodox or
+institutionalist spaces, such as the 2000--2009 cluster "Rationality and
+its Limits." Even the invocation of "old" behavioral economists follows
+a pattern of selective framing: figures like Simon are coupled with
+canonical critics of standard rationality (from Adam Smith to Allais) in
+the bibliometric community "Behavioral Economics: Social Preferences,"
+(2002-2009) not to engage with their substantive contributions, but to
+anchor "new" behavioral economics within a longer tradition of dissent.
+Simon's legacy thus seems to endure primarily as a symbolic
+touchstone---a rhetorical device for situating debates and constructing
+intellectual genealogies---while his analytical framework remains
+superficially absorbed, if not sidelined..
 
 # **Conclusion**
 
@@ -1505,9 +1511,10 @@ study economic contributions in English. Second, this article
 constitutes the first application of quantitative methods to the study
 of "semantic change" within the history of economics, an area that
 represents an important and growing strand of the literature on
-quantitative text analysis [@montanelliSurvey2024].Third, we also
-provide a LLM-base measure, with a time component, to select corpora
-that goes beyond raw set of keyword.
+quantitative text analysis [@montanelliSurvey2024]. Third, we also
+provide a LLM-base measure, with a time component (the representative
+vectors), to select corpora that goes beyond building a raw set of
+keywords.
 
 Our approach allows us to identify, within this corpus, the sentences
 most closely associated with the words "rational" and "rationality" and,
@@ -1567,9 +1574,10 @@ Finally, these methods are also "discovery tools." While they can be
 used to confirm or challenge existing claims in the history and
 philosophy of economics, they also help identify patterns that have so
 far been absent---or only marginally present---in the historical
-literature. By making available an interactive application to explore
-our results, we hope to encourage readers to pursue their own paths of
-discovery within the corpus.
+literature. We have briefly pointed to some of these patterns above. By
+making available an interactive application to explore our results, we
+hope to encourage readers to pursue their own paths of discovery within
+the corpus.
 
 [^1]: The bibliometric communities, identified through network analysis,
     could also be called clusters. But we opted for "communities", a
@@ -1705,15 +1713,16 @@ discovery within the corpus.
     our effort has consisted in adapting the method to our historical
     data, especially to accommodate the growth of the corpus over time.
 
-[^23]: The eight-year window for bibliometric communities follows
-    established practice in the quantitative history of economics
-    [@claveauMacrodynamics2016], which is generally between 5 and 10
-    years [@abramoAssessing2011]. In our case, economics being a
-    social science with longer citation spans of life
-    [@lariviereLongterm2008; @aistleitnerCitation2019], and our
-    object of study spanning across multiple decades, a longer time
-    window than 5 years is favored while preserving more granularity
-    than a 10-year one.
+[^23]: The eight-year window for defining bibliometric communities
+    aligns with established practices in the quantitative history of
+    economics [@claveauMacrodynamics2016], where timeframes typically
+    range between 5 and 10 years [@abramoAssessing2011]. Given that
+    economics exhibits longer citation lifespans than the natural
+    sciences [@lariviereLongterm2008; @aistleitnerCitation2019], and
+    considering the multi-decade scope of our study, we opted for a
+    window longer than five years. This choice balances granularity with
+    the need to capture enduring citation patterns, avoiding the coarser
+    resolution of a 10-year window.
 
 [^24]: Refer to the appendix for details.
 
@@ -1733,7 +1742,9 @@ discovery within the corpus.
 
 [^28]: One step in the discovery and interpretive process is often the
     assignment of "labels" to clusters in order to facilitate the
-    interpretation of visualizations.
+    interpretation of visualizations. We assign manually a label to each
+    intertemporal semantic cluster and bibliometric community after
+    qualitative inspection.
 
 [^29]: Of course, as in any historical inquiry of this kind, we are not
     entirely protected from selective emphasis, all the more so given

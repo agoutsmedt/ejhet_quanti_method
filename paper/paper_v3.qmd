@@ -17,6 +17,7 @@ format:
       text: |
         \usepackage{colortbl}
         \usepackage{threeparttable}
+        \usepackage{lscape}
 # Quarto execution defaults
 execute:
   echo: false
@@ -28,16 +29,17 @@ freeze: auto
 
 
 \name{Thomas Delcey\textsuperscript{a}\thanks{CONTACT Thomas Delcey. Email: thomas.delcey@ube.fr},
-Aurélien Goutsmedt\textsuperscript{b}\thanks{Email: aurelien.goutsmedt@uclouvain.be}, 
-and Alexandre Truc\textsuperscript{c}\thanks{Email: alexandre.truc@cnrs.fr}}
+Aurélien Goutsmedt\textsuperscript{b,c}\thanks{Email: aurelien.goutsmedt@uclouvain.be}, 
+and Alexandre Truc\textsuperscript{d}\thanks{Email: alexandre.truc@cnrs.fr}}
 
 
 \affil{\textsuperscript{a}Université de Bourgogne
-       \textsuperscript{b}UC Louvain, ISPOLE; ICHEC Brussels
-       \textsuperscript{c}Université Côte d'Azur}
+       \textsuperscript{b}UC Louvain, ISPOLE
+       \textsuperscript{c}ICHEC Brussels
+       \textsuperscript{d}Université Côte d'Azur}
 
 \begin{abstract}
-This article demonstrates how unsupervised quantitative methods can enrich the history of economic thought. Using the largest English-language corpus ever assembled for the field—nearly 290,000 economics journal articles from 1900 to 2009 with citation data—we analyze the evolution of the concept of rationality. Combining large language model–based semantic analysis with bibliometric and network methods, we identify and cluster discussions of rationality across time and scales, such as the circulation of bounded rationality and the emergence of behavioral economics. We provide an open-source interactive tool to support transparency and reuse.
+This article demonstrates how unsupervised quantitative methods can enrich the history of economic thought. Using the largest English-language corpus ever assembled for the field—nearly 290,000 <!-- ADD THE GOOD NUMBER AT THE END --> economics journal articles from 1900 to 2009 with citation data—we analyze the evolution of the concept of rationality. Combining large language model–based semantic analysis with bibliometric and network methods, we identify and cluster discussions of rationality across time and scales, such as the circulation of bounded rationality and the emergence of behavioral economics. We provide an open-source interactive tool to support transparency and reuse. 
 \end{abstract}
 
 \begin{keywords}
@@ -204,9 +206,9 @@ documents_tbl <- documents_tbl %>%
 
 ::: {#fig-distribution layout-nrow="2"}
 
-![Documents](images/documents_distribution_fulltext_database.png){#fig-fulltextdistribution_a width="90%"}
+![Documents](images/documents_distribution_fulltext_database.png){#fig-fulltextdistribution_a width="85%"}
 
-![Languages](images/language_distribution_by_year_fulltext_database.png){#fig-fulltextdistribution_b width="90%"}
+![Languages](images/language_distribution_by_year_fulltext_database.png){#fig-fulltextdistribution_b width="85%"}
 
 Distribution of documents and languages in the meta-corpus over time (1900-2009). Languages are identified by the sources. 
 ::: 
@@ -444,7 +446,7 @@ We then apply HDBSCAN to identify clusters in the UMAP space for each decade.^[W
 
 We choose a network-based approach to link clusters across decades. This approach handles many-to-many relationships between decade-level clusters---a semantic cluster may gradually merge with or split into multiple clusters over time. It is also consistent with the network-based approach applied to the articles-corpus. 
 
-We represent each cluster identified by HDBSCAN as a node in a network and edges are the cosine similarity between all clusters' centroids. This gives us a weighted network where nodes are decade specific clusters and edges are cosine similarities between their centroids. We keep only the most significant links using the LANS method (Local Adaptive Network Sparsification, `alpha = 0.02`) [@domagalskiBackbone2021].^[LANS retains edges that represent statistically significant similarities relative to a null model in which the weights are randomly distributed among the node's edges.] We apply the Leiden community detection (resolution = 2) on the backbone network.^[Using a smaller resolution would result in larger communities, thus reducing the granularity of the intertemporal semantic clusters. We opted for 2 as it widens the scope of the analysis, without producing too much fragmentation in the resulting intertemporal semantic clusters.] Intuitively, clusters that are strongly connected in the backbone network are grouped into intertemporal semantic clusters. @fig-capture-static-textual-network and @fig-capture-dynamic-textual-network are an example of the resulting network. 
+We represent each cluster identified by HDBSCAN as a node in a network and edges are the cosine similarity between all clusters' centroids. This gives us a weighted network where nodes are decade specific clusters and edges are cosine similarities between their centroids. We keep only the most significant links using the LANS method (Local Adaptive Network Sparsification, `alpha = 0.02`) [@domagalskiBackbone2021].^[LANS retains edges that represent statistically significant similarities relative to a null model in which the weights are randomly distributed among the node's edges.] We apply the Leiden community detection (resolution = 2) on the backbone network.^[To further refine community detection, we set the resolution parameter to 2. This choice increases the algorithm’s sensitivity to smaller, tightly knit clusters, which is critical for capturing specialized research literature in economics. A lower resolution (e.g., 1) might overlook these nuanced communities by favoring larger, more general groupings, while a higher resolution could fragment cohesive clusters into insignificant subcomponents. The value of 2 was selected, after inspection of different values, as a balanced trade-off between granularity and interpretability, aligning with the study’s focus on substantive and persistent research communities.] Intuitively, clusters that are strongly connected in the backbone network are grouped into intertemporal semantic clusters. @fig-capture-static-textual-network and @fig-capture-dynamic-textual-network are an example of the resulting network. 
 
 ## Bibliometric data and methods
 
@@ -454,52 +456,77 @@ This section details the bibliographic coupling and community detection workflow
 
 Networks were constructed using bibliographic coupling, where two publications are linked if they cite common references. This approach identifies articles that draw on similar intellectual foundations, revealing thematic communities within the literature. Raw common references counting can be misleading, as articles that cite many references overall are more likely to share citations by chance and references that are highly cited are also overall more likely to link articles together by chance. To weight shared references between two articles, we use the coupling strength method from [@shenRefinedMethodComputing2019]. Coupling strength weighs both the size of the reference list of articles and the number of overall citations of each reference to overweight significant co-occurrences of references.^[Statistical determination of edges like LANS method would have been a better option, but such methods are computationally unfeasible given the size of our networks] 
 
-To study the evolution of networks over time, we employed a dynamic windowing approach:
+To analyze the evolution of citation networks over time, we employed a dynamic windowing approach with the following parameters:
 
 * Time window: 8 years; 
-* Overlapping windows: windows overlap to allow smooth temporal transitions (1980-1987, 1981-1988, etc.);
-* Edge threshold: articles are only connected if they have at least 2 shared references.
+* Overlap: Consecutive windows overlap by 8 years (e.g., 1980–1987, 1981–1988, etc.) to ensure smooth temporal transitions and mitigate edge effects.
+* Edge threshold: Articles are connected only if they share at least two references, a threshold chosen to reduce network density.
 
-For each time window, we removed isolated articles (articles with no connections) and small components (connected groups of articles disconnected from the main network) ensuring that the analysis focused on the coherent and relevant literature.
+For each window, we refined the network by:
+
+* Removing isolated articles (nodes with no edges).
+* Excluding small disconnected components (groups of articles not linked to the main network).
+
+This filtering step ensures the analysis focuses exclusively on the relevant literature, reducing noise from peripheral or idiosyncratic contributions.
+
+The choice of an 8-year window aligns with established practices in the quantitative history of economics, where timeframes typically range from 5 to 10 years [@claveauMacrodynamics2016; @abramoAssessing2011]. However, economics exhibits longer citation lifespans than the natural sciences [@lariviereLongterm2008; @aistleitnerCitation2019], necessitating a longer window to capture meaningful citation patterns. Given the multi-decade scope of our study, an 8-year window was selected as a compromise:
+
+* It provides finer granularity than a 10-year window, avoiding the loss of temporal resolution and allowing us to identify emerging trends and shifts in research communities more precisely.
+* It is longer than 5 years, ensuring sufficient coverage of economics’ extended citation patterns.
 
 ### Clustering algorithm, spatilization, and intertemporal analysis
 
-Communities within each network were identified using the Leiden algorithm with modularity optimization [@traagLouvain2019]. This algorithm identify groups of articles that are have strong connections to each others, but few connections to the rest of the networks (i.e., relevant sub-groups of articles across the main network).
+Bibliometric communities within each network were identified using the Leiden algorithm [@traagLouvain2019], which optimizes modularity to detect groups of articles with dense internal connections and sparse external links. This algorithm is particularly suited for bibliometric networks due to its ability to handle large-scale networks efficiently. It avoids the resolution limit problem inherent in earlier methods like the Louvain algorithm, ensuring that smaller but meaningful communities are not artificially merged. We set the resolution parameter to its default value, 1. We consider this default value as a balanced choice to identify bibliometric communities of various sizes without over-fragmenting the network. 
 
-To identify the most relevant clusters across multiple networks, we made to an intertemporal analysis of our cluster. To trace the evolution of research communities over time, we linked clusters across consecutive time windows. Communities were considered continuous if they shared at least 50.1% of their members across two time windows. For example, if a cluster in the 1990-1997 network is made of similar articles as another cluster in the 1991-1998 network, the cluster are identified as the same one. This approach allows us to follow how research communities emerge, grow, split, merge, or decline over the 50-year period.
+To trace the evolution of research communities over time, we conducted an intertemporal analysis by linking communities across consecutive time windows. Communities were considered continuous if they shared at least 50.1% of their members between two overlapping windows. For example, if a community in the 1990–1997 network comprised a similar set of articles as a community in the 1991–1998 window, the two were treated as the same community [see @goutsmedtIndependent2023 for further details]. This threshold ensures robustness against minor fluctuations in cluster composition while capturing several key dynamics: the emergence of new research streams; the growth, decline, splitting, or merging of existing communities; the persistence of core themes over the 50-year period.
 
-For visualization and interpretation, see the application.^[ [https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/)] We focused on substantive communities using two criteria:
+For visualization and interpretation, see the interactive online application.^[[https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/)] To focus on substantive and influential research communities, we applied two criteria:
 
-* Temporal persistence: Communities must appear in at least 2 time windows
-* Size significance: Communities must represent at least 5% of the network in their peak window
+* Temporal Persistence: Communities must appear in at least two consecutive time windows, ensuring they are not ephemeral artifacts of the clustering process.
+* Size Significance: Communities must represent at least 5% of the network’s articles in their peak window, filtering out marginal  groupings.
 
 Smaller or more transient clusters are uncolored in visualizations to emphasize the major research streams.
 
-To visualize individual networks, articles (nodes) are color-coded by intertemporal clusters and spatialized in a two-dimensional space using the Force Atlas 2 algorithm [@jacomy_ForceAtlas2ContinuousGraph_2014]. This layout enhances readability by positioning similar articles in close proximity. However, these visualizations are intended as heuristic aids rather than primary analytical tools. The study’s findings are grounded in quantitative network metrics and detailed tables rather than visual analysis.
+For interpretive clarity, individual networks were spatialized in a two-dimensional layout using the Force Atlas 2 algorithm [@jacomy_ForceAtlas2ContinuousGraph_2014]. This method positions nodes (articles) such that similar articles (e.g., those sharing references or citations) are placed in close proximity and dissimilar articles are pushed apart, enhancing the readability of community structures.
 
+While these visualizations serve as heuristic aids for identifying patterns, the study’s findings are grounded in quantitative network metrics (e.g., community size and persistence) and detailed tabular data (e.g., top references per community) rather than visual analysis alone.
 
 ### Characterizing Research Communities
 
-We generated an automated exploratory dashboard in addition to our app to bridge the gap between the large-scale quantitative network analysis and the qualitative interpretation of research communities.
+In addition to the interactive application, an alluvial diagram is generated to map the flow of these clusters over time (see @fig-alluvial). This visualization allows us to trace the genesis, growth, merging, splitting, and decline of specific intellectual communities across decades. 
 
-An Alluvial Diagram is generated to map the flow of these clusters over time. This visualization allows us to trace the genesis, growth, merging, splitting, and decline of specific intellectual communities across decades. We also track this transformations in our app.
+We also track this transformations in our application.
 
-For each intertemporal clusters and also for each clusters in each temporal windows, we compiled: 
+For each bibliometric community in each time window, we provide detailed characterizations based on several metrics: 
 
 * The most distinctive words in the articles of the clusters in titles with TF-IDF. The TF-IDF algorithm identifies the most distinctive unigrams and bigrams for each cluster relative to the rest of the network.
-* The most cited articles in the network by other articles in the network
-* The most cited references (articles and books separately)
-* The journals in which the articles are published 
-* The most cited journals in references
-* The most productive authors
+* The sentences from the community's articles that are closest to the representative vector of their year. This allows us to identify sentences that are both semantically close to the representative vector and belong to articles from a specific community, which can provide insights into how rationality is discussed within this community. 
+* The most cited references by articles in the community.
+* The origin of the community: we identify the community's "ancestors" in the previous time window, i.e. the distribution of the community's articles in the previous time window's communities. 
+* The destiny of the community: we identify the community's "descendants" in the next time window, i.e. the distribution of the community's articles in the next time window's communities.
 
-Finally, while we are able to approximate how clusters are related to each others by their spatial position, we also generates a network overview and heat maps of inter-cluster relationships for each time window. Instead of looking at individual articles, the heat map treats entire clusters as nodes, calculating the normalized edge weight (cosine measure) between them based on the similarity of their shared references.
-
-\newpage 
-
-
+\clearpage 
 
 ## Appendix Tables and Figures
+
+::: {#fig-hdbscan_cluster_distribution_over_time layout-nrow="2"}
+
+![Noisy and clustered sentences](images/hdbscan_cluster_distribution_over_time.png){width="85%"}
+
+![Number of clusters by period](images/hdbscan_number_of_clusters_per_window.png){width="85%"}
+
+Distribution of noisy vs clustered sentences and number of clusters per time window.
+
+:::
+
+
+::: {#fig-alluvial layout-nrow="1"}
+
+![Alluvial diagram of intertemporal clusters](images/alluv_named.png){width="100%"}
+
+:::
+
+\clearpage
 
 ```{r}
 #| echo: false
@@ -611,13 +638,3 @@ tibble(
   ) %>%
   kable_styling(font_size = 9, latex_options = c("striped"))
 ```
-
-::: {#fig-hdbscan_cluster_distribution_over_time layout-nrow="2"}
-
-![Noisy and clustered sentences](images/hdbscan_cluster_distribution_over_time.png){width="100%"}
-
-![Number of clusters by period](images/hdbscan_number_of_clusters_per_window.png){width="100%"}
-
-Distribution of noisy vs clustered sentences and number of clusters per time window.
-
-:::
