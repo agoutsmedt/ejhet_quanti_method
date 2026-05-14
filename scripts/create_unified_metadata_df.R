@@ -4,7 +4,7 @@ pacman::p_load(fs)
 # this list of documents is used to filter the metadata df, to keep only the documents for which we have the full text and the embedding vector.
 documents_vectorised <- read_feather(file.path(
   data_path,
-  "metadata_maintext.feather"
+  "fulltexts_cosine_sim_with_rv.feather"
 ))
 
 # load row metadata from DuckDB
@@ -120,6 +120,11 @@ metadata_maintext <- metadata_all_texts %>%
     id %in% documents_vectorised$id
   )
 
+# extract document_vectorize not in metadata_main
+documents_vectorised_not_in_metadata <- documents_vectorised %>%
+  filter(
+    !(id %in% metadata_maintext$id)
+  )
 
 # save 2 databases in feather
 
