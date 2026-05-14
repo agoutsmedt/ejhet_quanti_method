@@ -28,22 +28,22 @@ freeze: auto
 ---
 
 
-\name{Thomas Delcey\textsuperscript{a}\thanks{CONTACT Thomas Delcey. Email: thomas.delcey@ube.fr},
+<!-- \name{Thomas Delcey\textsuperscript{a}\thanks{CONTACT Thomas Delcey. Email: thomas.delcey@ube.fr},
 Aurélien Goutsmedt\textsuperscript{b,c}\thanks{Email: aurelien.goutsmedt@uclouvain.be}, 
-and Alexandre Truc\textsuperscript{d}\thanks{Email: alexandre.truc@cnrs.fr}}
+and Alexandre Truc\textsuperscript{d}\thanks{Email: alexandre.truc@cnrs.fr}} -->
 
-
+<!-- 
 \affil{\textsuperscript{a}Université de Bourgogne
        \textsuperscript{b}UC Louvain, ISPOLE
        \textsuperscript{c}ICHEC Brussels
-       \textsuperscript{d}Université Côte d'Azur}
+       \textsuperscript{d}Université Côte d'Azur} -->
 
 \begin{abstract}
-This article demonstrates how unsupervised quantitative methods can enrich the history of economic thought. Using the largest English-language corpus ever assembled for the field—nearly 290,000 <!-- ADD THE GOOD NUMBER AT THE END --> economics journal articles from 1900 to 2009 with citation data—we analyze the evolution of the concept of rationality. Combining large language model–based semantic analysis with bibliometric and network methods, we identify and cluster discussions of rationality across time and scales, such as the circulation of bounded rationality and the emergence of behavioral economics. We provide an open-source interactive tool to support transparency and reuse. 
+This article demonstrates how unsupervised quantitative methods can enrich the history of economic thought. Using the largest English-language corpus ever assembled for the field—nearly 260,000 economics journal articles from 1900 to 2009 with citation data—we analyze the evolution of the concept of rationality. Combining large language model–based semantic analysis with bibliometric and network methods, we identify and cluster discussions of rationality across time and scales, such as the circulation of bounded rationality and the emergence of behavioral economics. We provide an open-source interactive tool to support transparency and reuse. 
 \end{abstract}
 
 \begin{keywords}
-rationality; economics history; bibliometrics; behavioral economics; natural language processing; large language models
+rationality; history of economics; bibliometrics; natural language processing; large language models
 \end{keywords}
 
 \begin{jelcode}
@@ -123,6 +123,15 @@ nb_sentences_top_1_percent <- read_feather(
   here::here(
     data_path,
     "top1pct_sentences_by_year.feather"
+  ),
+  as_data_frame = FALSE
+) %>%
+  nrow()
+
+nb_docs_all <- read_feather(
+  here::here(
+    data_path,
+    "metadata_all_texts.feather"
   ),
   as_data_frame = FALSE
 ) %>%
@@ -376,7 +385,7 @@ xlsx::write.xlsx(
 
 ### Sources 
 
-The meta-corpus is built from three main sources: JSTOR, Elsevier and ISTEX. The main source is JSTOR, which provides the largest coverage of historical economics journals including journals from various private editors and associations (e.g., the American Economic Association). However, important economics journals are missing from JSTOR (notably journals published by Elsevier). We therefore complement JSTOR with documents from a curated list of economics journals in SCOPUS, using two supplementary sources: Elsevier and ISTEX. We used the Elsevier API to access the full-texts of documents from Elsevier journals, that were available from 1997 onwards. We used the ISTEX API to access the full-texts of documents from Elsevier journals that were available before 1997, as well as full-texts from other economics journals identified from SCOPUS.
+The meta-corpus is built from three main sources: JSTOR, Elsevier and ISTEX. The main source is JSTOR, which provides the largest coverage of historical economics journals including journals from various private editors and associations (e.g., the American Economic Association). However, important economics journals are missing from JSTOR (notably journals published by Elsevier). We therefore complement JSTOR with documents from a curated list of economics journals in SCOPUS, using two supplementary sources: Elsevier and ISTEX. We used the Elsevier API to access the full-texts of documents from Elsevier journals that were available from 1997 onwards. We used the ISTEX API to access the full-texts of documents from Elsevier journals that were available before 1997, as well as full-texts from other economics journals identified from SCOPUS.
 
 ### Selecting economics documents
 
@@ -423,22 +432,22 @@ To build the sentences-corpus, we select sentences that are semantically close t
 Similarly, to build the articles-corpus, we select documents that are semantically close to the representative vector of their year, in terms of cosine similarity. Because $v_s$ is a sentence-level vector, we first compute a document-level vector by averaging the vectors of all sentences in the document. Let's denote $\mathcal{D}$ as the set of documents $d$ in our meta-corpus, and $\mathcal{S}_d$ the set of sentences in document $d$. We compute the vector of each document $d$ as follows:
 $$v_d = \frac{1}{|\mathcal{S}_d|} \sum_{s \in \mathcal{S}_d} v_s$$
 
-This results in $v_d$, a single 768-dimensional vector for each document. We then compute the cosine similarity between $v_d$ and the representative vector $RV_t$ of the document's publication year $t$. We retain the top 10\% most similar documents across the full period, yielding the articles-corpus $\mathcal{D}^{RV}$. Unlike the sentences-corpus, where the 1\% threshold is applied year by year to avoid over-representing recent years, the articles-corpus uses a global threshold.^[Due to variation in the number of articles matched to WoS across years, applying a year-by-year would have risked over-representing years with more WoS matches, independently of their semantic proximity to the representative vector.]
+This results in $v_d$, a single 768-dimensional vector for each document. We then compute the cosine similarity between $v_d$ and the representative vector $RV_t$ of the document's publication year $t$. We retain the top 10\% most similar documents across the full period, yielding the articles-corpus $\mathcal{D}^{RV}$. Unlike the sentences-corpus, where the 1\% threshold is applied year by year to avoid over-representing recent years, the articles-corpus uses a global threshold.^[Due to variation in the number of articles matched to WoS across years, applying a year-by-year threshold would have risked over-representing years with more WoS matches, independently of their semantic proximity to the representative vector.]
 
-The 1\% and 10\% threshold are of course debatable. It balances competing objectives. On the one hand, we want to capture a sufficient number of sentences and documents to represent the diversity of ways rationality is discussed in each year. On the other hand, we want to focus on sentences and documents that are strongly related to rationality and we want to limit the computational cost of subsequent analyses. There is clear room for improvement to refine the choice of thresholds. Our choices are based on manual inspection of documents and sentences closest to the threshold, for different threshold values (0.5\%, 1\%, 2\%; 5\%, 10\%, 20\%).
+The 1\% and 10\% threshold are of course debatable. They balances competing objectives. On the one hand, we want to capture a sufficient number of sentences and documents to represent the diversity of ways rationality is discussed in each year. On the other hand, we want to focus on sentences and documents that are strongly related to rationality and we want to limit the computational cost of subsequent analyses. There is clear room for improvement to refine the choice of thresholds. Our choices are based on manual inspection of documents and sentences closest to the threshold, for different threshold values (0.5\%, 1\%, 2\%; 5\%, 10\%, 20\%).
 
 ### Overlap between sentences and documents corpora
 
-@tbl-corpus-overlap reports the size of $\mathcal{S}_t^{RV}$, the sentence-corpus, and of $\mathcal{D}^{RV}$, the articles-corpus, as well as the extent of their overlap. By overlap, we mean the number of articles that are in both corpora. An article is in the sentences-corpus if at least one of its sentences is in $\mathcal{S}_t^{RV}$ and a sentence is in the articles-corpus if it is extracted from an article in $\mathcal{D}^{RV}$. The sentences-corpus and the articles-corpus share `r formatC(ov$n_overlap_articles, format = "d", big.mark = ",")` articles. Almost all documents in the articles-corpus are also in the sentences-corpus (i.e., `r ov$pct_overlap_in_articles_corpus`\%) but documents with sentences in the sentences-corpus are much less likely to be in the articles-corpus (i.e., `r ov$pct_overlap_in_sentences_corpus`\%). This is expected given the different selection criteria: the sentences-corpus are drawn from any documents, not only the 10\% most similar to the representative vector. However, despite representing only `r ov$pct_overlap_in_sentences_corpus`% of the articles in the sentences-corpus, `r ov$pct_overlap_sentences`% of the sentences from $\mathcal{S}_t^{RV}$ comes from article in $\mathcal{D}^{RV}$. In other words, sentences from articles in the article-corpus are over-represented in the sentences-corpus.
+@tbl-corpus-overlap reports the size of $\mathcal{S}_t^{RV}$, the sentence-corpus, and of $\mathcal{D}^{RV}$, the articles-corpus, as well as the extent of their overlap. By overlap, we mean the number of articles that are in both corpora. An article is in the sentences-corpus if at least one of its sentences is in $\mathcal{S}_t^{RV}$ and a sentence is in the articles-corpus if it is extracted from an article in $\mathcal{D}^{RV}$. The sentences-corpus and the articles-corpus share `r formatC(ov$n_overlap_articles, format = "d", big.mark = ",")` articles. Almost all documents in the articles-corpus are also in the sentences-corpus (i.e., `r ov$pct_overlap_in_articles_corpus`\%) but documents with sentences in the sentences-corpus are much less likely to be in the articles-corpus (i.e., `r ov$pct_overlap_in_sentences_corpus`\%). This is expected given the different selection criteria: the sentences-corpus is drawn from any documents, not only the 10\% most similar to the representative vector. However, despite representing only `r ov$pct_overlap_in_sentences_corpus`% of the articles in the sentences-corpus, `r ov$pct_overlap_sentences`% of the sentences from $\mathcal{S}_t^{RV}$ comes from article in $\mathcal{D}^{RV}$. In other words, sentences from articles in the article-corpus are over-represented in the sentences-corpus.
 
 ## Semantic clusters 
 
-This section details the text clustering methods used on the sentences-corpus, $\mathcal{S}_t^{RV}$. We adopt a dynamic approach: we apply clustering algorithms for each decade and then we link clusters across decades to recover intertemporal semantic clusters. This is a common approach in the literature on semantic change since most corpora are growing over time: applying a clustering algorithm on the whole corpus would lead to clusters that are mostly driven by recent years [@montanelliSurvey2024]. Regarding the choice of clustering methods, we followed the workflow of @alammarHandsOn2024 and use HDBSCAN. However, the choice of clustering methods is not a central contribution of our paper and we do not claim that it is the only choice and other algorithms might be worth exploring (e.g., k-means, affinity propagation, etc.). We chose HDBSCAN because they are widely used in the natural language processing community and have been shown to perform well for clustering semantic vectors. 
+This section details the text clustering methods used on the sentences-corpus, $\mathcal{S}_t^{RV}$. We adopt a dynamic approach: we apply clustering algorithms for each decade and then we link clusters across decades to recover intertemporal semantic clusters. This is a common approach in the literature on semantic change since most corpora are growing over time: applying a clustering algorithm on the whole corpus would lead to clusters that are mostly driven by recent years [@montanelliSurvey2024]. Regarding the choice of clustering methods, we followed the workflow of @alammarHandsOn2024 and use HDBSCAN. However, the choice of clustering methods is not a central contribution of our paper and we do not claim that it is the only choice and other algorithms might be worth exploring (e.g., k-means, affinity propagation, etc.). We chose HDBSCAN because it is widely used in the natural language processing community and have been shown to perform well for clustering semantic vectors. 
 
 
 ### UMAP and HDBSCAN
 
-UMAP is a dimensionality reduction technique that project the high-dimensional sentence vectors into a lower-dimensional space while preserving their information. Dimensionality reduction techniques like UMAP helps to improve the performance of clustering algorithms [e.g., @benzMapping2025]. Intuitively, the rationale for using UMAP is that high-dimensional spaces are often sparse, making clustering algorithms like HDBSCAN less effective. We first project the 768-dimensional sentence vectors to a 100-dimensional UMAP space (metric = cosine, n_neighbors = 15, min_dist = 0.0). From each $v_s \in \mathbb{R}^{768}$ and $s \in \mathcal{S}_t^{RV}$, we obtain $u_s \in \mathbb{R}^{100}$. To fit UMAP, we use a sampling strategy that keeps all pre-1980 sentences and caps the post-1980 years at 30,000 sentences each. The rationale is to avoid over-representing recent years in the UMAP fit. 
+UMAP is a dimensionality reduction technique that projects the high-dimensional sentence vectors into a lower-dimensional space while preserving their information. Dimensionality reduction techniques like UMAP help to improve the performance of clustering algorithms [e.g., @benzMapping2025]. Intuitively, the rationale for using UMAP is that high-dimensional spaces are often sparse, making clustering algorithms like HDBSCAN less effective. We first project the 768-dimensional sentence vectors to a 100-dimensional UMAP space (metric = cosine, n_neighbors = 15, min_dist = 0.0). From each $v_s \in \mathbb{R}^{768}$ and $s \in \mathcal{S}_t^{RV}$, we obtain $u_s \in \mathbb{R}^{100}$. To fit UMAP, we use a sampling strategy that keeps all pre-1980 sentences and caps the post-1980 years at 30,000 sentences each. The rationale is to avoid over-representing recent years in the UMAP fit. 
 
 We then apply HDBSCAN to identify clusters in the UMAP space for each decade.^[We define a first time windows of two decades (1900--1919)---because of the low number of sentences before 1920---followed by standard decades until 2009.] For each window, we run HDBSCAN on the UMAP coordinates. HDBSCAN's hyperparameters, in particular `min_cluster_size` and `min_samples`, influence the granularity of the clusters. We set `min_cluster_size = max(20, 1% of total sentences in the window)` and `min_samples = 1`. These parameters were selected after manual inspection of cluster interpretability. @fig-hdbscan_cluster_distribution_over_time shows the distribution of noisy vs clustered sentences and the number of clusters identified per time window by HDBSCAN.
 
@@ -450,7 +459,7 @@ We represent each cluster identified by HDBSCAN as a node in a network and edges
 
 ## Bibliometric data and methods
 
-This section details the bibliographic coupling and community detection workflow. The approach is similar to recent studies in the history of economics [@claveauMacrodynamics2016; @goutsmedtIndependent2023; @camilottoNavigating2023] and consist in building overlapping bibliographic coupling networks over time, applying community detection to identify research communities, and then linking communities across time to identify intertemporal bibliometric communities. We apply this approach to the articles-corpus, $\mathcal{D}^{RV}$, which is a subset of our meta-corpus that contains the 10\% most semantically similar documents to the representative vector of their year.
+This section details the bibliographic coupling and community detection workflow. The approach is similar to recent studies in the history of economics [@claveauMacrodynamics2016; @goutsmedtIndependent2023; @camilottoNavigating2023] and consists in building overlapping bibliographic coupling networks over time, applying community detection to identify research communities, and then linking communities across time to identify intertemporal bibliometric communities. We apply this approach to the articles-corpus, $\mathcal{D}^{RV}$, which is a subset of our meta-corpus that contains the 10\% most semantically similar documents to the representative vector of their year.
 
 ### Dynamic coupling networks 
 
@@ -474,7 +483,7 @@ The choice of an 8-year window aligns with established practices in the quantita
 * It provides finer granularity than a 10-year window, avoiding the loss of temporal resolution and allowing us to identify emerging trends and shifts in research communities more precisely.
 * It is longer than 5 years, ensuring sufficient coverage of economics’ extended citation patterns.
 
-### Clustering algorithm, spatilization, and intertemporal analysis
+### Clustering algorithm, spatialization, and intertemporal analysis
 
 Bibliometric communities within each network were identified using the Leiden algorithm [@traagLouvain2019], which optimizes modularity to detect groups of articles with dense internal connections and sparse external links. This algorithm is particularly suited for bibliometric networks due to its ability to handle large-scale networks efficiently. It avoids the resolution limit problem inherent in earlier methods like the Louvain algorithm, ensuring that smaller but meaningful communities are not artificially merged. We set the resolution parameter to its default value, 1. We consider this default value as a balanced choice to identify bibliometric communities of various sizes without over-fragmenting the network. 
 
@@ -493,9 +502,7 @@ While these visualizations serve as heuristic aids for identifying patterns, the
 
 ### Characterizing Research Communities
 
-In addition to the interactive application, an alluvial diagram is generated to map the flow of these clusters over time (see @fig-alluvial). This visualization allows us to trace the genesis, growth, merging, splitting, and decline of specific intellectual communities across decades. 
-
-We also track this transformations in our application.
+In addition to the interactive application, an alluvial diagram is generated to map the flow of these clusters over time (see @fig-alluvial). This visualization allows us to trace the genesis, growth, merging, splitting, and decline of specific intellectual communities across decades. We also track these transformations in our application.
 
 For each bibliometric community in each time window, we provide detailed characterizations based on several metrics: 
 

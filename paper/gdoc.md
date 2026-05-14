@@ -38,7 +38,7 @@ suited to historical inquiry because their unsupervised nature reduces
 the risk of presentism: rather than imposing present-day categories on
 the past, unsupervised algorithms uncover patterns directly from the
 data. When time is explicitly incorporated, researchers can map the
-discipline at different points of time, to identify the emergence and
+discipline at different points in time, to identify the emergence and
 decline of subjects and concepts, and to assess the influence of
 specific economists or ideas.
 
@@ -73,7 +73,7 @@ demonstration. First, many historians of economics engage with it in one
 way or another, which makes the exercise relevant for a broad audience.
 Second, because the concept is broad and pervasive in economics,
 applying quantitative methods to a very large corpus is particularly
-informative.[^2] We use a corpus of 238,764 articles in economics
+informative.[^2] We use a corpus of 259 165 articles in economics
 between 1900 and 2009 to show how these methods can handle long time
 horizons. Third, the multiple meanings attached to "rationality" and its
 uses applied to various subjects show how textual methods, coupled with
@@ -121,7 +121,7 @@ Scopus have similar coverage [@martin-martinGoogleScholarMicrosoft2021;
 @culbertReference2025], some studies might suffer from choosing a less
 appropriate database regarding the research questions. For instance,
 Scopus has a lower coverage of the "top five" economics journals before
-the 1990s and, while being openaccess, OpenAlex has been less curated
+the 1990s and, while being open-access, OpenAlex has been less curated
 than the products of for-profit publishers. Whatever the provider, less
 central or now-defunct journals are more likely to have incomplete or
 discontinuous digital coverage, impeding their inclusion for historical
@@ -155,9 +155,9 @@ datasets from scratch. However, such tasks remain time-consuming beyond
 small-scale study. More commonly, it is often necessary to combine
 information from different databases to fulfill a specific goal. For
 example, a medium-scale study of the publications of the European
-Economic Review [@goutsmedtIndependent2023]---few thousands
-documents---required to combine three heterogenous databases: Econlit
-(for JEL codes classification) Web of Science, and Scopus (due to
+Economic Review [@goutsmedtIndependent2023]---a few thousands
+documents---required combining three heterogeneous databases: Econlit
+(for JEL codes classification), Web of Science, and Scopus (due to
 incomplete coverage of the EER in Web of Science).
 
 For our study of rationality, the first step was to identify the best
@@ -173,11 +173,11 @@ list of articles; for these, we retrieved full texts from Elsevier, when
 available.[^5] Third, remaining full texts were obtained from the ISTEX
 project [@istexInfrastructure2025], which provides access to a
 substantial corpus of documents for researchers affiliated with French
-universities.[^6] We obtain a first corpus, that we call *meta-corpus,*
-of 238,764 economics articles that will be later filtered to focus on
-"rationality".
+universities.[^6] We obtain a raw corpus of 812,191 documents, written
+in different languages and of heterogeneous types (research articles,
+book reviews, etc.), which will subsequently be filtered.
 
-The @fig-distribution shows the distribution of this meta-corpus across
+The @fig-distribution shows the distribution of this raw corpus across
 the years and languages. Our corpus disproportionately represents
 Anglo-Saxon journals, which happen to be the most systematically
 digitized and preserved. This skew is problematic on two fronts. First,
@@ -186,7 +186,7 @@ English-language articles. Second, it introduces a form of presentism:
 the retrospective accessibility of these journals' data today should not
 be conflated with their historical centrality, nor should it imply that
 journal articles constituted the dominant medium for the circulation of
-scholarly ideas. Their prominence within the meta-corpus reflects less
+scholarly ideas. Their prominence within the raw corpus reflects less
 their past influence than their greater capacity, through resources and
 institutional support, to maintain comprehensive digital archives.
 Conversely, the materials missing "are unlikely to be missing at random"
@@ -222,15 +222,15 @@ or appendices be analyzed or excluded? Each decision may carry
 historiographical implications. It shapes the corpus and, ultimately,
 the history of rationality our methods can reveal. There are rarely
 definitive and uncontestable choices, but rather a series of trade-offs
-that should be made explicit and required to engage with some of the
-material available.[^8]
+that should be made explicit and requires engaging with some of the
+material available at hand.[^8]
 
 In light of this article's purpose, we operated a series of choices in
 extracting textual data from the full-text materials provided by JSTOR,
 Elsevier, and ISTEX. Our first choice was to restrict the analysis to
 English-language articles, since cross-language comparisons involve
 additional challenges, which would go far beyond the scope of this
-article.[^9] We also restrain our analysis to research articles and
+article.[^9] We also restrict our analysis to research articles and
 filter out book reviews, comments, editorial reports or obituaries.
 While such materials can illuminate how rationality was debated, they
 are not primary sites for articulating new ideas within the discipline.
@@ -255,7 +255,7 @@ missing precisely where they should have figured prominently. This
 prompted us to further explore potential biases in JSTOR and to augment
 our corpus with new full texts extracted from Elsevier and the ISTEX
 project. Exploring raw sources is thus an important step that requires
-to already engage with both collected materials and the existing
+already engaging with both collected materials and the existing
 literature.
 
 The use of several databases also raised specific issues. Here, our goal
@@ -294,7 +294,7 @@ transition from a database to a well-defined corpus is therefore
 straightforward. For example, writing the history of a particular
 journal [@edwardsFifty2020; @charlesRevue2025] or of one or several
 individuals [@trucDisciplinary2025; @andradaUnderstanding2017;
-@fontanaFragmentation2023] entails comparatively definitional or
+@fontanaFragmentation2023] entails comparatively fewer definitional or
 boundary challenges. While some large-scale studies focus on the
 discipline as a whole [@claveauMacrodynamics2016; @ambrosinoWhat2018;
 @bacciniExploring2025], such work still requires an operational
@@ -318,14 +318,14 @@ formulations such as "model-consistent expectations"? Defining the
 relevant historical materials therefore involves adopting explicit
 conventions to approximate the object under study
 [@desrosieresPolitics2011]. The act of delimiting a corpus is a
-convention and such act must be assessed instrumentally, not as a
+convention and such an act must be assessed instrumentally, not as a
 definitive delineation, but as an operational hypothesis tailored to a
 specific research question or even an act of "drawing impossible
 boundaries" [@lietzDrawing2020; @zittBibliometric2019].
 
 Many "proxies" have been used in the history and philosophy of economics
 to define disciplines and sub-disciplines. For instance,
-[@fontanaFragmentation2023] restrict their economics corpus to
+[@fontanaFragmentation2023] restrict their economics corpus to the
 allegedly most influential economics journals, the "Blue Ribbon Eight";
 [@goutsmedtIndependent2023] used the JEL codes to select macroeconomic
 documents; while [@trucForty2022] and [@jullienHistory2024] relied
@@ -344,7 +344,7 @@ for evaluating the adequacy and representativeness of the resulting
 corpus.
 
 In our case, we define *economic* documents by building the corpus from
-*peer-review* journals. This convention has both advantages and
+*peer-reviewed* journals. This convention has both advantages and
 limitations. On the one hand, it provides a clear and reproducible
 criterion, relying on a predetermined set of journals, rather than
 requiring case-by-case decisions about whether individual documents
@@ -360,13 +360,14 @@ journals to include, particularly for those at the margins of
 settled on a carefully curated list of 329 journals identified as
 economics journals in JSTOR and Scopus, but excluding journals that are
 not entirely academic, insufficiently focused on economics, or only
-founded within the last twenty years.[^12] We were able to retrieve
-289538 articles published in these journals from 1900 to 2009. These
-articles form what we call our "meta-corpus".
+founded within the last twenty years.[^12] Filtering the raw corpus to
+retain only English-language research articles from these journals, we
+obtain 259,165 articles published between 1900 and 2009. These articles
+constitute what we have called our meta-corpus.
 
-The second challenge was to restrain our corpus to documents engaging
+The second challenge was to restrict our corpus to documents engaging
 with the issue of rationality. One of the most straightforward proxies
-are keywords [@trucNeuroeconomics2023]. Based on a predefined list of
+is keywords [@trucNeuroeconomics2023]. Based on a predefined list of
 target terms (called a "dictionary"), this approach restricts a corpus
 to documents that mention these terms with at least a given frequency.
 In addition to its relative simplicity, it works well for specific and
@@ -417,7 +418,7 @@ possible to treat ideas and conceptual shifts as measurable objects,
 thereby opening new possibilities for the quantitative study of economic
 thought.
 
-We rely on Sentence-BERT [@reimersSentenceBERT2019], an LLM designed
+We rely on Sentence-BERT [@reimersSentenceBERT2019], a LLM designed
 specifically to produce sentence embeddings, that is, numerical vectors
 that represent the meaning of a sentence. The model is fine-tuned for
 semantic comparison between sentences: sentences that express similar
@@ -439,21 +440,19 @@ Despite their remarkable potential, LLMs have important limitations for
 historical analysis. Computing a single representative vector over 110
 years raises serious historical issues: these models are trained on vast
 amounts of text, the majority of which are recent, and therefore reflect
-a presentist bias in their representation of language. LLMs are trained
-on vast amounts of texts but the majority of which are recent, and
-therefore reflect a presentist, numerical view of language.[^15] For
-example, current models struggle to reproduce earlier writing styles and
-cannot reliably infer the publication date of a text
-[@underwoodCan2025]. Sentence-BERT is subject to the same limitations,
-and the sentence embeddings it produces inevitably inherit this bias.
-Besides, as illustrated by @fig-distribution, our corpus is
-exponentially distributed over time, with most sentences drawn from
-recent articles and the centroid of our *sentences A* would therefore
-itself be skewed toward recent language. Consequently, the sentences
-retrieved in set *B*, those closest to the centroid of *A*, would
-predominantly come from recent periods. In other words, our results
-would reflect a modern understanding of rationality, at the expense of
-earlier conceptions of the concept.
+a presentist bias in their representation of language.[^15] For example,
+current models struggle to reproduce earlier writing styles and cannot
+reliably infer the publication date of a text [@underwoodCan2025].
+Sentence-BERT is subject to the same limitations, and the sentence
+embeddings it produces inevitably inherit this bias. Besides, as
+illustrated by @fig-distribution, our corpus is exponentially
+distributed over time, with most sentences drawn from recent articles
+and the centroid of our *sentences A* would therefore itself be skewed
+toward recent language. Consequently, the sentences retrieved in set
+*B*, those closest to the centroid of *A*, would predominantly come from
+recent periods. In other words, our results would reflect a modern
+understanding of rationality, at the expense of earlier conceptions of
+the concept.
 
 To mitigate this presentist bias, we adapted the way sentence similarity
 is computed across time (see @fig-rv-method-diagram in the appendix for
@@ -462,10 +461,10 @@ sentence from, say, 1910 directly to a single representative vector
 constructed from all sentences in the corpus containing "rationality" or
 "rational," we construct time-specific representative vectors. For each
 year, we compute a moving-centroid embedding using a symmetric five-year
-window, based on all the sentences containing "rationality" or
-"rational".[^16] Concretely, for the year 1910, we averaged the vectors
-of all sentences containing "rationality" or "rational" from 1905 to
-1915.[^17]
+(11 years) window, based on all the sentences containing "rationality"
+or "rational".[^16] Concretely, for the year 1910, we averaged the
+vectors of all sentences containing "rationality" or "rational" from
+1905 to 1915.[^17]
 
 This procedure yields a period-specific reference vector that reflects
 how these terms were used at that particular moment in time. A sentence
@@ -476,7 +475,7 @@ They should be interpreted as operational summaries of the semantic
 contexts in which "rationality" appears within a given symmetric
 five-year window, rather than as fixed theoretical definitions of the
 concept. While the representative vectors are not associated with any
-real sentences, it is close in the vector space from real sentences.
+real sentences, they are close in the vector space from real sentences.
 This method allows for the identification of discussions on rationality
 across large corpora at low computational cost. For illustration,
 @tbl-illustrative_sentences reports the 5 sentences closest to the
@@ -484,11 +483,11 @@ representative vector, ranked by cosine similarity for the years 1910,
 1950, and 2000.
 
 We built a first corpus, that we call the *sentences-corpus*. For each
-year, we select all the sentences from our meta-corpus the 1% of
-sentences whose embeddings are closest to the corresponding
-representative vector.[^18] This sentence-corpus is composed of 499 157
-sentences that will be used for subsequent textual analysis to identify
-*semantic clusters* on rationality.
+year, we select the 1% of sentences from our meta-corpus whose
+embeddings are closest to the corresponding representative vector.[^18]
+This sentences-corpus is composed of 499 157 sentences that will be used
+for subsequent textual analysis to identify *semantic clusters* on
+rationality.
 
 We built a second corpus, at the document level, that we call the
 *articles-corpus*. We extract from our meta-corpus the *documents* that
@@ -505,13 +504,12 @@ to @tbl-illustrative_sentences but for documents,
 corresponding representative vectors for years 1910, 1950 and 2000.
 
 @fig-method-schema-general summarises this whole process of building
-our two corpora from our different meta-corpus and
-@fig-rv-method-diagram summarises the construction of the
-representative vectors.
+our two corpora from our meta-corpus and @fig-rv-method-diagram
+summarises the construction of the representative vectors.
 
 # **Exploring the corpus** 
 
-# Simple exploration
+## Simple exploration
 
 Before returning to our specific corpora on rationality and diving into
 more advanced LLM-based analyses, we first step back and examine simpler
@@ -618,7 +616,7 @@ neoclassical rational choice, while @akerlofMarket1970 and
 @kahnemanProspect1979 are foundational contributions to what economists
 now refer to as "new" behavioral economics. The latter tradition exerted
 substantially greater influence than the earlier one, both across all
-WoS economics journals and within the top five journals.The contrast
+WoS economics journals and within the top five journals. The contrast
 concerns not only the magnitude of influence, but also the timing and
 speed of diffusion. Citations to the two "new" behavioral economics
 papers increased rapidly and steadily from publication onward, whereas
@@ -637,13 +635,13 @@ Citation counts are a blunt tool and cannot answer many questions of
 interest to historians of economics: Who cites these works? Are they
 cited together? In what intellectual contexts do these citations occur?
 Moreover, focusing on a small set of references implies a degree of
-arbitrariness into the analysis. Likewise, simply counting the words
-that appear next to "rationality" tells us little about whether these
-words and expressions are used jointly within the same argument or
-whether they belong to distinct topics and contexts that mobilize the
-concept differently. It also overlooks the much broader vocabulary
-related to rationality (e.g., profit maximization, expected utility,
-social choice).
+arbitrariness in the analysis. Likewise, simply counting the words that
+appear next to "rationality" tells us little about whether these words
+and expressions are used jointly within the same argument or whether
+they belong to distinct topics and contexts that mobilize the concept
+differently. It also overlooks the much broader vocabulary related to
+rationality (e.g., profit maximization, expected utility, social
+choice).
 
 Most recent quantitative studies in the history of economics rely on
 what can be grouped under the label of "unsupervised methods." These
@@ -766,7 +764,7 @@ ideas travel across fields, and where intellectual boundaries lie. It
 conveys sometimes a more sociological dimension: scholars tend to cite
 the work of people publishing in similar journals, going to similar
 conferences, etc. The following sub-section illustrates how we interpret
-our results, and how the two methods complementarity may be useful.
+our results, and how the two methods' complementarity may be useful.
 
 ## Interpreting "Results"
 
@@ -812,8 +810,8 @@ cluster we labelled "Rationality and its Limits," which gathers close to
 20,000 sentences from 1920 to 2009.[^28] How can we get a sense of what
 this cluster actually coalesces around? Before any qualitative
 interpretation or contextualization with the secondary literature, we
-must first produce a series of indicators to help us at characterizing
-the cluster. We choose the following indicators:
+must first produce a series of indicators to help us characterize the
+cluster. We choose the following indicators:
 
 - **The TF-IDF.** We identify words specific to the cluster for each
   decade, based on Term Frequency-Inverse Document Frequency (TF-IDF).
@@ -882,13 +880,13 @@ grouping addresses rationality and its limits in general across multiple
 decades. Rather, bibliometric analysis identifies groups of articles
 from authors in close academic communities. In relation to the semantic
 cluster "Rationality and its Limits", we observe, for instance, the
-emergence of the community "Behavioral Economics: Risk & Uncertainty"
-community in the 1981-1988 window. As with the semantic clusters, for
-each bibliometric community in each temporal window we extract,
-equivalent indicators: the most identifying words, the sentences closest
-to the representative vectors---based on the articles belonging to the
+emergence of the "Behavioral Economics: Risk & Uncertainty" community in
+the 1981-1988 window. As with the semantic clusters, for each
+bibliometric community in each temporal window we extract equivalent
+indicators: the most identifying words, the sentences closest to the
+representative vectors---based on the articles belonging to the
 community---as well as the most cited references. We also examine the
-flows of each community in a given window: that is whether its nodes
+flows of each community in a given window: that is, whether its nodes
 derive primarily from the same or from different communities in
 preceding periods ("origins") and what they become in the following
 period ("destinies").
@@ -942,7 +940,7 @@ pleasures and pains, a view later formalized as utility maximization
 
 In our first two decades, semantic cluster "Utility Theory" represents
 discussion centred on utility and brings together insights on marginal
-utility from, among others, Sidney. J. Chapman, Arthur Pigou, Francis Y.
+utility from, among others, Sidney J. Chapman, Arthur Pigou, Francis Y.
 Edgeworth, and John M. Clark. Cluster "History of Economic Thought &
 Philosophy of Economics" also captures discussions about utility that
 were framed as interpretations, critiques, or extensions of classical
@@ -1035,26 +1033,26 @@ progressively distinguished from "reason" or "intelligence" and recast
 as a formal, axiomatic notion---"rigid rules that determine unique
 solutions" [@ericksonHow2013; see also @klaesConceptual2005].
 
-These transformations are visible in the intertemporal semantic semantic
-cluster "Utility Theory". While it constituted only a tiny share of
-sentences between 1900 and 1919, and was absent in the 1920s, it gained
-importance in the 1930s to the 1950s (though still representing less
-than 5% of all sentences). During this period, the cluster captures the
-heart of the debate concerning the measurability of utility and the
-opposition between "cardinal" and "ordinal" utility. In the 1930s, the
-debate still bore on the psychological dimension of utility measurement.
-In 1933, John Hicks and Roy Allen [-@hicksReconsideration1934]
-coauthored an article on demand analysis that eliminated marginal
-utility by appealing to the concept of the marginal rate of
-substitution---the slope of the indifference curve [see also
-@moscatiMeasuring2019, 98--100]. Already in 1932, Allen had made this
-project explicit: by starting from "preferential discrimination," or
-individuals' preferences over different bundles of goods, it becomes
-unnecessary to "make any assumption about the existence of 'total
-utility' or about the measurability of 'utility'; the hedonistic
-hypothesis has been rendered superfluous" [@allenFoundations1932,
-207].[^32] In other words, "Subjective and psychological concepts have
-been discarded from pure economic theory" (ibid.).
+These transformations are visible in the intertemporal semantic cluster
+"Utility Theory". While it constituted only a tiny share of sentences
+between 1900 and 1919, and was absent in the 1920s, it gained importance
+in the 1930s to the 1950s (though still representing less than 5% of all
+sentences). During this period, the cluster captures the heart of the
+debate concerning the measurability of utility and the opposition
+between "cardinal" and "ordinal" utility. In the 1930s, the debate still
+bore on the psychological dimension of utility measurement. In 1933,
+John Hicks and Roy Allen [-@hicksReconsideration1934] coauthored an
+article on demand analysis that eliminated marginal utility by appealing
+to the concept of the marginal rate of substitution---the slope of the
+indifference curve [see also @moscatiMeasuring2019, 98--100]. Already
+in 1932, Allen had made this project explicit: by starting from
+"preferential discrimination," or individuals' preferences over
+different bundles of goods, it becomes unnecessary to "make any
+assumption about the existence of 'total utility' or about the
+measurability of 'utility'; the hedonistic hypothesis has been rendered
+superfluous" [@allenFoundations1932, 207].[^32] In other words,
+"Subjective and psychological concepts have been discarded from pure
+economic theory" (ibid.).
 
 Yet this position was not uncontested. Indeed, in the same cluster,
 terms such as "introspection," "satisfaction(s)," and "pleasure" recur
@@ -1108,7 +1106,7 @@ of which relied heavily on "as if" reasoning, notably to justify, in the
 latter, the behavior of agents regarding expected utility.[^34]
 
 Shifts in the discipline's methodology are also captured by the cluster
-"Methodological Discussion." While in the 1920s and 1930s economists
+"Methodological Discussions." While in the 1920s and 1930s economists
 still engaged with notions such as "human nature," "passions," or
 "prejudices," the postwar period saw the growing prominence of terms
 such as "logical implications" and "assumptions," followed, from the
@@ -1155,7 +1153,7 @@ publications by *Public Choice* [see @cherrierEconomists2017].
 Welfare economics and public choice, as well as public finance
 [@desmarais-tremblayPublic2023], are also clearly visible in the
 bibliometric analysis after 1960. Indeed, one of the major bibliometric
-communities of the 1960s "Public Economics: Externalities" with James
+communities of the 1960s is "Public Economics: Externalities" with James
 Buchanan, Ronald Coase, and Richard Musgrave as central references. The
 prominence of public finance increases further in subsequent decades,
 with many communities gravitating around "Public Economics:
@@ -1193,32 +1191,32 @@ analysis, spread across several bibliometric communities
 ("Macroeconomics: Business Cycles & RE," "International Macroeconomics,"
 and "Macroeconomics: Modelling Consequences of RE").
 
-A similar trajectory to macroeconomics can also be observed in finance.
-The origins of financial issues can be traced to the semantic cluster
-"Capital & Investment Theory," which focused initially on the theory of
-investment. Until the 1930s, the issue was framed around the returns of
-capital. For instance, the cluster includes the so-called Hayek-Knight
-controversy on the conception of capital [@cohenHayek2003]. After the
-1940s, decision-making under uncertainty became a central theme,
-crystallized by works such as George @shackleTheory1942 on investment
-under radical uncertainty, which figures among the most representative
-articles. One decade later, Jack @hirshleiferTheory1958 inscribed
-investment theory within the rising neoclassical conception of
-rationality, by formalizing investment decisions as a problem of
-intertemporal maximization of consumption*.* In the same vein, the
-Modigliani--Miller theorem [@modiglianiCost1958] further consolidated
-this shift by grounding firm financial decisions as an arbitrage
-problem, opening the path to modern financial economics. Their theorem,
-they argued, can be used "as a basis for rational investment
-decision-making within the firm" [@modiglianiCost1958, 296]. After the
-1960s, the cluster "Capital & Investment Theory" became much more
-prominent, accounting for more than 10% of all sentences. In this
-period, rationality is increasingly framed in formal decision-theoretic
-terms and focused on appropriate investment choices under uncertainty.
-Hence, our analysis suggests that rationality in finance enters
-primarily through corporate finance, rather than through asset pricing,
-where rationality seems to have remained an implicit assumption, rarely
-discussed explicitly prior to the emergence of behavioral finance.
+Finance shows a trajectory similar to macroeconomics. The origins of
+financial issues can be traced to the semantic cluster "Capital &
+Investment Theory," which focused initially on the theory of investment.
+Until the 1930s, the issue was framed around the returns of capital. For
+instance, the cluster includes the so-called Hayek-Knight controversy on
+the conception of capital [@cohenHayek2003]. After the 1940s,
+decision-making under uncertainty became a central theme, crystallized
+by works such as George @shackleTheory1942 on investment under radical
+uncertainty, which figures among the most representative articles. One
+decade later, Jack @hirshleiferTheory1958 inscribed investment theory
+within the rising neoclassical conception of rationality, by formalizing
+investment decisions as a problem of intertemporal maximization of
+consumption*.* In the same vein, the Modigliani--Miller theorem
+[@modiglianiCost1958] further consolidated this shift by grounding
+firm financial decisions as an arbitrage problem, opening the path to
+modern financial economics. Their theorem, they argued, can be used "as
+a basis for rational investment decision-making within the firm"
+[@modiglianiCost1958, 296]. After the 1960s, the cluster "Capital &
+Investment Theory" became much more prominent, accounting for more than
+10% of all sentences. In this period, rationality is increasingly framed
+in formal decision-theoretic terms and focused on appropriate investment
+choices under uncertainty. Hence, our analysis suggests that rationality
+in finance enters primarily through corporate finance, rather than
+through asset pricing, where rationality seems to have remained an
+implicit assumption, rarely discussed explicitly prior to the emergence
+of behavioral finance.
 
 However, from the 1980s onward, modern asset pricing became dominant
 within the cluster "Capital & Investment Theory" as indicated by the
@@ -1289,8 +1287,8 @@ approaches and because it emerged in the 1980s, at a moment when
 economic theory faced multiple epistemological challenges, thereby
 creating an opportune context for alternative frameworks.
 
-Why did these two closely conceptually-related research programs follow
-such different trajectories and levels of influence in economics? Both
+Why did these two conceptually-related research programs follow such
+different trajectories and levels of influence in economics? Both
 challenged standard assumptions of rationality under the banner of
 behavioral economics, and both were ultimately recognized with Nobel
 Prizes, yet their patterns of reception and adoption differed. While our
@@ -1312,7 +1310,7 @@ highlights Simon's conceptual centrality. The semantic cluster
 the rise of Simon's influence. In the 1950s, the TF-IDF associated with
 this cluster was centered on terms such as "rational behavior,"
 "rationalization," and "irrationality." By the 1970s, "bounded
-rationality" had become one the most prevalent expressions in the
+rationality" had become one of the most prevalent expressions in the
 cluster, and by the 1990s, references to "boundedly rational agents" and
 "procedural rationality" clearly positioned Simon's concepts at the core
 of economic discussions, reflecting a delayed but substantial
@@ -1343,14 +1341,14 @@ behavioral economics---ranging from prospect theory in the analysis of
 risk to experimental paradigms such as the ultimatum game in game theory
 [@gualaParadigmatic2008].
 
-Second, Simon\'s conceptual influence, spearheaded by bounded
+Second, Simon's conceptual influence, spearheaded by bounded
 rationality, never translated into stable bibliometric communities.
 While his framework shaped how many economists approached rationality,
 very few actually developed the research program he initiated. In our
 bibliometric networks, only small, unstable communities formed around
-Simon\'s work. In the 1960s and early 1970s, his ideas appeared in
-*Public Economic* clusters, operations research circles and behavioral
-theories of the firm (*cl_165*) and critique of the standard
+Simon's work. In the 1960s and early 1970s, his ideas appeared in
+*Public Economic* communities, operations research circles and
+behavioral theories of the firm (*cl_165*) and critique of the standard
 profit-maximizing such as socialist enterprise theory (*cl_123*). Simon
 was generally associated with other researchers critical of perfect
 rationality: @winterSatisficing1971, which applied satisficing to firm
@@ -1360,36 +1358,37 @@ focus on allocative efficiency (*cl_179*). Together, Simon, Winter,
 Cyert, and Leibenstein formed a diverse organizational theory critique
 of how rationality, especially through profit maximization, is employed
 in economics. While this collective movement had some momentum, none of
-these research had an individual effect on economics structure [see
-also @sent_behavioral_2004]. After 1969-1976, these different research
-streams coalesced into a small short-lived community (*cl_258*) before
-fragmenting. References to Simon and critiques of profit maximization
-remained scattered, moving through several small communities (e.g.,
-*cl_793* on post-keynesian economics, *cl_755* on contract theory,
-*cl_773* and *cl_614* on institutionalist approaches) without ever
-achieving the critical mass. While Simon's influence in economics was
-conceptually enduring, it remained marginal and unable to generate
-coherent, large and stable bibliometric communities.
+these research programs had an individual effect on economics structure
+[see also @sent_behavioral_2004]. After 1969-1976, these different
+research streams coalesced into a small short-lived community (*cl_258*)
+before fragmenting. References to Simon and critiques of profit
+maximization remained scattered, moving through several small
+communities (e.g., *cl_793* on post-Keynesian economics, *cl_755* on
+contract theory, *cl_773* and *cl_614* on institutionalist approaches)
+without ever achieving critical mass. While Simon's influence in
+economics was conceptually enduring, it remained marginal and unable to
+generate coherent, large and stable bibliometric communities.
 
-"New" behavioral economics reception reveals a dramatic contrast. Unlike
-Simon's trajectory, the heuristics and biases research program of
-Kahneman, Tversky, and other "new" behavioral economists generated
-multiple stable clusters that formed well-identified and substantial
-research communities. A main "Behavioral Economics: Risk & Uncertainty"
-cluster emerged in 1981-1988, structured by early adopters of the new
-approach. The crystallization of this distinct cluster signaled the
-beginning of explosive growth and the spinning off of several autonomous
-communities that captured emerging specialized areas of behavioral
-economics: pro-social behavior (*Behavioral Economics: Social
-Preferences*) and behavioral game theory (*Game Theory: Behavioral*),
-intertemporal decision-making and risk (*Behavioral Economics: Risk &
-Uncertainty*), and behavioral finance (*Finance: Behavioral Finance*).
-In a lot of these cases, behavioral economics clusters come to outgrow
-or replace existing clusters (e.g., game theory, decision theory).
+The reception of "New" behavioral economics reveals a contrasted
+pattern. Unlike Simon's trajectory, the heuristics and biases research
+program of Kahneman, Tversky, and other "new" behavioral economists
+generated multiple stable clusters that formed well-identified and
+substantial research communities. A main "Behavioral Economics: Risk &
+Uncertainty" cluster emerged in 1981-1988, structured by early adopters
+of the new approach. The crystallization of this distinct cluster
+signaled the beginning of explosive growth and the spinning off of
+several autonomous communities that captured emerging specialized areas
+of behavioral economics: pro-social behavior (*Behavioral Economics:
+Social Preferences*) and behavioral game theory (*Game Theory:
+Behavioral*), intertemporal decision-making and risk (*Behavioral
+Economics: Risk & Uncertainty*), and behavioral finance (*Finance:
+Behavioral Finance*). In many cases, behavioral economics clusters come
+to outgrow or replace existing clusters (e.g., game theory, decision
+theory).
 
 By the 2000s, behavioral economics had become the dominant venue for
 research on rationality. Three behavioral economics communities
-represented approximately 30% of the entire network with many additional
+represented nearly 30% of the entire network, with many additional
 communities structured by behavioral economics research without being
 explicitly characterized as such. The scale and speed of acceptance
 differed dramatically from Simon's experience. By 1980,
@@ -1443,8 +1442,8 @@ redefinition of what constitutes behavioral economics. A more charitable
 and reflexive view would see the situation as resulting from
 insufficient familiarity with the earlier literature.
 
-The surge in citations to earlier works by Simon and Allais reveal a
-striking tension: while "new" behavioral economists often overlook the
+The surge in citations to earlier works by Simon and Allais reveals a
+tension: while "new" behavioral economists often overlook the
 contributions of their predecessors, the field's rapid expansion has
 paradoxically amplified attention to these earlier works---far beyond
 the recognition they received upon publication. This pattern supports
@@ -1458,13 +1457,13 @@ and @earlPrinciples2022 to reintegrate older insights into contemporary
 frameworks. Second, the citations could signal intellectual
 appropriation, where classic works are selectively reframed to serve
 modern agendas. As @monginAllais2019 argues, this risks distorting
-historical contributions through a presentist lens, prioritizing utility
-over fidelity. Third, the surge in citations may instead represent a
-backlash against the "new" behavioral program, with defenders of earlier
-traditions invoking Simon and Allais to challenge the hegemony of
-heuristics-and-biases frameworks [@vranasGigerenzers2000]. Here,
-citations function less as homage than as rhetorical weapons in an
-ongoing contest over the field's direction.
+historical contributions through a presentist lens, prioritizing
+contemporary relevance over historical fidelity. Third, the surge in
+citations may instead represent a backlash against the "new" behavioral
+program, with defenders of earlier traditions invoking Simon and Allais
+to challenge the hegemony of heuristics-and-biases frameworks
+[@vranasGigerenzers2000]. Here, citations function less as homage than
+as rhetorical weapons in an ongoing contest over the field's direction.
 
 A definitive assessment of this dynamic will require both deeper
 qualitative analysis---such as archival work or interviews to uncover
@@ -1496,7 +1495,7 @@ anchor "new" behavioral economics within a longer tradition of dissent.
 Simon's legacy thus seems to endure primarily as a symbolic
 touchstone---a rhetorical device for situating debates and constructing
 intellectual genealogies---while his analytical framework remains
-superficially absorbed, if not sidelined..
+superficially absorbed, if not sidelined.
 
 # **Conclusion**
 
@@ -1504,7 +1503,7 @@ This article is first and foremost methodological: it aims to
 demonstrate, through a concrete application, the usefulness of
 quantitative methods for the history of economic thought. Nonetheless,
 it does so by breaking new ground in the history and philosophy of
-economics. First, the corpus we build---comprising nearly 290,000
+economics. First, the corpus we build---comprising nearly 260,000
 full-text economics articles spanning more than a century---is, to our
 knowledge, the largest and most comprehensive database ever used to
 study economic contributions in English. Second, this article
@@ -1512,8 +1511,8 @@ constitutes the first application of quantitative methods to the study
 of "semantic change" within the history of economics, an area that
 represents an important and growing strand of the literature on
 quantitative text analysis [@montanelliSurvey2024]. Third, we also
-provide a LLM-base measure, with a time component (the representative
-vectors), to select corpora that goes beyond building a raw set of
+provide a LLM-based measure to select corpora, with a time component
+(the representative vectors) that goes beyond building a raw set of
 keywords.
 
 Our approach allows us to identify, within this corpus, the sentences
@@ -1653,13 +1652,13 @@ the corpus.
 [^14]: Henceforth, "similarity" between sentences or documents refers to
     cosine similarity.
 
-[^15]: [Moreover, the texts used to train these models are not primarily
+[^15]: Moreover, the texts used to train these models are not primarily
     academic articles in economics. This means that there may be
     important gaps between the general language patterns the model has
     learned and the specific vocabulary, concepts, and writing practices
-    of our "domain" [see e.g. @zhangEconBERT2025].]{.mark}
+    of our "domain" [see e.g. @zhangEconBERT2025].
 
-[^16]: [Centroids are widely used in the literature on "semantic change"
+[^16]: Centroids are widely used in the literature on "semantic change"
     to represent the average embedding of a temporal slice or a cluster
     of a corpus [@montanelliSurvey2024]. We adopt the centroid rather
     than the medoid (i.e. the observed sentences whose embedding is
@@ -1668,7 +1667,7 @@ the corpus.
     disproportionately influenced by a single atypical example. While
     the medoid is an embedding of a real sentence and is easily
     interpretable, it is straightforward to compute the closest vector
-    from the centroid (see]{.mark} @tbl-illustrative_sentences).
+    from the centroid (see @tbl-illustrative_sentences).
 
 [^17]: We initially tested a symmetric two-year window. However,
     particularly in the early periods, this specification resulted in
@@ -1680,7 +1679,7 @@ the corpus.
     variation too much, especially given the rapid growth of the corpus
     after the 1960s.
 
-[^18]: [The choice of the 1% quantile reflects a trade-off between false
+[^18]: The choice of the 1% quantile reflects a trade-off between false
     positives and false negatives. We observed that a more restrictive
     threshold (e.g., 0.5%) excludes many sentences that obviously deal
     with rationality in economics, whereas a more permissive threshold
@@ -1689,7 +1688,7 @@ the corpus.
     appeared as a reasonable compromise. Moreover, a moderate number of
     false positives does not substantially threaten the analysis, since
     such sentences are likely to be classified as "noise" by the HDBSCAN
-    algorithm.]{.mark}
+    algorithm.
 
 [^19]: The "articles-corpus" only starts in 1960, because the
     bibliographic data from WoS are too limited prior to this date to be
@@ -1727,7 +1726,7 @@ the corpus.
 [^24]: Refer to the appendix for details.
 
 [^25]: We don't use overlapping windows in this case, notably for
-    computational reasons: finding HDSBCAN clusters on a set of tens of
+    computational reasons: finding HDBSCAN clusters on a set of tens of
     thousands of sentences is much more computationally intensive than
     finding bibliometric communities for at most a few thousands of
     articles.
@@ -1767,7 +1766,7 @@ the corpus.
     pushed forward similar claims, regretting that "few economists have
     regarded the study of psychology as a necessary part of the
     equipment of their work," often relying on "tacit preconceptions"
-    rather than to seek to "psychologists to gain a knowledge of the
+    rather than than seeking "psychologists to gain a knowledge of the
     mind and its modes of operation."
 
 [^32]: See closest sentences to the "Utility Theory" cluster's centroid.
