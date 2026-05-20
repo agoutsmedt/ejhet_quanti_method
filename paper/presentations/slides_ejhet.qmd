@@ -4,14 +4,16 @@ subtitle: "A Quantitative History of Rationality in Economic Thought"
 author:
   - name: "Thomas Delcey" 
   - name: "Aurélien Goutsmedt"
-  - name: "Alexandre Truc" 
+    affiliation: "HES/ESHET Congress"
+  - name: "Alexandre Truc"
+
 lang: "en"
 filters:
   - pandoc-quotation.lua
 quot-lang: en
 date: "May 26, 2026"
 date-format: long
-bibliography: references.bib
+bibliography: ../references.bib
 format:
   revealjs:
     theme:
@@ -54,21 +56,10 @@ execute:
 :::
 
 :::{.notes}
-- Presentation
-  - History of the economics discipline.
-  - Emergence of quantitative methods in the history of economic thought.
-- A history of the way economists use the concept of rationality. What is rationality for them, what does it imply for agents? For what problems is the concept used? Doing this from a long-term historical perspective.
-- Recent research article as part of a special issue.
-- Using textual methods: text mining, NLP, text as data. Academic publications as data source. Using appropriate computational methods to analyse this type of source.
-  - Why this concept: long history in the discipline,
-  - complex and evolving concept.
 - What should the chosen method(s) be able to do:
   - handle very large corpora. Over 110 years of publications (60 million sentences and 290k economics articles).
-  - Historical context: also important in visualisation. Being able to situate results in time, and thus having methods relatively suited to the historical dimension of the project. Not projecting current definitions of rationality. Observing the uses of rationality as they occur at a given moment.
-  - Particular feature of HET research but also, intellectual history more broadly. Suspicion towards quantitative methods, and the important role of textual interpretation, contextualisation, etc. Important to have a method that allows back-and-forth between quantitative results and qualitative interpretation, traditional textual analysis.
-- These are the broad outlines of the article project. Offering an original presentation of this work through visualisation. Because visualisation is a genuine challenge. Without overstating it, many methodological steps and choices were guided at one point or another by visualisation. Rethinking the method sometimes came through rethinking how to visualise the results. Strong entanglement between the two.
-  - Many visualisations in my slides to illustrate this. Some visualisations are "drafts".
-- Feel free to ask questions at any time, particularly about the method and the visualisations.
+  - Handle the historical dimension of the data. We want to be able to see how things evolve over time, and not just get a static picture or a "presentist" picture.
+  - important role of textual interpretation, contextualisation, etc. Important to have a method that allows back-and-forth between quantitative results and qualitative interpretation, traditional textual analysis.
 :::
 
 ## Quantitative methods for HET 
@@ -141,7 +132,7 @@ Embeddings models represent words or sentences as vectors in a multidimensional 
 ::: {.column width="35%" .highlight-last}
 ::: {.callout-note .fragment appearance="minimal"}
 - Our goal:  
-    1. Vectorize texts related to rationality 
+    1. Use *contextual* embeddings (rather than *static*) to vectorize texts related to rationality
     2. Group these vectors into clusters (different meanings of rationality)
 :::
 :::
@@ -156,7 +147,7 @@ Embeddings models represent words or sentences as vectors in a multidimensional 
 - The position of words in this space reflects their meaning and usage. Greater proximity = greater semantic similarity.
 - Measured by cosine similarity: a value between -1 and 1 indicating how closely two vectors point in the same direction.
 - Static embeddings: each word has a unique representation, regardless of context.
-- Contextual embeddings: the representation of a word or sentence depends on the context in which it appears, capturing finer semantic nuances. Allows polysemy to be taken into account.
+- Contextual embeddings: the representation of a word or sentence depends on the context in which it appears, capturing finer semantic nuances. Allows polysemy to be taken into account. That's the basic technique behind LLMs.
 :::
 
 ## Our data 
@@ -167,7 +158,7 @@ Embeddings models represent words or sentences as vectors in a multidimensional 
 - Three sources: economic journals in JSTOR, completed by Elsevier + ISTEX.
 - We kept for the analysis: 
   - Research articles (excluding book reviews, editorials, etc.);
-  - Articles published between 1900 and 2020;
+  - Articles published between 1900 and 2009;
   - Articles in English.
 - Resulting in a corpus of 258k+ research articles.
 ::: 
@@ -181,8 +172,6 @@ Clear room for improvement: english bias, exclusion of books, etc.
 ::: 
 
 ::: 
-
-
 
 ## Sentence Vectors
 
@@ -299,7 +288,7 @@ make_tbl(c(1950, 1975, 2000), new_year = 2000)
     1. This average vector is the "representative vector", $RV$: it captures the meaning of rationality in a given year.
 
 2. Extract sentences closest to this vector. For each year:
-    1. Compute the cosine similarity between $RV$ and the 61M sentence vectors;
+    1. Compute the cosine similarity between $RV$ and the sentence vectors for this year;
     2. Select the top 1% most similar sentences.
 
 3. Clustering: 
@@ -311,13 +300,11 @@ make_tbl(c(1950, 1975, 2000), new_year = 2000)
 
 ## Visualising clusters as a network
 
-::: {#fig-clusters-network layout-ncol=2 .smaller-text}
+::: {layout-ncol=2}
 
 ![Static](../images/backbone_communities_network.png){width=90% fig-align="center"}
 
 ![Dynamic](../images/temporal_network_plot.png){width=90% fig-align="center"}
-
-A static and dynamic visualisation of the network of clusters. Each node is a cluster of sentences, and links represent similarity between clusters. Clusters are grouped into meta-clusters (colours) that persist over time.
 
 ::: 
 
@@ -347,5 +334,13 @@ A static and dynamic visualisation of the network of clusters. Each node is a cl
 
 ## {background-iframe="https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/" background-interactive="true"}
 
+## Some results from our analysis
+
+:::{.highlight-last .small-text}
+- Our analysis recovers well early-20th-century debates among institutionalist economists, notably around the concept of “pecuniary” institutions.
+- A social dimension of rationality emerges as early as the 1930s, with the promotion of "rationalizing" economic processes and institutions.
+- The theory of the firm plays an important role in critiques of what came to be viewed as the standard conception of rationality.
+- Debates on individual rationality and choice theory remain relatively limited in the 1960s and 1970s, before the rise of behavioural economics.
+:::
 
 ## Bibliography
