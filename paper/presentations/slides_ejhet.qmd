@@ -282,7 +282,7 @@ make_tbl(c(1950, 1975, 2000), new_year = 2000)
 
 ::: {.highlight-last .tiny-text}
 1. Vectorise the 61M sentences in the corpus using sentence-BERT.
-1. Compute the "representative vectors".** _For each year_**: 
+1. Compute the "representative vectors".- **_For each year_**: 
     1. Select all vectors of sentences containing "rational" or "rationality";
     1. Compute the moving average of these vectors;
     1. This average vector is the "representative vector", $RV$: it captures the meanings of rationality in a given year.
@@ -304,8 +304,9 @@ make_tbl(c(1950, 1975, 2000), new_year = 2000)
 
 ![Static](../images/backbone_communities_network.png){width=90% fig-align="center"}
 
+::: {.fragment}
 ![Dynamic](../images/temporal_network_plot.png){width=90% fig-align="center"}
-
+::: 
 ::: 
 
 :::{.notes}
@@ -320,8 +321,8 @@ make_tbl(c(1950, 1975, 2000), new_year = 2000)
 ## But What Do These Clusters Correspond To?
 
 ::: {.highlight-last .very-small-text}
-- We need to _select_ and _rank_ the most relevant information to characterize clusters and make them interpretable. 
-  - Development of a set of complementary indicators
+- We need to _select_ and _rank_ the most relevant informationdn to interpret these clusters.
+  - Development of a set of complementary indicators:
     - Most frequent words
     - Closest sentences
     - Closest articles
@@ -338,7 +339,7 @@ make_tbl(c(1950, 1975, 2000), new_year = 2000)
 
 :::{.highlight-last .small-text}
 - Well-known trends: decision theory, game theory, rational expectations, behavioral economics, etc.
-- Treatment of earlier periods: discussions among institutionalist economists (critique of hedonism, "pecuniary" institutions).  
+- Trends in early periods: institutionalist economists (critique of hedonism, "pecuniary" institutions).  
 - Interesting overlooked trends: 
   - A social dimension of rationality emerging in the 1920 with the promotion of "rationalization" of process and institutions.
   - Discussions on entrepreneurs play an important role in the critiques of profit-maximization. 
