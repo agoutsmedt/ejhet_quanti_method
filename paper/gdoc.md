@@ -1589,7 +1589,7 @@ the corpus.
 
 [^3]: The application is available in the GitHub repository:
     [anonymized]. A public version is available at the following url:
-    [[https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/]{.underline}](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/%5D(https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/))
+    [https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/).
 
 [^4]: One of the main challenges for a quantitative history of economics
     is to move beyond reliance on proprietary digital libraries and to
@@ -1737,7 +1737,7 @@ the corpus.
     [[https://github.com/tdelcey/ejhet_quanti_method_app]{.underline}](https://github.com/tdelcey/ejhet_quanti_method_app%5D(https://github.com/tdelcey/ejhet_quanti_method_app)).
     For non technical-users, a public version is available at the
     following url:
-    [[https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/]{.underline}](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/%5D(https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/))
+    [https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/).
 
 [^28]: One step in the discovery and interpretive process is often the
     assignment of "labels" to clusters in order to facilitate the
