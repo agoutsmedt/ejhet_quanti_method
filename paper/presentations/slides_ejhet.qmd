@@ -282,7 +282,7 @@ make_tbl(c(1950, 1975, 2000), new_year = 2000)
 
 ::: {.highlight-last .tiny-text}
 1. Vectorise the 61M sentences in the corpus using sentence-BERT.
-1. Compute the "representative vectors".- **_For each year_**: 
+1. Compute the "representative vectors". **_For each year_**: 
     1. Select all vectors of sentences containing "rational" or "rationality";
     1. Compute the moving average of these vectors;
     1. This average vector is the "representative vector", $RV$: it captures the meanings of rationality in a given year.
