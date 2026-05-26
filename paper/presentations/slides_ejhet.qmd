@@ -42,7 +42,7 @@ execute:
 ## Context and objectives
 
 :::{.highlight-last .very-small-text}
-- The paper is part of EJHET special issue on methods in the history of economic thought.
+- The paper is part of the EJHET special issue on methods in the history of economic thought.
 - We discuss unsupervised methods and apply them to study the history of rationality in economics.
 
 :::{.fragment .incremental}
@@ -91,7 +91,7 @@ execute:
 
 :::{.callout-tip .fragment .nonincremental}
 ### Unsupervised methods 
-- Class of algorithms to identify **patterns** in unlabeled data, without predefined categories or labels as opposed to supervised methods. 
+- A class of algorithms to identify **patterns** in unlabeled data, without predefined categories or labels as opposed to supervised methods.
 - In HET, they typically served to identify clusters of documents sharing common patterns, such as similar references (bibliographic coupling) or similar vocabulary (topic modeling).
 ::: 
 
@@ -117,7 +117,7 @@ Qualitative and quantitative work are deeply intertwined in unsupervised methods
 ::: {.smaller-text}
 ::: {.callout-tip .nonincremental}
 ### Embeddings
-Embeddings models represent words or sentences as vectors in a multidimensional space that captures their meaning and usage.
+Embedding models represent words or sentences as vectors in a multidimensional space that captures their meaning and usage.
 :::
 ::: 
 
@@ -168,7 +168,7 @@ Not in the presentation but we also retrieve citation data to run bibliometric a
 ::: 
 
 ::: {.callout-important appearance="minimal" .fragment}
-Clear room for improvement: english bias, exclusion of books, etc. 
+Clear room for improvement: English bias, exclusion of books, etc.
 ::: 
 
 ::: 
@@ -217,7 +217,7 @@ make_tbl <- function(years, new_year = NULL) {
 :::{.fragment .fade-in-then-out}
 ```{r}
 #| echo: false
-#| tbl-cap: 'Real sentences from the corpus whose vectors are close from the vector of "Economic agents are rational."'
+#| tbl-cap: 'Real sentences from the corpus whose vectors are close to the vector of "Economic agents are rational."'
 make_tbl(1950)
 ```
 :::
@@ -225,7 +225,7 @@ make_tbl(1950)
 :::{.fragment .fade-in-then-out}
 ```{r}
 #| echo: false
-#| tbl-cap: 'Real sentences from the corpus whose vectors are close from the vector of "Economic agents are rational."'
+#| tbl-cap: 'Real sentences from the corpus whose vectors are close to the vector of "Economic agents are rational."'
 make_tbl(c(1950, 1975), new_year = 1975)
 ```
 :::
@@ -233,7 +233,7 @@ make_tbl(c(1950, 1975), new_year = 1975)
 :::{.fragment .fade-in}
 ```{r}
 #| echo: false
-#| tbl-cap: 'Real sentences from the corpus whose vectors are close from the vector of "Economic agents are rational."'
+#| tbl-cap: 'Real sentences from the corpus whose vectors are close to the vector of "Economic agents are rational."'
 make_tbl(c(1950, 1975, 2000), new_year = 2000)
 ```
 :::
@@ -321,14 +321,14 @@ make_tbl(c(1950, 1975, 2000), new_year = 2000)
 ## But What Do These Clusters Correspond To?
 
 ::: {.highlight-last .very-small-text}
-- We need to _select_ and _rank_ the most relevant informationdn to interpret these clusters.
+- We need to _select_ and _rank_ the most relevant information to interpret these clusters.
   - Development of a set of complementary indicators:
     - Most frequent words
     - Closest sentences
     - Closest articles
     - Cited references
 - How to share this information with readers and reviewers ?
-  - Production of long reports with tables in appendix but hardly readable and replicable by readers.
+  - Production of long reports with tables in the appendix but hardly readable and replicable by readers.
   - Development of an interactive application for exploring results
 :::
 
@@ -341,7 +341,7 @@ make_tbl(c(1950, 1975, 2000), new_year = 2000)
 - Well-known trends: decision theory, game theory, rational expectations, behavioral economics, etc.
 - Trends in early periods: institutionalist economists (critique of hedonism, "pecuniary" institutions).  
 - Interesting overlooked trends: 
-  - A social dimension of rationality emerging in the 1920 with the promotion of "rationalization" of process and institutions.
+  - A social dimension of rationality emerging in the 1920s with the promotion of "rationalization" of processes and institutions.
   - Discussions on entrepreneurs play an important role in the critiques of profit-maximization. 
 :::
 
