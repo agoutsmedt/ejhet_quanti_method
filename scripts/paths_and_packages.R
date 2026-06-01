@@ -112,7 +112,7 @@ setDTthreads(percent = 20)
 
 invisible(lapply(
   sort(list.files(
-    here::here("scripts", "_functions"),
+    here::here("scripts", "functions"),
     full.names = TRUE,
     pattern = "\\.R$"
   )),
