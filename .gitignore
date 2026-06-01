@@ -21,6 +21,7 @@ scripts/analysing_sentences_cluster_files
 scripts/_depreciated/**/*_cache
 scripts/_depreciated/**/*_files
 renv/
+renv.lock
 rsconnect/
 .secrets
 groq_api_key.txt
@@ -32,5 +33,5 @@ paper/paper_*_cache
 paper/images/rv_method_diagram.png
 paper/paper_v3.pdf
 CLAUDE.md
-.claude/settings.local.json
+.claude/
 paper/answer_reviewers.pdf
