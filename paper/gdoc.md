@@ -1,7 +1,7 @@
 # Introduction
 
-In the last decade, the number of history of economics papers employing
-quantitative methods has increased [see e.g.,
+In the last decade, the number of history of economics articles
+employing quantitative methods has increased [see e.g.,
 @goutsmedtQuantitative2023]. Several essays have adopted a reflexive
 stance, examining the implications of using quantitative methods in the
 history of economics [@cherrierQuantitative2018;
@@ -24,43 +24,42 @@ are useful and examine, in practice, the methodological choices they
 entail. We present a step-by-step application of specific quantitative
 methods to a broad topic: the history of rationality in the twentieth
 century---using this case to illuminate, in practice, what choices
-quantitative analysis involves.
+quantitative analysis involves.[^1]
 
 We focus our discussion on unsupervised methods. Unsupervised methods
 are machine-learning techniques in which algorithms identify patterns
 from unlabelled data, as opposed to supervised learning methods that
-learn patterns from labelled data to make inferences. The goal of
-unsupervised methods is not necessarily to provide a "measure"
-[@grimmerText2022]---though they can be adapted to do so---but to
-organise in categories large corpora and enable accelerated and "distant
-reading" [@morettiDistant2013; @guldiDangerous2023]. They are well
-suited to historical inquiry because their unsupervised nature reduces
-the risk of presentism: rather than imposing present-day categories on
-the past, unsupervised algorithms uncover patterns directly from the
-data. When time is explicitly incorporated, researchers can map the
-discipline at different points in time, to identify the emergence and
-decline of subjects and concepts, and to assess the influence of
-specific economists or ideas.
+learn patterns from labelled data, based on pre-defined categories, to
+make inferences. The goal of unsupervised methods is not necessarily to
+provide a "measure" [@grimmerText2022]---though they can be adapted to
+do so---but to organise in categories large corpora and enable
+accelerated and "distant reading" [@morettiDistant2013;
+@guldiDangerous2023]. They are well suited to historical inquiry
+because their unsupervised nature reduces the risk of presentism: rather
+than imposing present-day categories on the past, unsupervised
+algorithms uncover patterns directly from the data. When time is
+explicitly incorporated, researchers can map the discipline at different
+points in time, to identify the emergence and decline of subjects and
+concepts, and to assess the influence of specific economists or ideas.
 
 Our article draws on two types of data, texts and citations. The
 analysis of textual corpora offers a direct window into the semantic
-content of debates, while citation data provides a means of tracing
-intellectual connections and channels of influence within the
+content of economic contributions, while citation data provides a means
+of tracing intellectual connections and channels of influence within the
 discipline. We show how a large corpus of documents can be classified
 based on the information contained in textual and citation data---what
-we call "*semantic clusters*" and "*bibliometric communities*."[^1]
+we call "*semantic clusters*" and "*bibliometric communities*."[^2]
 Combining both allows us to illustrate concretely the use of two popular
 sets of data for the history of economics. This combination is also
 justified by what we regard as a crucial principle of quantitative
-analysis in the history of economics in particular, and more broadly in
-the history of science: the triangulation of different sources of data
-and the validation of results through the comparison of findings
-obtained from distinct methods.
+analysis in the history of economics and other disciplines: the
+triangulation of different sources of data and the validation of results
+through the comparison of findings obtained from distinct methods.
 
 Above all, our discussion aims to illustrate a core principle for
 historical inquiry with such unsupervised quantitative methods. They
 require continuous back-and-forth between aggregate quantitative
-results, complementary indicators used for interpretation, and
+results, complementary indicators used for interpretation, as well as
 preliminary knowledge and close reading of primary and secondary
 sources. These methods function not only as a form of corroboration but
 also as "discovery methods" [@grimmerText2022]: they facilitate the
@@ -73,7 +72,7 @@ demonstration. First, many historians of economics engage with it in one
 way or another, which makes the exercise relevant for a broad audience.
 Second, because the concept is broad and pervasive in economics,
 applying quantitative methods to a very large corpus is particularly
-informative.[^2] We use a corpus of 259,165 articles in economics
+informative.[^3] We use a corpus of 259,165 articles in economics
 between 1900 and 2009 to show how these methods can handle long time
 horizons. Third, the multiple meanings attached to "rationality" and its
 uses applied to various subjects show how textual methods, coupled with
@@ -82,17 +81,17 @@ bibliometrics, can help capture this semantic plurality.
 In what follows, we concentrate on what such a quantitative analysis
 requires in practice. We highlight what kinds of questions and
 challenges arise at each stage of the research process. This focus lets
-us highlight (a) the crucial issue of selecting sources and building
-data; (b) how even simple quantitative assessments can be informative;
-(c) the challenges and subjective choices involved in building and
-adapting tools; and (d) why interpreting results demands careful
+us highlight *(a)* the crucial issue of selecting sources and building
+data; *(b)* how even simple quantitative assessments can be informative;
+*(c)* the challenges and subjective choices involved in building and
+adapting tools; and *(d)* why interpreting results demands careful
 attention to various indicators and close knowledge of both the corpus
 and its historical context. By tracing, step by step, how we assemble
 and analyze our corpus, we aim to provide a practical example and a
 reflection on broader methodological issues faced by historians of
 economics in quantitative inquiries. The analysis of the results relies
 on the use of an interactive application that we have built for this
-article.[^3]
+article.[^4]
 
 # **From sources to corpus**
 
@@ -127,12 +126,12 @@ central or now-defunct journals are more likely to have incomplete or
 discontinuous digital coverage, impeding their inclusion for historical
 analyses. Additionally, as these databases are oriented toward
 English-speaking contributions, they may be inadequate for a research
-project targeting other languages.[^4] More generally, citation
+project targeting other languages.[^5] More generally, citation
 practices have only standardised progressively in the postwar period.
 Consequently, citation data are most of the time relatively poor before
 the 1960s. Last, although they provide useful metadata and citation
 information, these databases generally lack full text, which is subject
-to copyright and therefore, a large and representative corpus of
+to copyright and therefore. A large and representative corpus of
 economics articles cannot be obtained from a single publisher.
 
 Even when citations and full texts are available, the quality of
@@ -142,9 +141,10 @@ constitutes a reference and the conventions governing its recording have
 changed over time---for instance, from references embedded in footnotes
 to the development of standardized bibliographies and the author--date
 system [@graftonFootnote1999]. Full texts face similar limitations:
-mathematical expressions and empirical material, such as tables, are
-often poorly captured by providers and difficult to encode properly.
-These shortcomings restrict what can be studied by quantitative tools.
+mathematical expressions and empirical materials, such as those included
+in tables, are often poorly captured by providers and difficult to
+encode properly. These shortcomings restrict what can be studied by
+quantitative tools.
 
 In short, the availability and quality of data determine what can be
 asked and so answered. The scarcity and structure of data affect every
@@ -162,18 +162,19 @@ incomplete coverage of the EER in Web of Science).
 
 For our study of rationality, the first step was to identify the best
 sources. For citation data, the Web of Science (WoS) provides a reliable
-and consistent coverage for our period and has been widely used in the
-history of economics
-[@culbertReference2025;@martin-martinGoogleScholarMicrosoft2021;@claveauMacrodynamics2016].
-As for full text, we relied on three providers. First, JSTOR's full-text
-collection offers good-quality scans of most leading economics journals
+and consistent coverage for our period
+[@culbertReference2025;@martin-martinGoogleScholarMicrosoft2021] and
+has been widely used in the history of economics
+[@claveauMacrodynamics2016]. As for full text, we relied on three
+providers. First, JSTOR's full-text collection offers relatively
+good-quality scans of most leading economics journals
 [@jstorText2025]. Second, we used Scopus to identify peer-reviewed
 economics journals not included in JSTOR and to compile a complementary
 list of articles; for these, we retrieved full texts from Elsevier, when
-available.[^5] Third, remaining full texts were obtained from the ISTEX
+available.[^6] Third, remaining full texts were obtained from the ISTEX
 project [@istexInfrastructure2025], which provides access to a
 substantial corpus of documents for researchers affiliated with French
-universities.[^6] We obtain a raw corpus of 812,191 documents, written
+universities.[^7] We obtain a raw corpus of 812,191 documents, written
 in different languages and of heterogeneous types (research articles,
 book reviews, etc.), which will subsequently be filtered.
 
@@ -190,7 +191,7 @@ scholarly ideas. Their prominence within the raw corpus reflects less
 their past influence than their greater capacity, through resources and
 institutional support, to maintain comprehensive digital archives.
 Conversely, the materials missing "are unlikely to be missing at random"
-[@stoltzMapping2024, 11].[^7]
+[@stoltzMapping2024, 11].[^8]
 
 Once access to full text is secured, another crucial step is to
 transform them into a usable database. While WoS citations are already
@@ -223,14 +224,14 @@ historiographical implications. It shapes the corpus and, ultimately,
 the history of rationality our methods can reveal. There are rarely
 definitive and uncontestable choices, but rather a series of trade-offs
 that should be made explicit and requires engaging with some of the
-material available at hand.[^8]
+material available at hand.[^9]
 
 In light of this article's purpose, we operated a series of choices in
 extracting textual data from the full-text materials provided by JSTOR,
 Elsevier, and ISTEX. Our first choice was to restrict the analysis to
 English-language articles, since cross-language comparisons involve
 additional challenges, which would go far beyond the scope of this
-article.[^9] We also restrict our analysis to research articles and
+article.[^10] We also restrict our analysis to research articles and
 filter out book reviews, comments, editorial reports or obituaries.
 While such materials can illuminate how rationality was debated, they
 are not primary sites for articulating new ideas within the discipline.
@@ -276,7 +277,7 @@ range. Differences in journal coverage and in data storage practices
 (particularly title formatting) mean that it is generally impossible to
 achieve a complete match between databases. In our case, approximately
 25% of the full-text documents after 1960 could not be matched to WoS
-records, which prevents us from analyzing their citation data.[^10]
+records, which prevents us from analyzing their citation data.[^11]
 
 ## From data to corpus {#sec-data_corpus}
 
@@ -292,16 +293,15 @@ The first challenge was thus to delineate economics as an object of
 study. Some research objects are relatively easier to delineate, and the
 transition from a database to a well-defined corpus is therefore
 straightforward. For example, writing the history of a particular
-journal [@edwardsFifty2020; @charlesRevue2025] or of one or several
-individuals [@trucDisciplinary2025; @andradaUnderstanding2017;
-@fontanaFragmentation2023] entails comparatively fewer definitional or
-boundary challenges. While some large-scale studies focus on the
-discipline as a whole [@claveauMacrodynamics2016; @ambrosinoWhat2018;
-@bacciniExploring2025], such work still requires an operational
-definition of what are documents in "economics." This definitional issue
-becomes even more pronounced when the object of study is a specific
-"field" or "research specialty" [@morrisMapping2008;
-@lyutovMachine2021].
+journal [@charlesRevue2025;@edwardsFifty2020], or of one or several
+individuals [@andradaUnderstanding2017; @trucDisciplinary2025]
+entails comparatively fewer definitional or boundary challenges. While
+some large-scale studies focus on the discipline as a whole
+[@ambrosinoWhat2018;@bacciniExploring2025;@claveauMacrodynamics2016],
+such work still requires an operational definition of what are documents
+in "economics." This definitional issue becomes even more pronounced
+when the object of study is a specific "field" or "research specialty"
+[@lyutovMachine2021;@morrisMapping2008].
 
 Non-quantitative historical approaches often address large objects by
 focusing on clearly identifiable cases or canonical contributions,
@@ -343,15 +343,15 @@ thorough knowledge of the history of the object studied is thus crucial
 for evaluating the adequacy and representativeness of the resulting
 corpus.
 
-In our case, we define *economic* documents by building the corpus from
-*peer-reviewed* journals. This convention has both advantages and
-limitations. On the one hand, it provides a clear and reproducible
+In our case, we define *economics* documents by building the corpus from
+a list of *peer-reviewed* journals. This convention has both advantages
+and limitations. On the one hand, it provides a clear and reproducible
 criterion, relying on a predetermined set of journals, rather than
 requiring case-by-case decisions about whether individual documents
 qualify as "economics". Journals also constitute a central institutional
 marker of a discipline, alongside training programs and professional
 associations. On the other hand, this choice excludes other publication
-outlets, such as books and working papers.[^11] In addition, it only
+outlets, such as books and working papers.[^12] In addition, it only
 partially captures interdisciplinarity, missing interdisciplinary
 journals or economists publishing in other disciplinary journals.
 Finally, this choice also entails boundary decisions regarding which
@@ -360,10 +360,10 @@ journals to include, particularly for those at the margins of
 settled on a carefully curated list of 329 journals identified as
 economics journals in JSTOR and Scopus, but excluding journals that are
 not entirely academic, insufficiently focused on economics, or only
-founded within the last twenty years.[^12] Filtering the raw corpus to
+founded within the last twenty years.[^13] Filtering the raw corpus to
 retain only English-language research articles from these journals, we
 obtain 259,165 articles published between 1900 and 2009. These articles
-constitute what we have called our meta-corpus.
+constitute what we have called our *meta-corpus*.
 
 The second challenge was to restrict our corpus to documents engaging
 with the issue of rationality. One of the most straightforward proxies
@@ -378,8 +378,8 @@ instances of a term rather than the concept as a whole. Just think about
 the various ways rationality could be discussed in the history of
 economics: beyond the term "rationality", economists employ various
 expressions that refer to close ideas such as "maximising profits",
-"expected utility", the "*homo oeconomicus"*, or the "transitivity and
-completeness of preferences".
+"expected utility", the "*homo oeconomicus*,*"* or the "transitivity"
+and "completeness of preferences."
 
 Going beyond searching for occurrences of "rationality" and "rational,"
 we could have constructed an extensive dictionary of terms associated
@@ -397,18 +397,18 @@ thus remain unaware of them throughout the analysis
 
 To overcome this issue, we use a Large Language Model (LLM) to identify
 documents---and in particular specific sentences within documents---that
-deal with rationality in our corpus of economic articles.[^13] LLMs are
-trained on extremely large collections of text to learn patterns in
+deal with rationality in our meta-corpus of economic articles.[^14] LLMs
+are trained on extremely large collections of text to learn patterns in
 language. The type of models we use, i.e. bidirectional encoder models
 such as BERT, learns to predict missing words in a sentence or to
 determine whether two sentences follow each other. Through this
 training, the model learns billions of internal parameters that capture
 regularities in vocabulary, grammar, and meaning. Such a model
-represents texts as vectors---often called embeddings---that capture
-their context and meaning. The relative position of each vector in this
-space reflects semantic proximity: standard distance metrics---such as
-cosine similarity---can then be used to compare, rank, or hierarchically
-cluster sentences by meaning.[^14] This enables us to compare sentences
+represents texts as vectors---called embeddings---that capture their
+context and meaning. The relative position of each vector in this space
+reflects semantic proximity: standard distance metrics---such as cosine
+similarity---can then be used to compare, rank, or hierarchically
+cluster sentences by meaning.[^15] This enables us to compare sentences
 not by the exact words they use but by their underlying meaning. For
 example, the same term---such as "model"---may carry different meanings
 depending on the surrounding context (*fashion model* vs *scientific
@@ -431,16 +431,16 @@ embeddings of *A*. We call such a centroid vector a "representative
 vector", as it encapsulates the semantic meaning of rational and
 rationality in our meta-corpus. Then, we could retrieve a set of
 *sentences B* that are the most similar to this centroid. Thus, from a
-set of *sentences A* explicitly mentioning the word "rationality," we
-retrieve a set of *sentences B*---which may never mention the terms but
-likely discusses a related idea such as profit-maximization [see
-@ashIdeas2026 for a similar use].
+set of *sentences A* explicitly mentioning the words "rationality" and
+"rational," we retrieve a set of *sentences B*---which may never mention
+the terms but likely discuss a related idea such as profit-maximization
+[see @ashIdeas2026 for a similar use].
 
 Despite their remarkable potential, LLMs have important limitations for
 historical analysis. Computing a single representative vector over 110
 years raises serious historical issues: these models are trained on vast
 amounts of text, the majority of which are recent, and therefore reflect
-a presentist bias in their representation of language.[^15] For example,
+a presentist bias in their representation of language.[^16] For example,
 current models struggle to reproduce earlier writing styles and cannot
 reliably infer the publication date of a text [@underwoodCan2025].
 Sentence-BERT is subject to the same limitations, and the sentence
@@ -462,9 +462,9 @@ constructed from all sentences in the corpus containing "rationality" or
 "rational," we construct time-specific representative vectors. For each
 year, we compute a moving-centroid embedding using a symmetric five-year
 (11 years) window, based on all the sentences containing "rationality"
-or "rational".[^16] Concretely, for the year 1910, we averaged the
+or "rational."[^17] Concretely, for the year 1910, we averaged the
 vectors of all sentences containing "rationality" or "rational" from
-1905 to 1915.[^17]
+1905 to 1915.[^18]
 
 This procedure yields a period-specific reference vector that reflects
 how these terms were used at that particular moment in time. A sentence
@@ -482,24 +482,24 @@ across large corpora at low computational cost. For illustration,
 representative vector, ranked by cosine similarity for the years 1910,
 1950, and 2000.
 
-We built a first corpus, that we call the *sentences-corpus*. For each
-year, we select the 1% of sentences from our meta-corpus whose
-embeddings are closest to the corresponding representative vector.[^18]
-This sentences-corpus is composed of 499,157 sentences that will be used
-for subsequent textual analysis to identify *semantic clusters* on
-rationality.
+Thus, from our meta-corpus, we built a first sub-corpus, that we call
+the *sentences-corpus*. For each year, we select the 1% of sentences
+from our meta-corpus whose embeddings are closest to the corresponding
+representative vector.[^19] This sentences-corpus is composed of 499,157
+sentences that will be used for subsequent textual analysis to identify
+*semantic clusters* on rationality.
 
 We built a second corpus, at the document level, that we call the
 *articles-corpus*. We extract from our meta-corpus the *documents* that
 are closest to the corresponding representative vector. Because each
-document consists of a set of sentences (and thus is represented by a
-set of vectors), we can also give a vectorial representation to the
-document by computing the centroid of its sentence vectors. We select
-the 10% of articles published after 1960 whose centroids are closest to
-the corresponding representative vector. This articles-corpus, composed
-of 25,916 articles, is then used in the bibliometric analysis to
-identify *bibliographic communities* from 1960 onwards.[^19] Equivalent
-to @tbl-illustrative_sentences but for documents,
+article consists of a set of sentences (and thus is represented by a set
+of vectors), we can also give a vectorial representation to the article
+by computing the centroid of its sentence vectors. We select the 10% of
+articles published after 1960 whose centroids are closest to the
+corresponding representative vector. This articles-corpus, composed of
+25,916 articles, is then used in the bibliometric analysis to identify
+*bibliographic communities* from 1960 onwards.[^20] Equivalent to
+@tbl-illustrative_sentences but for documents,
 @tbl-illustrative_documents displays the five closest documents to the
 corresponding representative vectors for years 1910, 1950 and 2000.
 
@@ -638,10 +638,9 @@ Moreover, focusing on a small set of references implies a degree of
 arbitrariness in the analysis. Likewise, simply counting the words that
 appear next to "rationality" tells us little about whether these words
 and expressions are used jointly within the same argument or whether
-they belong to distinct topics and contexts that mobilize the concept
-differently. It also overlooks the much broader vocabulary related to
-rationality (e.g., profit maximization, expected utility, social
-choice).
+they belong to distinct contexts that mobilize the concept differently.
+It also overlooks the much broader vocabulary related to rationality
+(e.g., profit maximization, expected utility, social choice).
 
 Most recent quantitative studies in the history of economics rely on
 what can be grouped under the label of "unsupervised methods." These
@@ -649,7 +648,7 @@ approaches apply algorithms to a corpus---whether textual or citation
 data---to generate classifications and assign categories that are not
 predetermined by the researcher but that emerge from statistical
 patterns in the data itself, which gives the approach its "unsupervised"
-character.[^20] Assigning such categories imposes a form of internal
+character.[^21] Assigning such categories imposes a form of internal
 organization on large and otherwise unwieldy bodies of material,
 enabling an accelerated or "distant reading" [@morettiDistant2013].
 The typical output of these methods is a map of a discipline or research
@@ -663,14 +662,14 @@ algorithms---require researchers to formulate hypotheses, define
 variables, or establish categories prior to analysis
 [@doAugmented2022]. Unsupervised methods rather seek to detect
 patterns, groupings, or structures that emerge from the data
-itself.[^21] This "discovery" capacity [@grimmerText2022] is
+itself.[^22] This "discovery" capacity [@grimmerText2022] is
 especially valuable in large-scale and long-run historical analysis,
 where the relevant categories may be uncertain, evolving, or difficult
 to define in advance. In such contexts, imposing predefined
 classifications risks introducing categories that are historically
 inadequate or anachronistic. Unsupervised approaches therefore provide a
 useful way to identify unexpected regularities, semantic groupings, or
-intellectual communities before moving to interpretation.[^22]
+intellectual communities before moving to interpretation.[^23]
 
 In this paper, we use unsupervised methods to analyse both the
 articles-corpus and the sentences-corpus. The articles-corpus consists
@@ -679,7 +678,7 @@ representative vectors. To make sense of this large set of documents, we
 employ a method that groups together documents mobilizing similar
 understandings of rationality. We use bibliographic coupling, a method
 commonly employed in the history of economic thought [see e.g.,
-@claveauMacrodynamics2016; @trucForty2022; @bacciniDoes2025]. In a
+@bacciniDoes2025;@claveauMacrodynamics2016; @trucForty2022]. In a
 bibliographic coupling network, documents are represented as nodes, and
 links between them are weighted according to the number of references
 they share. The more references two articles have in common, the
@@ -693,9 +692,10 @@ or research field.
 However, citation practices tend to favor more recent works, which makes
 it unhelpful for historians to construct a single citation network
 spanning an entire century. Following a method that has proven effective
-in the field [@claveauMacrodynamics2016; @goutsmedtIndependent2023;
-@camilottoNavigating2023], we therefore split our corpus into
-overlapping eight-year windows,[^23] starting in 1960 (1960--1967;
+in the history of economics
+[@camilottoNavigating2023;@claveauMacrodynamics2016;
+@goutsmedtIndependent2023], we therefore split our corpus into
+overlapping eight-year windows,[^24] starting in 1960 (1960--1967;
 1961--1968; ... ; 2002--2009), and built a series of 43 separate
 networks. Using community-detection algorithms [@traagLouvain2019], we
 identify groups of documents that share a substantial fraction of
@@ -709,7 +709,7 @@ together documents from different periods of time but that are likely to
 engage with rationality in similar ways, based on their shared citation
 patterns. This method allows us both to *zoom in* on specific
 communities at a given period and to *zoom out* by reconstructing the
-broader picture of a dynamic intellectual field.[^24]
+broader picture of a dynamic intellectual field.[^25]
 
 For textual analysis, we use the sentences-corpus that gathers the top
 1% of sentences that are most similar to our annual representative
@@ -728,11 +728,11 @@ Because the distribution of identified sentences is strongly
 present-biased (@fig-distribution), clustering all sentences at once
 would risk over-representing recent periods. We therefore perform
 clustering separately for each decade from 1900 onward (merging the
-first two decades due to fewer sentences).[^25] As in our bibliographic
+first two decades due to fewer sentences).[^26] As in our bibliographic
 approach, we then seek to form larger groups over time, allowing us to
 "zoom in" and "zoom out" depending on what we are searching for. Using
 the cosine similarity between clusters across decades, we merge the
-closest ones into 17 "intertemporal semantic clusters."[^26]
+closest ones into 17 "intertemporal semantic clusters."[^27]
 
 With both methods, we thus obtain a list of "intertemporal bibliometric
 communities" (from 1960 to 2009) and "intertemporal semantic clusters"
@@ -805,9 +805,9 @@ which we *select* and *prioritise* observations that will make sense of
 them. To make this crucial step as transparent and replicable as
 possible, we have built an application, where readers can explore all
 the semantic clusters and bibliometric communities, together with their
-corresponding indicators.[^27] Let us take as an example the semantic
+corresponding indicators.[^28] Let us take as an example the semantic
 cluster we labelled "Rationality and its Limits," which gathers close to
-20,000 sentences from 1920 to 2009.[^28] How can we get a sense of what
+20,000 sentences from 1920 to 2009.[^29] How can we get a sense of what
 this cluster actually coalesces around? Before any qualitative
 interpretation or contextualization with the secondary literature, we
 must first produce a series of indicators to help us characterize the
@@ -860,7 +860,7 @@ cluster. We choose the following indicators:
   cluster). For instance, in the 1950s, one of the most important
   references within this cluster is John von Neumann and Oskar
   Morgenstern's *Theory of Games and Economic Behavior*
-  [@vonneumannTheory1944], while @kahnemanProspect1979 becomes the
+  [-@vonneumannTheory1944], while @kahnemanProspect1979 becomes the
   most cited reference in the 2000s.
 
 With all these indicators---and prior to any further qualitative
@@ -881,15 +881,15 @@ decades. Rather, bibliometric analysis identifies groups of articles
 from authors in close academic communities. In relation to the semantic
 cluster "Rationality and its Limits", we observe, for instance, the
 emergence of the "Behavioral Economics: Risk & Uncertainty" community in
-the 1981-1988 window. As with the semantic clusters, for each
-bibliometric community in each temporal window we extract equivalent
-indicators: the most identifying words, the sentences closest to the
-representative vectors---based on the articles belonging to the
-community---as well as the most cited references. We also examine the
-flows of each community in a given window: that is, whether its nodes
-derive primarily from the same or from different communities in
-preceding periods ("origins") and what they become in the following
-period ("destinies").
+the 1981-1988 window, that remains until the last window (2002-2009). As
+with the semantic clusters, for each bibliometric community in each
+temporal window we extract equivalent indicators: the most identifying
+words, the sentences closest to the representative vectors---based on
+the articles belonging to the community---as well as the most cited
+references. We also examine the flows of each community in a given
+window: that is, whether its nodes derive primarily from the same or
+from different communities in preceding periods ("origins") and what
+they become in the following period ("destinies").
 
 # **Discussion**
 
@@ -920,7 +920,7 @@ Our goal is also to show how we navigate the results and triangulate
 indicators to produce coherent historical narratives. While we rely on
 the secondary literature, the articles we foreground are those
 identified by our indicators as some of the most significant for
-understanding the semantic clusters or bibliometric communities.[^29] We
+understanding the semantic clusters or bibliometric communities.[^30] We
 provide two complementary discussions: a macro-level perspective that
 highlights broad patterns in the evolution of rationality, and a
 micro-level analysis that focuses on the emergence of a specific
@@ -948,7 +948,7 @@ authors---most notably Mill, Ricardo or Malthus. Yet, if anything, our
 results suggest that marginal utility theory appears mostly under severe
 criticism in this period, especially from institutionalist economists
 such as Thorstein Veblen, Wesley Mitchell, John Maurice Clark, and
-Rexford Tugwell.[^30]
+Rexford Tugwell.[^31]
 
 The criticism was directed along two main lines. First, as
 @giocoliModeling2003[48--50] points out, institutionalist economists
@@ -967,7 +967,7 @@ unsound psychology, and that the economics of both Ricardo and Jevons
 originally rested on hedonistic preconceptions" [@mitchellHuman1914,
 1]. For economics, the crucial issue was thus to choose "between
 providing a sounder psychological basis for our analysis, and holding
-that its psychological basis does not concern the economist" (2).[^31]
+that its psychological basis does not concern the economist" (2).[^32]
 Such criticism did not falter in the 1920s. In the cluster "Rationality
 and its Limits"---centered at the time on "rationalisation" and "human
 reason"---@tugwellHuman1922[317] encouraged economists to move beyond
@@ -1050,7 +1050,7 @@ in 1932, Allen had made this project explicit: by starting from
 different bundles of goods, it becomes unnecessary to "make any
 assumption about the existence of 'total utility' or about the
 measurability of 'utility'; the hedonistic hypothesis has been rendered
-superfluous" [@allenFoundations1932, 207].[^32] In other words,
+superfluous" [@allenFoundations1932, 207].[^33] In other words,
 "Subjective and psychological concepts have been discarded from pure
 economic theory" (ibid.).
 
@@ -1095,7 +1095,7 @@ value of Lester's questionnaire-based surveys of entrepreneurs, while
 Lester replied that "at the heart of economic theory should be an
 adequate analysis and understanding of the psychology, policies, and
 practices of business management in modern industry"
-[@lesterMarginalism1947, 146].[^33] More generally, the marginalist
+[@lesterMarginalism1947, 146].[^34] More generally, the marginalist
 controversy provided a key intellectual background for Friedman's essay
 on positive economics [-@friedmanMethodology1953], in which he
 formulated the "as if" principle to justify, among other assumptions,
@@ -1103,7 +1103,7 @@ profit maximization. By the 1950s, the most cited articles within the
 cluster "Firm Theory & Entrepreneur" were Machlup's
 [-@machlupMarginal1946] and Friedman's [@friedmanUtility1948], both
 of which relied heavily on "as if" reasoning, notably to justify, in the
-latter, the behavior of agents regarding expected utility.[^34]
+latter, the behavior of agents regarding expected utility.[^35]
 
 Shifts in the discipline's methodology are also captured by the cluster
 "Methodological Discussions." While in the 1920s and 1930s economists
@@ -1144,7 +1144,7 @@ intertemporal semantic cluster "Decision Theory", the rational "decision
 making" is applied not only to individuals but also to firms and public
 policy. Social choice issues emerge in this cluster in the 1970s,
 notably through debates on the implications of Arrow's impossibility
-theorem [-@arrowSocial1951; see e.g. @igersheimDeath2019].[^35]
+theorem [-@arrowSocial1951; see e.g. @igersheimDeath2019].[^36]
 Arrow's contribution also stimulated the formation of the cluster
 "Voting & Public Choice" in the 1960s, where it appears as the primary
 reference, alongside works by @downsEconomic1957 and
@@ -1183,7 +1183,7 @@ academia into policy circles and the press, and was often described as a
 account for this rapid diffusion beyond controversial policy debates
 during the stagflation era. First, the results show no significant trace
 of rational expectations in the 1960s in either the bibliometric or
-textual outputs.[^36] But from the 1970s onward, it occupies a central
+textual outputs.[^37] But from the 1970s onward, it occupies a central
 place in the literature on rationality, reaching its apogee in the
 1980s, when it accounted for nearly 30% of all sentences in the textual
 analysis, as well as a comparable share of articles in the bibliometric
@@ -1415,7 +1415,7 @@ Tversky's work. Despite the fact that @kahnemanProspect1979 was the
 duo's only publication in an economics journal until 1985---well before
 the Sloan--Russell Sage programs formally institutionalized behavioral
 economics---prospect theory experienced rapid and sustained citation
-growth (@fig-rationality-paper-citations).[^37] Moreover, as early as
+growth (@fig-rationality-paper-citations).[^38] Moreover, as early as
 the 1978--1985 bibliometric network, we identify an autonomous cluster
 structured around their work (cl_391), indicating that the article not
 only attracted citations but quickly catalyzed new research strands, in
@@ -1578,87 +1578,97 @@ making available an interactive application to explore our results, we
 hope to encourage readers to pursue their own paths of discovery within
 the corpus.
 
-[^1]: The bibliometric communities, identified through network analysis,
+[^1]: In this perspective, our purpose is similar to
+    @claveauSocial2018.
+
+[^2]: The bibliometric communities, identified through network analysis,
     could also be called clusters. But we opted for "communities", a
     term often used in network analysis, in order to distinguish them
-    from the "semantic clusters".
+    from the "semantic clusters."
 
-[^2]: To be clear, we don't think that quantitative methods are only
+[^3]: To be clear, we don't think that quantitative methods are only
     helpful for very large corpora. However, it is where their surplus
     value may appear as the most obvious.
 
-[^3]: The application is available in the GitHub repository:
-    [anonymized]. A public version is available at the following url:
+[^4]: The application is available in the GitHub repository:
+    [https://github.com/tdelcey/ejhet_quanti_method_app](https://github.com/tdelcey/ejhet_quanti_method_app).
+    A public version is available at the following url:
     [https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/).
 
-[^4]: One of the main challenges for a quantitative history of economics
-    is to move beyond reliance on proprietary digital libraries and to
-    actively develop open, historically inclusive corpora. This includes
-    incorporating materials produced in non-Anglophone countries and
-    expanding the range of textual formats considered---such as books,
-    book reviews, working papers, and conference proceedings.
+[^5]: One of the main challenges for the quantitative history of
+    economics is to move beyond reliance on proprietary digital
+    libraries and to actively develop open, historically inclusive
+    corpora. This includes incorporating materials produced in
+    non-Anglophone countries and expanding the range of textual formats
+    considered---such as books, book reviews, working papers, and
+    conference proceedings.
 
-[^5]: The Elsevier API allows users to retrieve the full text of
-    Elsevier journals such as the *European Economic Review*, provided
-    that they have institutional access to the relevant issues.
+[^6]: Elsevier API allows users to retrieve the full text of Elsevier
+    journals such as the *European Economic Review*, provided that users
+    have institutional access to the relevant issues.
 
-[^6]: ISTEX allows us to retrieve economics journals not available
+[^7]: ISTEX allows us to retrieve economics journals not available
     through JSTOR or Elsevier API, such as the *Journal of Economic
     Theory* and to access specific issues of Elsevier journals for which
     we lack institutional access (e.g., the *European Economic review*
     before 1997). For more detailed information on the collection of
     data, see the appendix.
 
-[^7]: Bibliometric and textual data themselves have a history; they are
+[^8]: Bibliometric and textual data themselves have a history; they are
     "made by institutions, through human processes"
     [@guldiDangerous2023, 34]. Whether digital or material, archives
-    are shaped by "distortions" and \"occlusions\", and the processes
+    are shaped by "distortions" and \"occlusions,\" and the processes
     through which they are constituted are themselves worthy subjects of
     historical investigation [@dastonSciences2012].
 
-[^8]: The programming dimension of such computational approaches enable
+[^9]: The programming dimension of such computational approaches enable
     iterative feedback between analysis and corpus cleaning
     [@nelsonComputational2020]; critical scrutiny can therefore be
     continuously exercised at each stage of the research "pipeline"
     [@leeRole2020].
 
-[^9]: Indeed, most textual methods are designed to identify
+[^10]: Indeed, most textual methods are designed to identify
     commonalities within texts that share a specific linguistic
     structure. Hence, the same topic discussed by two documents in two
     different languages will likely not be identified as related because
     linguistic differences mask underlying semantic similarity**.**
 
-[^10]: See the appendix for more information on the matching process, in
-    particular, @tbl-wos-match-decade.
+[^11]: For further details on the matching process, see the appendix,
+    particularly, @tbl-wos-match-decade. A failure to match an article
+    in WoS does not necessarily indicate an error in the matching
+    procedure; it may simply reflect the absence of the article in the
+    WoS database. This is notably the case for certain JSTOR-indexed
+    journals---particularly those that are no longer published---which
+    are not covered in WoS.
 
-[^11]: Adding these other outlets would pose additional challenges. For
+[^12]: Adding these other outlets would pose additional challenges. For
     both working papers and, above all, books, no large-scale databases
     provide comprehensive full texts or complete reference lists. In
     addition, working papers raise the problem of potential double
     counting, as they may eventually be published in economic journals.
 
-[^12]: We did not filter journals by language a priori. Indeed, many
+[^13]: We did not filter journals by language a priori. Indeed, many
     non-anglo-saxon journals also publish English articles at some more
     or less frequent occasions. It was thus easier to filter by language
     a posteriori and at the document level, once articles were
     collected.
 
-[^13]: Our goal here is not to provide the reader with extensive details
+[^14]: Our goal here is not to provide the reader with extensive details
     on what these models are and how we use them (see the appendix for
     additional details and references), but rather to provide general
     intuitions about the use of LLMs, to understand the building of our
     corpus.
 
-[^14]: Henceforth, "similarity" between sentences or documents refers to
+[^15]: Henceforth, "similarity" between sentences or documents refers to
     cosine similarity.
 
-[^15]: Moreover, the texts used to train these models are not primarily
+[^16]: Moreover, the texts used to train these models are not primarily
     academic articles in economics. This means that there may be
     important gaps between the general language patterns the model has
     learned and the specific vocabulary, concepts, and writing practices
     of our "domain" [see e.g. @zhangEconBERT2025].
 
-[^16]: Centroids are widely used in the literature on "semantic change"
+[^17]: Centroids are widely used in the literature on "semantic change"
     to represent the average embedding of a temporal slice or a cluster
     of a corpus [@montanelliSurvey2024]. We adopt the centroid rather
     than the medoid (i.e. the observed sentences whose embedding is
@@ -1669,7 +1679,7 @@ the corpus.
     interpretable, it is straightforward to compute the closest vector
     from the centroid (see @tbl-illustrative_sentences).
 
-[^17]: We initially tested a symmetric two-year window. However,
+[^18]: We initially tested a symmetric two-year window. However,
     particularly in the early periods, this specification resulted in
     substantial volatility in average usage of the terms "rational" and
     "rationality", thereby increasing the number of "noisy" sentences
@@ -1679,7 +1689,7 @@ the corpus.
     variation too much, especially given the rapid growth of the corpus
     after the 1960s.
 
-[^18]: The choice of the 1% quantile reflects a trade-off between false
+[^19]: The choice of the 1% quantile reflects a trade-off between false
     positives and false negatives. We observed that a more restrictive
     threshold (e.g., 0.5%) excludes many sentences that obviously deal
     with rationality in economics, whereas a more permissive threshold
@@ -1687,14 +1697,14 @@ the corpus.
     focus, particularly in earlier periods. The 1% threshold therefore
     appeared as a reasonable compromise. Moreover, a moderate number of
     false positives does not substantially threaten the analysis, since
-    such sentences are likely to be classified as "noise" by the HDBSCAN
-    algorithm.
+    such sentences are likely to be later classified as "noise" by the
+    HDBSCAN algorithm.
 
-[^19]: The "articles-corpus" only starts in 1960, because the
+[^20]: The "articles-corpus" only starts in 1960, because the
     bibliographic data from WoS are too limited prior to this date to be
     reliably used.
 
-[^20]: "Unsupervised" does not mean that the modeller has no influence
+[^21]: "Unsupervised" does not mean that the modeller has no influence
     on the output. The analyst must choose a particular model and its
     parameters and these choices embed methodological priors about the
     types of patterns the procedure is likely to reveal. For instance,
@@ -1703,16 +1713,16 @@ the corpus.
     justify the different parameters chosen for our methods in the
     appendix.
 
-[^21]: See @simonsLarge2026 for a discussion of using LLMs with
+[^22]: See @simonsLarge2026 for a discussion of using LLMs with
     unsupervised or supervised methods in the history and philosophy of
     science.
 
-[^22]: That does not mean, however, that an unsupervised algorithm can
+[^23]: That does not mean, however, that an unsupervised algorithm can
     be applied blindly to historical questions: a substantial part of
     our effort has consisted in adapting the method to our historical
     data, especially to accommodate the growth of the corpus over time.
 
-[^23]: The eight-year window for defining bibliometric communities
+[^24]: The eight-year window for defining bibliometric communities
     aligns with established practices in the quantitative history of
     economics [@claveauMacrodynamics2016], where timeframes typically
     range between 5 and 10 years [@abramoAssessing2011]. Given that
@@ -1723,29 +1733,29 @@ the corpus.
     the need to capture enduring citation patterns, avoiding the coarser
     resolution of a 10-year window.
 
-[^24]: Refer to the appendix for details.
+[^25]: Refer to the appendix for details.
 
-[^25]: We don't use overlapping windows in this case, notably for
+[^26]: We don't use overlapping windows in this case, notably for
     computational reasons: finding HDBSCAN clusters on a set of tens of
     thousands of sentences is much more computationally intensive than
     finding bibliometric communities for at most a few thousands of
     articles.
 
-[^26]: Refer to the appendix for details.
+[^27]: Refer to the appendix for details.
 
-[^27]: The application is available in the GitHub repository:
-    [[https://github.com/tdelcey/ejhet_quanti_method_app]{.underline}](https://github.com/tdelcey/ejhet_quanti_method_app%5D(https://github.com/tdelcey/ejhet_quanti_method_app)).
+[^28]: The application is available in the GitHub repository:
+    [https://github.com/tdelcey/ejhet_quanti_method_app](https://github.com/tdelcey/ejhet_quanti_method_app).
     For non technical-users, a public version is available at the
     following url:
     [https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/).
 
-[^28]: One step in the discovery and interpretive process is often the
+[^29]: One step in the discovery and interpretive process is often the
     assignment of "labels" to clusters in order to facilitate the
     interpretation of visualizations. We assign manually a label to each
     intertemporal semantic cluster and bibliometric community after
     qualitative inspection.
 
-[^29]: Of course, as in any historical inquiry of this kind, we are not
+[^30]: Of course, as in any historical inquiry of this kind, we are not
     entirely protected from selective emphasis, all the more so given
     that the scope of our study is too broad to summarize every pattern
     revealed by our results. Other scholars could have, at various
@@ -1758,20 +1768,20 @@ the corpus.
     historians of economic thought more generally---allows readers to
     assess the robustness and limits of our narrative.
 
-[^30]: However, because we focus on English, published articles, our
+[^31]: However, because we focus on English, published articles, our
     clusters are biased toward American journals, notably in the first
     decades.
 
-[^31]: Some years earlier, @mitchellRationality1910[97] already
+[^32]: Some years earlier, @mitchellRationality1910[97] already
     pushed forward similar claims, regretting that "few economists have
     regarded the study of psychology as a necessary part of the
     equipment of their work," often relying on "tacit preconceptions"
     rather than than seeking "psychologists to gain a knowledge of the
     mind and its modes of operation."
 
-[^32]: See closest sentences to the "Utility Theory" cluster's centroid.
+[^33]: See closest sentences to the "Utility Theory" cluster's centroid.
 
-[^33]: Machlup's position was that even if a "goodly portion of all
+[^34]: Machlup's position was that even if a "goodly portion of all
     business behavior may be non-rational, thoughtless, [or] blindly
     repetitive" [-@machlupMarginal1946, 520], questionnaire evidence
     and empirical findings more generally did not demonstrate the
@@ -1784,24 +1794,24 @@ the corpus.
     "rational" once uncertainty and long-run effects are taken into
     account [see also @herfeldTheories2018].
 
-[^34]: The cluster "Firm Theory & Entrepreneur" nevertheless remained a
+[^35]: The cluster "Firm Theory & Entrepreneur" nevertheless remained a
     site for critiques of profit maximization. During the 1960s and
     1970s, contributions that proposed alternative frameworks for
     explaining firms' decisions were highly cited [such as
     @simonTheories1959] or appeared among closest articles from
     centroid [like @winterSatisficing1971].
 
-[^35]: This grouping of sentences in the 1970s actually took its origins
+[^36]: This grouping of sentences in the 1970s actually took its origins
     in the cluster "Utility Theory" (which ended in the 1960s) with a
     focus on welfare economics.
 
-[^36]: This highlights a key caveat of our methods. Because these
+[^37]: This highlights a key caveat of our methods. Because these
     methods foreground statistically "significant" patterns and
     indicators' prevalence, they are not always well suited to tracing
     and interpreting the origins of a concept or theory with the care
     that close historical study and archival research provide.
 
-[^37]: This aligns with a general finding in scientometrics that
+[^38]: This aligns with a general finding in scientometrics that
     citations in the first two years after publication explain more than
     half of the variation in cumulative citations
     [@sternHighRanked2014]

@@ -39,7 +39,7 @@ and Alexandre Truc\textsuperscript{d}\thanks{Email: alexandre.truc@cnrs.fr}}
        \textsuperscript{d}Université Côte d'Azur}
 
 \begin{abstract}
-This article demonstrates how unsupervised quantitative methods can enrich the history of economic thought. Using the largest English-language corpus ever assembled for the field—nearly 260,000 economics journal articles from 1900 to 2009 with citation data—we analyze the evolution of the concept of rationality. Combining large language model–based semantic analysis with bibliometric and network methods, we identify and cluster discussions of rationality across time and scales, such as the circulation of bounded rationality and the emergence of behavioral economics. We provide an open-source interactive tool to support transparency and reuse. 
+This article demonstrates how unsupervised quantitative methods can enrich the history of economic thought. Using the largest English-language corpus ever assembled for the field—nearly 260,000 economics journal articles from 1900 to 2009 with citation data—we analyze the evolution of the concept of rationality. Combining large language model–based semantic analysis with bibliometric and network methods, we identify and cluster discussions of rationality across time and scales, such as the emergence of a social view of rationality, the circulation of bounded rationality, and the emergence of behavioral economics. We provide an open-source interactive tool to support transparency and reuse. 
 \end{abstract}
 
 \begin{keywords}
@@ -203,6 +203,10 @@ documents_tbl <- documents_tbl %>%
 
 {{< include gdoc.md >}}
 
+# Acknowledgements{.unnumbered}
+
+We thank the participants of the Cargèse Workshop for their feedback on an earlier draft of this paper, as well as Béatrice Cherrier and Aurélien Saïdi for their comments on our methodological approach. We are particularly grateful to Francesco Sergi for his meticulous reading of the manuscript and to Nicolas Camilotto, who notably inspired the paper’s title. Finally, we thank the two anonymous reviewers for their comments.
+
 # References
 
 ::: {#refs}
@@ -337,15 +341,11 @@ Temporal evolution of sentence clusters discussing rationality in economics jour
 A bibliographic coupling network of articles discussing rationality in economics journals (1994–2001). This figure shows a snapshot of the dynamic bibliographic coupling networks built on the articles-corpus. Each node is an article from the 1994–2001 time window. Articles are connected when they cite similar references---a proxy for shared intellectual content. Colors indicate communities of articles that recurrently cluster together across consecutive 8-year time windows. Uncolored nodes belong to communities that are too small or too short-lived to be considered substantive. Labels are manually assigned by the authors after qualitative inspection of each cluster. The spatial layout positions articles with similar citation profiles in close proximity. See the appendix for the full methodology. We strongly advise readers to explore the networks via the [companion application](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/).
 ::: 
 
-
 \clearpage 
 
 # Appendix
 
-@fig-method-schema-general summarizes the general workflow of our method. The goal of this appendix is to provide the general rationale and workflow of our methods. It requires technical knowledge of natural language processing and bibliometric methods. Since fulltexts are not publicly available and are submitted to copyright, we cannot share a full replication package and, in particular, the data and the code to build the meta-corpus are not available. The rest of the code is available in the GitHub repository: [anonymized]. We refer to the companion application for the detailed results of the clustering analyses. The application can be downloaded from the GitHub repository: [anonymized] and run locally. However, to facilitate access for all users, we also provide a public access to the application at the following link: [https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/). 
-
-<!-- Links to add after publication: [https://github.com/agoutsmedt/ejhet_quanti_method](https://github.com/agoutsmedt/ejhet_quanti_method) 
-[https://github.com/tdelcey/ejhet_quanti_method_app](https://github.com/tdelcey/ejhet_quanti_method_app)-->
+@fig-method-schema-general summarizes the general workflow of our method. The goal of this appendix is to provide the general rationale and workflow of our methods. It requires technical knowledge of natural language processing and bibliometric methods. Since fulltexts are not publicly available and are submitted to copyright, we cannot share a full replication package and, in particular, the data and the code to build the meta-corpus are not available. The rest of the code is available in the GitHub repository: [https://github.com/agoutsmedt/ejhet_quanti_method](https://github.com/agoutsmedt/ejhet_quanti_method). We refer to the companion application for the detailed results of the clustering analyses. The application can be downloaded from the GitHub repository: [https://github.com/tdelcey/ejhet_quanti_method_app](https://github.com/tdelcey/ejhet_quanti_method_app) and run locally. However, to facilitate access for all users, we also provide a public access to the application at the following link: [https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/). 
 
 ## Building the meta-corpus
 
