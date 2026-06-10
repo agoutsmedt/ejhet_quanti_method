@@ -52,10 +52,8 @@ B00; B20
 
 
 ```{r}
-#| echo: false
-#| message: false
-#| warning: false
 #| label: setup
+#| include: false
 
 source(here::here(".", "scripts", "paths_and_packages.R"))
 
@@ -205,7 +203,7 @@ documents_tbl <- documents_tbl %>%
 
 # Acknowledgements{.unnumbered}
 
-We thank the participants of the Cargèse Workshop for their feedback on an earlier draft of this paper, as well as Béatrice Cherrier and Aurélien Saïdi for their comments on our methodological approach. We are particularly grateful to Francesco Sergi for his meticulous reading of the manuscript and to Nicolas Camilotto, who notably inspired the paper’s title. Finally, we thank the two anonymous reviewers for their comments.
+We thank the participants of the Cargèse Workshop for their feedback on an earlier draft of this paper, as well as Béatrice Cherrier and Aurélien Saïdi for their comments on our methodological approach. We are particularly grateful to Francesco Sergi for his meticulous reading of the manuscript and to Nicolas Camilotto, who notably inspired the paper's title. Finally, we thank the two anonymous reviewers for their comments.
 
 # References
 
@@ -307,7 +305,7 @@ Relative frequency of terms "rational" and "rationality" in the meta-corpus (190
 
 ![](images/top_neighbor_words_decades.png){width="100%"}
 
-Five most frequent neighbor terms of "rational" and "rationality" by decade. We search and select $n-1$ and $n+1$ neighbors of "rational" and "rationality" in each sentence. We remove stop words and compute the most frequent neighbors by decade. We merge 1900 and 1910 decades because of the low number of sentences containing "rational" or "rationality" before 1910. 
+Five most frequent neighbor terms of "rational" and "rationality" by decade in the full texts of the meta-corpus. Neighbors are the $n-1$ or $n+1$ words appearing before or after "rational" and "rationality". We remove stop words and compute the most frequent neighbors by decade. We merge 1900 and 1910 decades because of the low number of sentences containing "rational" or "rationality" before 1910. 
 
 ::: 
 
@@ -324,14 +322,14 @@ Five most frequent neighbor terms of "rational" and "rationality" by decade. We 
 
 ![](images/backbone_communities_network.png){width="100%"}
 
-Network of sentence clusters discussing rationality in economics journals (1900–2009), with a force-directed layout emphasizing thematic proximity. Each node is a group of sentences discussing rationality in a similar way, identified within a given decade. Node size reflects the share of sentences gathered by this cluster in its corresponding decade. Colors indicate broader thematic clusters that persist across decades — nodes sharing the same color address rationality in comparable ways across time. These are the "intertemporal semantic clusters". See the appendix for in-depth details on the methodology. Labels are manually assigned by the authors after qualitative inspection of each cluster. In this visualisation, we applied a force-directed layout to position nodes with similar connections closer together, which helps to visually identify clusters of related discussions. We strongly advise readers to explore the networks via the [companion application](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/).
+Network of sentence clusters discussing rationality in economics journals (1900–2009), with a force-directed layout emphasizing thematic proximity. Each node is a group of sentences discussing rationality in a similar way, identified within a given decade and built from the sentences-corpus. Node size reflects the share of sentences gathered by this cluster in its corresponding decade. Colors indicate broader thematic clusters that persist across decades — nodes sharing the same color address rationality in comparable ways across time. These are the "intertemporal semantic clusters". See the appendix for in-depth details on the methodology. Labels are manually assigned by the authors after qualitative inspection of each cluster. In this visualisation, we applied a force-directed layout to position nodes with similar connections closer together, which helps to visually identify clusters of related discussions. We strongly advise readers to explore the networks via the [companion application](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/).
 ::: 
 
 ::: {#fig-capture-dynamic-textual-network layout-nrow="1"}
 
 ![](images/temporal_network_plot.png){width="100%"}
 
-Temporal evolution of sentence clusters discussing rationality in economics journals (1900–2009).This figure is similar to @fig-capture-static-textual-network but with a different layout to emphasize the temporal dimension. In this visualisation, we group clusters by decade along the x-axis (1900–1919, 1920–1929, ... , 2000–2009) and group thematically similar clusters along the y-axis, making it easier to follow how topics evolve over time. We strongly advise readers to explore the networks via the [companion application](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/).
+Temporal evolution of sentence clusters discussing rationality in economics journals (1900–2009). This figure is similar to @fig-capture-static-textual-network but with a different layout to emphasize the temporal dimension. In this visualisation, we group clusters by decade along the x-axis (1900–1919, 1920–1929, ... , 2000–2009) and group thematically similar clusters along the y-axis, making it easier to follow how semantic clusters evolve over time. We strongly advise readers to explore the networks via the [companion application](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/).
 ::: 
 
 ::: {#fig-capture-dynamic-bibliometric-network layout-nrow="1"}
@@ -345,7 +343,7 @@ A bibliographic coupling network of articles discussing rationality in economics
 
 # Appendix
 
-@fig-method-schema-general summarizes the general workflow of our method. The goal of this appendix is to provide the general rationale and workflow of our methods. It requires technical knowledge of natural language processing and bibliometric methods. Since fulltexts are not publicly available and are submitted to copyright, we cannot share a full replication package and, in particular, the data and the code to build the meta-corpus are not available. The rest of the code is available in the GitHub repository: [https://github.com/agoutsmedt/ejhet_quanti_method](https://github.com/agoutsmedt/ejhet_quanti_method). We refer to the companion application for the detailed results of the clustering analyses. The application can be downloaded from the GitHub repository: [https://github.com/tdelcey/ejhet_quanti_method_app](https://github.com/tdelcey/ejhet_quanti_method_app) and run locally. However, to facilitate access for all users, we also provide a public access to the application at the following link: [https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/). 
+The goal of this appendix is to provide a detailed description of the methods used to build the meta-corpus, to compute the representative vectors, to build the sentences and documents corpora, and to perform the clustering analyses. It is technical and is primarily intended for readers interested in replicating our methods. It requires basic knowledge of natural language processing and bibliometric methods. Since fulltexts are not publicly available and are submitted to copyright, we cannot share a full replication package and, in particular, the data and the code to build the meta-corpus are not available. The rest of the code is available in the GitHub repository: [https://github.com/agoutsmedt/ejhet_quanti_method](https://github.com/agoutsmedt/ejhet_quanti_method). We refer to the companion application for the detailed results of the clustering analyses. The application can be downloaded from the GitHub repository: [https://github.com/tdelcey/ejhet_quanti_method_app](https://github.com/tdelcey/ejhet_quanti_method_app) and run locally. However, to facilitate access for all users, we also provide a public access to the application at the following link: [https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/). 
 
 ## Building the meta-corpus
 

@@ -650,10 +650,10 @@ predetermined by the researcher but that emerge from statistical
 patterns in the data itself, which gives the approach its "unsupervised"
 character.[^21] Assigning such categories imposes a form of internal
 organization on large and otherwise unwieldy bodies of material,
-enabling an accelerated or "distant reading" [@morettiDistant2013].
-The typical output of these methods is a map of a discipline or research
-area, showing how different entities---topics, articles,
-authors---relate to one another.
+enabling an accelerated or "distant reading" [@morettiDistant2013;
+@guldiDangerous2023]. The typical output of these methods is a map of
+a discipline or research area, showing how different entities---topics,
+articles, authors---relate to one another.
 
 In contrast to unsupervised methods, supervised methods aim to estimate
 predefined relationships or reproduce categories specified in advance.
@@ -793,25 +793,24 @@ quantitative methods demand a continuous dialogue with qualitative
 interpretation, grounded in a close reading of the relevant secondary
 literature. Only through this iterative back-and-forth can we turn
 statistical groupings into meaningful historical insights. This is both
-a weakness and a strength. On the one hand, the analysis is not
-immediately transparent, as it requires the construction of intermediate
-tools---such as our interactive application---to guide interpretation.
-On the other hand, it is consistent with the practices of historians of
-economic thought, who likewise select, prioritise, and read texts in
-order to make sense of their corpus.
+a weakness and a strength. On the one hand, the results are not
+immediately transparent, as it requires intermediate analyses to make an
+interpretation. On the other hand, it is consistent with the practices
+of historians of economic thought, who likewise select, prioritise, and
+read texts in order to make sense of their corpus.
 
 A key step for the interpretation of our results is thus the process by
-which we *select* and *prioritise* observations that will make sense of
-them. To make this crucial step as transparent and replicable as
-possible, we have built an application, where readers can explore all
-the semantic clusters and bibliometric communities, together with their
-corresponding indicators.[^28] Let us take as an example the semantic
-cluster we labelled "Rationality and its Limits," which gathers close to
-20,000 sentences from 1920 to 2009.[^29] How can we get a sense of what
-this cluster actually coalesces around? Before any qualitative
-interpretation or contextualization with the secondary literature, we
-must first produce a series of indicators to help us characterize the
-cluster. We choose the following indicators:
+which we *select* and *rank* observations (in our case, sentences or
+documents) that will make sense of clusters. This selection and ranking
+relies on a series of indicators and a back-and-forth process between
+them and qualitative analysis. To make this crucial step as transparent
+and replicable as possible, we have built an application, where readers
+can explore all the semantic clusters and bibliometric communities,
+together with their corresponding indicators.[^28] Let us take as an
+example the semantic cluster we labelled "Rationality and its Limits,"
+which gathers close to 20,000 sentences from 1920 to 2009.[^29] How can
+we get a sense of what this cluster actually coalesces around? We choose
+the following indicators:
 
 - **The TF-IDF.** We identify words specific to the cluster for each
   decade, based on Term Frequency-Inverse Document Frequency (TF-IDF).
@@ -896,7 +895,7 @@ they become in the following period ("destinies").
 Equipped with these groupings and indicators, we can make sense of our
 results. How can they help enrich, complete, and refine our
 understanding of the various and evolving meanings of rationality in
-economics? This paper does not propose an alternative history of the
+economics? This paper does not propose a comprehensive history of the
 concept, which would extend far beyond the scope of this methodological
 discussion. Rather, we highlight selected findings that corroborate and
 strengthen strands of the existing literature, notably by allowing us to
@@ -1076,34 +1075,33 @@ articles of the cluster. To complete this panorama, a separate cluster
 "Game Theory" emerged in the 1950s, which ultimately comes to represent
 nearly 15% of all sentences after 1990.
 
-Transformations in the conception of rationality are also visible in
-intertemporal semantic clusters that persist over time while reflecting
-profound shifts in the discipline's methodology and the growing
-centrality of rational choice theory*.* For instance, the cluster "Firm
-Theory & Entrepreneur" spans the period from 1900 to 1979 and therefore
-provides a useful vantage point from which to trace how changing
-conceptions of rationality reshaped the treatment of firms' decisions.
-In the 1920s, the cluster emphasizes entrepreneurial decision-making,
-understood primarily as prudence facing uncertainty rather than formal
-optimization. From the 1940s, this cluster increasingly centers on
-"profit maximization." The cluster captures the core of the so-called
-"marginalist controversy" [@backhouseFriedmans2009], notably through
-Richard Lester's attack on marginal theory and Fritz Machlup's
-[-@machlupMarginal1946] response. Machlup defended profit maximization
-and, more broadly, marginalist theory itself. He rejected the evidential
-value of Lester's questionnaire-based surveys of entrepreneurs, while
-Lester replied that "at the heart of economic theory should be an
-adequate analysis and understanding of the psychology, policies, and
-practices of business management in modern industry"
-[@lesterMarginalism1947, 146].[^34] More generally, the marginalist
-controversy provided a key intellectual background for Friedman's essay
-on positive economics [-@friedmanMethodology1953], in which he
-formulated the "as if" principle to justify, among other assumptions,
-profit maximization. By the 1950s, the most cited articles within the
-cluster "Firm Theory & Entrepreneur" were Machlup's
-[-@machlupMarginal1946] and Friedman's [@friedmanUtility1948], both
-of which relied heavily on "as if" reasoning, notably to justify, in the
-latter, the behavior of agents regarding expected utility.[^35]
+Transformations in the conception of rationality are also visible in the
+internal evolution of intertemporal semantic clusters*.* For instance,
+the cluster "Firm Theory & Entrepreneur" spans the period from 1900 to
+1979 and therefore provides a useful vantage point from which to trace
+how changing conceptions of rationality reshaped the treatment of firms'
+decisions. In the 1920s, the cluster emphasizes entrepreneurial
+decision-making, understood primarily as prudence facing uncertainty
+rather than formal optimization. From the 1940s, this cluster
+increasingly centers on "profit maximization." The cluster captures the
+core of the so-called "marginalist controversy"
+[@backhouseFriedmans2009], notably through Richard Lester's attack on
+marginal theory and Fritz Machlup's [-@machlupMarginal1946] response.
+Machlup defended profit maximization and, more broadly, marginalist
+theory itself. He rejected the evidential value of Lester's
+questionnaire-based surveys of entrepreneurs, while Lester replied that
+"at the heart of economic theory should be an adequate analysis and
+understanding of the psychology, policies, and practices of business
+management in modern industry" [@lesterMarginalism1947, 146].[^34]
+More generally, the marginalist controversy provided a key intellectual
+background for Friedman's essay on positive economics
+[-@friedmanMethodology1953], in which he formulated the "as if"
+principle to justify, among other assumptions, profit maximization. By
+the 1950s, the most cited articles within the cluster "Firm Theory &
+Entrepreneur" were Machlup's [-@machlupMarginal1946] and Friedman's
+[@friedmanUtility1948], both of which relied heavily on "as if"
+reasoning, notably to justify, in the latter, the behavior of agents
+regarding expected utility.[^35]
 
 Shifts in the discipline's methodology are also captured by the cluster
 "Methodological Discussions." While in the 1920s and 1930s economists
@@ -1191,32 +1189,32 @@ analysis, spread across several bibliometric communities
 ("Macroeconomics: Business Cycles & RE," "International Macroeconomics,"
 and "Macroeconomics: Modelling Consequences of RE").
 
-Finance shows a trajectory similar to macroeconomics. The origins of
-financial issues can be traced to the semantic cluster "Capital &
-Investment Theory," which focused initially on the theory of investment.
-Until the 1930s, the issue was framed around the returns of capital. For
-instance, the cluster includes the so-called Hayek-Knight controversy on
-the conception of capital [@cohenHayek2003]. After the 1940s,
-decision-making under uncertainty became a central theme, crystallized
-by works such as George @shackleTheory1942 on investment under radical
-uncertainty, which figures among the most representative articles. One
-decade later, Jack @hirshleiferTheory1958 inscribed investment theory
-within the rising neoclassical conception of rationality, by formalizing
-investment decisions as a problem of intertemporal maximization of
-consumption*.* In the same vein, the Modigliani--Miller theorem
-[@modiglianiCost1958] further consolidated this shift by grounding
-firm financial decisions as an arbitrage problem, opening the path to
-modern financial economics. Their theorem, they argued, can be used "as
-a basis for rational investment decision-making within the firm"
-[@modiglianiCost1958, 296]. After the 1960s, the cluster "Capital &
-Investment Theory" became much more prominent, accounting for more than
-10% of all sentences. In this period, rationality is increasingly framed
-in formal decision-theoretic terms and focused on appropriate investment
-choices under uncertainty. Hence, our analysis suggests that rationality
-in finance enters primarily through corporate finance, rather than
-through asset pricing, where rationality seems to have remained an
-implicit assumption, rarely discussed explicitly prior to the emergence
-of behavioral finance.
+Finance shows a trajectory similar to macroeconomics. Discussions on
+rationality in the context of finance are captured in the semantic
+cluster "Capital & Investment Theory." Until the 1930s, the issue was
+framed around the concept of capital. For instance, the cluster includes
+the so-called Hayek-Knight controversy on the conception of capital
+[@cohenHayek2003]. After the 1940s, decision-making under uncertainty
+became a central theme, crystallized by works such as George
+@shackleTheory1942 on investment under radical uncertainty, which
+figures among the most representative articles. One decade later, Jack
+@hirshleiferTheory1958 inscribed investment theory within the rising
+neoclassical conception of rationality, by formalizing investment
+decisions as a problem of intertemporal maximization of consumption*.*
+In the same vein, the Modigliani--Miller theorem [@modiglianiCost1958]
+further consolidated this shift by grounding firm financial decisions as
+an arbitrage problem, opening the path to modern financial economics.
+Their theorem, they argued, can be used "as a basis for rational
+investment decision-making within the firm" [@modiglianiCost1958,
+296]. After the 1960s, the cluster "Capital & Investment Theory" became
+much more prominent, accounting for more than 10% of all sentences. In
+this period, rationality is increasingly framed in formal
+decision-theoretic terms and focused on appropriate investment choices
+under uncertainty. Hence, our analysis suggests that rationality in
+finance enters primarily through corporate finance, rather than through
+asset pricing, where rationality seems to have remained an implicit
+assumption, rarely discussed explicitly prior to the emergence of
+behavioral finance.
 
 However, from the 1980s onward, modern asset pricing became dominant
 within the cluster "Capital & Investment Theory" as indicated by the
@@ -1698,7 +1696,7 @@ the corpus.
     appeared as a reasonable compromise. Moreover, a moderate number of
     false positives does not substantially threaten the analysis, since
     such sentences are likely to be later classified as "noise" by the
-    HDBSCAN algorithm.
+    HDBSCAN algorithm (more details below).
 
 [^20]: The "articles-corpus" only starts in 1960, because the
     bibliographic data from WoS are too limited prior to this date to be
