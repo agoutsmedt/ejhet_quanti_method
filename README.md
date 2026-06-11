@@ -44,7 +44,7 @@ Raw data comes from four sources and is **not included** in this repository due 
 | JSTOR | Full-text economics articles |
 | Web of Science | Citation metadata |
 | Elsevier | Full-text economics articles |
-| ISTex | Full-text economics articles |
+| ISTEX | Full-text economics articles |
 
 Sentence embeddings were pre-computed with [`sentence-transformers/all-mpnet-base-v2`](https://huggingface.co/sentence-transformers/all-mpnet-base-v2) and stored externally alongside the raw data.
 

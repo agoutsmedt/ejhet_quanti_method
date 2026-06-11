@@ -23,7 +23,7 @@ execute:
   echo: false
   warning: false
   message: false
-  cache: true
+  cache: false
 freeze: auto
 ---
 
@@ -301,7 +301,7 @@ Relative frequency of terms "rational" and "rationality" in the meta-corpus (190
 ::: 
 
 
-::: {#fig-co-occurence}
+::: {#fig-co-occurrence}
 
 ![](images/top_neighbor_words_decades.png){width="100%"}
 
@@ -313,7 +313,7 @@ Five most frequent neighbor terms of "rational" and "rationality" by decade in t
 
 ![](images/citation_patterns_square.jpg){width="100%"}
 
-**Relative citation of a selection of seminal papers on behavioral economics.** 
+Relative citation of a selection of seminal papers on behavioral economics. Source of documents and citations: Web of Science. 
 
 ::: 
 
@@ -322,28 +322,29 @@ Five most frequent neighbor terms of "rational" and "rationality" by decade in t
 
 ![](images/backbone_communities_network.png){width="100%"}
 
-Network of sentence clusters discussing rationality in economics journals (1900–2009), with a force-directed layout emphasizing thematic proximity. Each node is a group of sentences discussing rationality in a similar way, identified within a given decade and built from the sentences-corpus. Node size reflects the share of sentences gathered by this cluster in its corresponding decade. Colors indicate broader thematic clusters that persist across decades — nodes sharing the same color address rationality in comparable ways across time. These are the "intertemporal semantic clusters". See the appendix for in-depth details on the methodology. Labels are manually assigned by the authors after qualitative inspection of each cluster. In this visualisation, we applied a force-directed layout to position nodes with similar connections closer together, which helps to visually identify clusters of related discussions. We strongly advise readers to explore the networks via the [companion application](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/).
+Network of sentence clusters discussing rationality in economics journals (1900–2009), with a force-directed layout emphasizing thematic proximity. Each node is a group of sentences discussing rationality in a similar way, identified within a given decade and built from the sentences-corpus. Node size reflects the share of sentences gathered by this cluster in its corresponding decade. Colors indicate broader thematic clusters that persist across decades — nodes sharing the same color address rationality in comparable ways across time. These are the "intertemporal semantic clusters". See the appendix for in-depth details on the methodology. Labels are manually assigned by the authors after qualitative inspection of each cluster. In this visualisation, we applied a force-directed layout to position nodes with similar connections closer together, which helps to visually identify clusters of related discussions. We strongly advise readers to explore the networks via the companion application [https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/).
 ::: 
 
 ::: {#fig-capture-dynamic-textual-network layout-nrow="1"}
 
 ![](images/temporal_network_plot.png){width="100%"}
 
-Temporal evolution of sentence clusters discussing rationality in economics journals (1900–2009). This figure is similar to @fig-capture-static-textual-network but with a different layout to emphasize the temporal dimension. In this visualisation, we group clusters by decade along the x-axis (1900–1919, 1920–1929, ... , 2000–2009) and group thematically similar clusters along the y-axis, making it easier to follow how semantic clusters evolve over time. We strongly advise readers to explore the networks via the [companion application](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/).
+Temporal evolution of sentence clusters discussing rationality in economics journals (1900–2009). This figure is similar to @fig-capture-static-textual-network but with a different layout to emphasize the temporal dimension. In this visualisation, we group clusters by decade along the x-axis (1900–1919, 1920–1929, ... , 2000–2009) and group thematically similar clusters along the y-axis, making it easier to follow how semantic clusters evolve over time. We strongly advise readers to explore the networks via the companion application [https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/).
 ::: 
 
 ::: {#fig-capture-dynamic-bibliometric-network layout-nrow="1"}
 
 ![](images/citation_network_1994_2001.png){width="100%"}
 
-A bibliographic coupling network of articles discussing rationality in economics journals (1994–2001). This figure shows a snapshot of the dynamic bibliographic coupling networks built on the articles-corpus. Each node is an article from the 1994–2001 time window. Articles are connected when they cite similar references---a proxy for shared intellectual content. Colors indicate communities of articles that recurrently cluster together across consecutive 8-year time windows. Uncolored nodes belong to communities that are too small or too short-lived to be considered substantive. Labels are manually assigned by the authors after qualitative inspection of each cluster. The spatial layout positions articles with similar citation profiles in close proximity. See the appendix for the full methodology. We strongly advise readers to explore the networks via the [companion application](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/).
+A bibliographic coupling network of articles discussing rationality in economics journals (1994–2001). This figure shows a snapshot of the dynamic bibliographic coupling networks built on the articles-corpus. Each node is an article from the 1994–2001 time window. Articles are connected when they cite similar references---a proxy for shared intellectual content. Colors indicate communities of articles that recurrently cluster together across consecutive 8-year time windows. Uncolored nodes belong to communities that are too small or too short-lived to be considered substantive. Labels are manually assigned by the authors after qualitative inspection of each cluster. The spatial layout positions articles with similar citation profiles in close proximity. See the appendix for the full methodology. We strongly advise readers to explore the networks via the companion application [https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/).
 ::: 
 
 \clearpage 
 
 # Appendix
 
-The goal of this appendix is to provide a detailed description of the methods used to build the meta-corpus, to compute the representative vectors, to build the sentences and documents corpora, and to perform the clustering analyses. It is technical and is primarily intended for readers interested in replicating our methods. It requires basic knowledge of natural language processing and bibliometric methods. Since fulltexts are not publicly available and are submitted to copyright, we cannot share a full replication package and, in particular, the data and the code to build the meta-corpus are not available. The rest of the code is available in the GitHub repository: [https://github.com/agoutsmedt/ejhet_quanti_method](https://github.com/agoutsmedt/ejhet_quanti_method). We refer to the companion application for the detailed results of the clustering analyses. The application can be downloaded from the GitHub repository: [https://github.com/tdelcey/ejhet_quanti_method_app](https://github.com/tdelcey/ejhet_quanti_method_app) and run locally. However, to facilitate access for all users, we also provide a public access to the application at the following link: [https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/). 
+The goal of this appendix is to provide a detailed description of the methods used to build the meta-corpus, to compute the representative vectors, to build the sentences and documents corpora, and to perform the clustering analyses. It is technical and is primarily intended for readers interested in replicating our methods. It requires basic knowledge of natural language processing and bibliometric methods. Since fulltexts are not publicly available and are submitted to copyright, we cannot share a full replication package and, in particular, the data and the code to build the meta-corpus are not available. The rest of the code is available in the GitHub repository: [https://github.com/agoutsmedt/ejhet_quanti_method](https://github.com/agoutsmedt/ejhet_quanti_method). We refer to the companion application for the detailed results of the clustering analyses. The application can be downloaded here [https://www.doi.org/10.5281/zenodo.20558669](https://www.doi.org/10.5281/zenodo.20558669). A public and online version is available at the following URL: [https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/). If the URL is no longer active, a permanent archived version is available via the Zenodo link above. 
+
 
 ## Building the meta-corpus
 
@@ -432,7 +433,7 @@ $$v_d = \frac{1}{|\mathcal{S}_d|} \sum_{s \in \mathcal{S}_d} v_s$$
 
 This results in $v_d$, a single 768-dimensional vector for each document. We then compute the cosine similarity between $v_d$ and the representative vector $RV_t$ of the document's publication year $t$. We retain the top 10\% most similar documents across the full period, yielding the articles-corpus $\mathcal{D}^{RV}$. Unlike the sentences-corpus, where the 1\% threshold is applied year by year to avoid over-representing recent years, the articles-corpus uses a global threshold.^[Due to variation in the number of articles matched to WoS across years, applying a year-by-year threshold would have risked over-representing years with more WoS matches, independently of their semantic proximity to the representative vector.]
 
-The 1\% and 10\% threshold are of course debatable. They balances competing objectives. On the one hand, we want to capture a sufficient number of sentences and documents to represent the diversity of ways rationality is discussed in each year. On the other hand, we want to focus on sentences and documents that are strongly related to rationality and we want to limit the computational cost of subsequent analyses. There is clear room for improvement to refine the choice of thresholds. Our choices are based on manual inspection of documents and sentences closest to the threshold, for different threshold values (0.5\%, 1\%, 2\%; 5\%, 10\%, 20\%).
+The 1\% and 10\% threshold are of course debatable. They balance competing objectives. On the one hand, we want to capture a sufficient number of sentences and documents to represent the diversity of ways rationality is discussed in each year. On the other hand, we want to focus on sentences and documents that are strongly related to rationality and we want to limit the computational cost of subsequent analyses. There is clear room for improvement to refine the choice of thresholds. Our choices are based on manual inspection of documents and sentences closest to the threshold, for different threshold values (0.5\%, 1\%, 2\%; 5\%, 10\%, 20\%).
 
 ### Overlap between sentences and documents corpora
 
@@ -453,7 +454,7 @@ We then apply HDBSCAN to identify clusters in the UMAP space for each decade.^[W
 
 We choose a network-based approach to link clusters across decades. This approach handles many-to-many relationships between decade-level clusters---a semantic cluster may gradually merge with or split into multiple clusters over time. It is also consistent with the network-based approach applied to the articles-corpus. 
 
-We represent each cluster identified by HDBSCAN as a node in a network and edges are the cosine similarity between all clusters' centroids. This gives us a weighted network where nodes are decade specific clusters and edges are cosine similarities between their centroids. We keep only the most significant links using the LANS method (Local Adaptive Network Sparsification, `alpha = 0.02`) [@domagalskiBackbone2021].^[LANS retains edges that represent statistically significant similarities relative to a null model in which the weights are randomly distributed among the node's edges.] We apply the Leiden community detection (resolution = 2) on the backbone network.^[To further refine community detection, we set the resolution parameter to 2. This choice increases the algorithm’s sensitivity to smaller, tightly knit clusters, which is critical for capturing specialized research literature in economics. A lower resolution (e.g., 1) might overlook these nuanced communities by favoring larger, more general groupings, while a higher resolution could fragment cohesive clusters into insignificant subcomponents. The value of 2 was selected, after inspection of different values, as a balanced trade-off between granularity and interpretability, aligning with the study’s focus on substantive and persistent research communities.] Intuitively, clusters that are strongly connected in the backbone network are grouped into intertemporal semantic clusters. @fig-capture-static-textual-network and @fig-capture-dynamic-textual-network are an example of the resulting network. 
+We represent each cluster identified by HDBSCAN as a node in a network and edges are the cosine similarity between all clusters' centroids. This gives us a weighted network where nodes are decade specific clusters and edges are cosine similarities between their centroids. We keep only the most significant links using the LANS method (Local Adaptive Network Sparsification, `alpha = 0.02`) [@domagalskiBackbone2021].^[LANS retains edges that represent statistically significant similarities relative to a null model in which the weights are randomly distributed among the node's edges.] We apply the Leiden community detection (resolution = 2) on the backbone network.^[To further refine community detection, we set the resolution parameter to 2. This choice increases the algorithm’s sensitivity to smaller, tightly knit clusters, which is critical for capturing specialized research literature in economics. A lower resolution (e.g., 1) might overlook these nuanced communities by favoring larger, more general groupings, while a higher resolution could fragment cohesive clusters into insignificant subcomponents. The value of 2 was selected, after inspection of different values, as a balanced trade-off between granularity and interpretability, aligning with the study’s focus on substantive and persistent research communities.] Intuitively, clusters that are strongly connected in the backbone network are grouped into intertemporal semantic clusters. @fig-capture-static-textual-network and @fig-capture-dynamic-textual-network are visualizations of the resulting intertemporal semantic clusters with different layouts. 
 
 ## Bibliometric data and methods
 
@@ -487,7 +488,7 @@ Bibliometric communities within each network were identified using the Leiden al
 
 To trace the evolution of research communities over time, we conducted an intertemporal analysis by linking communities across consecutive time windows. Communities were considered continuous if they shared at least 50.1% of their members between two overlapping windows. For example, if a community in the 1990–1997 network comprised a similar set of articles as a community in the 1991–1998 window, the two were treated as the same community [see @goutsmedtIndependent2023 for further details]. This threshold ensures robustness against minor fluctuations in cluster composition while capturing several key dynamics: the emergence of new research streams; the growth, decline, splitting, or merging of existing communities; the persistence of core themes over the 50-year period.
 
-For visualization and interpretation, see the interactive online application.^[[https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/).] To focus on substantive and influential research communities, we applied two criteria:
+For visualization and interpretation, see the interactive online application. To focus on substantive and influential research communities, we applied two criteria:
 
 * Temporal Persistence: Communities must appear in at least two consecutive time windows, ensuring they are not ephemeral artifacts of the clustering process.
 * Size Significance: Communities must represent at least 5% of the network’s articles in their peak window, filtering out marginal  groupings.
@@ -527,7 +528,7 @@ Distribution of noisy vs clustered sentences and number of clusters per time win
 
 ::: {#fig-alluvial layout-nrow="1"}
 
-![Alluvial diagram of intertemporal clusters](images/alluv_named.png){width="100%"}
+![Alluvial diagram of the intertemporal bibliometric communities](images/alluvial_named.jpeg){width="100%"}
 
 :::
 

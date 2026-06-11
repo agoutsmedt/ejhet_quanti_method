@@ -130,9 +130,9 @@ project targeting other languages.[^5] More generally, citation
 practices have only standardised progressively in the postwar period.
 Consequently, citation data are most of the time relatively poor before
 the 1960s. Last, although they provide useful metadata and citation
-information, these databases generally lack full text, which is subject
-to copyright and therefore. A large and representative corpus of
-economics articles cannot be obtained from a single publisher.
+information, these databases generally lack full text that is subject to
+copyright. A large and representative corpus of economics articles
+cannot be obtained from a single publisher.
 
 Even when citations and full texts are available, the quality of
 information that can be reliably encoded remains limited. Citation data
@@ -155,7 +155,7 @@ datasets from scratch. However, such tasks remain time-consuming beyond
 small-scale study. More commonly, it is often necessary to combine
 information from different databases to fulfill a specific goal. For
 example, a medium-scale study of the publications of the European
-Economic Review [@goutsmedtIndependent2023]---a few thousands
+Economic Review [@goutsmedtIndependent2023]---a few thousand
 documents---required combining three heterogeneous databases: Econlit
 (for JEL codes classification), Web of Science, and Scopus (due to
 incomplete coverage of the EER in Web of Science).
@@ -325,10 +325,10 @@ boundaries" [@lietzDrawing2020; @zittBibliometric2019].
 
 Many "proxies" have been used in the history and philosophy of economics
 to define disciplines and sub-disciplines. For instance,
-[@fontanaFragmentation2023] restrict their economics corpus to the
+@fontanaFragmentation2023 restrict their economics corpus to the
 allegedly most influential economics journals, the "Blue Ribbon Eight";
-[@goutsmedtIndependent2023] used the JEL codes to select macroeconomic
-documents; while [@trucForty2022] and [@jullienHistory2024] relied
+@goutsmedtIndependent2023 used the JEL codes to select macroeconomic
+documents; while @trucForty2022 and @jullienHistory2024 relied
 respectively on citations data and institutional affiliations to
 identify the boundaries of behavioral economics. However, such
 approximations have implications for the object under study. Both JEL
@@ -399,7 +399,7 @@ To overcome this issue, we use a Large Language Model (LLM) to identify
 documents---and in particular specific sentences within documents---that
 deal with rationality in our meta-corpus of economic articles.[^14] LLMs
 are trained on extremely large collections of text to learn patterns in
-language. The type of models we use, i.e. bidirectional encoder models
+language. The type of models we use, i.e., bidirectional encoder models
 such as BERT, learns to predict missing words in a sentence or to
 determine whether two sentences follow each other. Through this
 training, the model learns billions of internal parameters that capture
@@ -548,7 +548,7 @@ While our usage of a LLM will shed light on the context surrounding this
 upward movement, such context can also be approximated with simple
 measures. Co-occurrence analysis helps recover the different
 intellectual settings in which rationality is invoked.
-@fig-co-occurence reports, by decade, the five words most frequently
+@fig-co-occurrence reports, by decade, the five words most frequently
 adjacent to "rational" or "rationality," showing how these associations
 shift over time. Before the 1930s, the picture was heterogeneous. The
 notion was tied to the marginalist idea of "calculation," but it
@@ -995,7 +995,7 @@ institutionalists, had to be understood through the prism of the
 underlined that "pecuniary valuation," or economic valuation, is only
 possible because of the institutions that make such valuation possible
 [see also @rutherfordInstitutionalist2013, 58--59].
-@fig-co-occurence shows well the importance of "pecuniary" as a
+@fig-co-occurrence shows well the importance of "pecuniary" as a
 neighbor to "rational" and "rationality" in the first twenty years of
 the twentieth century.
 
@@ -1588,10 +1588,12 @@ the corpus.
     helpful for very large corpora. However, it is where their surplus
     value may appear as the most obvious.
 
-[^4]: The application is available in the GitHub repository:
-    [https://github.com/tdelcey/ejhet_quanti_method_app](https://github.com/tdelcey/ejhet_quanti_method_app).
-    A public version is available at the following url:
+[^4]: The application can be downloaded here
+    [https://www.doi.org/10.5281/zenodo.20558669](https://www.doi.org/10.5281/zenodo.20558669).
+    A public and online version is available at the following URL:
     [https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/).
+    If the URL is no longer active, a permanent archived version is
+    available via the Zenodo link above.
 
 [^5]: One of the main challenges for the quantitative history of
     economics is to move beyond reliance on proprietary digital
@@ -1608,7 +1610,7 @@ the corpus.
 [^7]: ISTEX allows us to retrieve economics journals not available
     through JSTOR or Elsevier API, such as the *Journal of Economic
     Theory* and to access specific issues of Elsevier journals for which
-    we lack institutional access (e.g., the *European Economic review*
+    we lack institutional access (e.g., the *European Economic Review*
     before 1997). For more detailed information on the collection of
     data, see the appendix.
 
@@ -1736,16 +1738,17 @@ the corpus.
 [^26]: We don't use overlapping windows in this case, notably for
     computational reasons: finding HDBSCAN clusters on a set of tens of
     thousands of sentences is much more computationally intensive than
-    finding bibliometric communities for at most a few thousands of
+    finding bibliometric communities for at most a few thousand of
     articles.
 
 [^27]: Refer to the appendix for details.
 
-[^28]: The application is available in the GitHub repository:
-    [https://github.com/tdelcey/ejhet_quanti_method_app](https://github.com/tdelcey/ejhet_quanti_method_app).
-    For non technical-users, a public version is available at the
-    following url:
+[^28]: The application can be downloaded here
+    [https://www.doi.org/10.5281/zenodo.20558669](https://www.doi.org/10.5281/zenodo.20558669).
+    A public and online version is available at the following URL:
     [https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/).
+    If the URL is no longer active, a permanent archived version is
+    available via the Zenodo link above.
 
 [^29]: One step in the discovery and interpretive process is often the
     assignment of "labels" to clusters in order to facilitate the
@@ -1774,8 +1777,8 @@ the corpus.
     pushed forward similar claims, regretting that "few economists have
     regarded the study of psychology as a necessary part of the
     equipment of their work," often relying on "tacit preconceptions"
-    rather than than seeking "psychologists to gain a knowledge of the
-    mind and its modes of operation."
+    rather than seeking "psychologists to gain a knowledge of the mind
+    and its modes of operation."
 
 [^33]: See closest sentences to the "Utility Theory" cluster's centroid.
 
