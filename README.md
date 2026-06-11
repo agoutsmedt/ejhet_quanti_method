@@ -15,7 +15,7 @@ Replication repository for:
 
 This repository contains the code to reproduce the quantitative analysis in the paper. Because the data are under license restrictions and cannot be shared, we did not structure the repo for direct replication but to help interested readers understand the data processing pipeline and adapt it to their own corpora. 
 
-The result of the analysis can be explored using the interactive Shiny app available in this GitHub repository: [github.com/tdelcey/ejhet_quanti_method_app](https://github.com/tdelcey/ejhet_quanti_method_app). A version of the app is also hosted online at [https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/). 
+The result of the analysis can be explored using the interactive Shiny app available for download at [10.5281/zenodo.20558669](https://zenodo.org/record/20558669). A version of the app is also hosted online at [https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/). 
 
 ## Repository structure
 
