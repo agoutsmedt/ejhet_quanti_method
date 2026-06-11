@@ -386,8 +386,8 @@ kable(refs_item0[,.N,.(label_refs,Revue_Abbrege)][order(-N)] %>%
 ```{r echo=FALSE,  message=FALSE, warning=FALSE, error=FALSE, results=TRUE, out.width='100%'}
 
 alluv_dt <- alluv_dt %>% mutate(
-  window_plot = paste0(window, "-", as.numeric(window) + time_window_var),
-  window_plot = factor(window_plot, levels = paste0(sort(unique(as.numeric(window) )), "-", sort(unique(as.numeric(window) )) + time_window_var)))
+  window_plot = paste0(window, "-", as.numeric(window) + time_window_var-1),
+  window_plot = factor(window_plot, levels = paste0(sort(unique(as.numeric(window) )), "-", sort(unique(as.numeric(window) )) + time_window_var-1)))
 
 alluv_dt$dynamic_cluster_leiden <- forcats::fct_reorder(alluv_dt$dynamic_cluster_leiden, alluv_dt$minimize_crossing_order, min, .desc = TRUE)
 
