@@ -357,7 +357,7 @@ journals or economists publishing in other disciplinary journals.
 Finally, this choice also entails boundary decisions regarding which
 journals to include, particularly for those at the margins of
 "economics", due to their ambiguous editorial standards. We eventually
-settled on a carefully curated list of 329 journals identified as
+settled on a carefully curated list of 316 journals identified as
 economics journals in JSTOR and Scopus, but excluding journals that are
 not entirely academic, insufficiently focused on economics, or only
 founded within the last twenty years.[^13] Filtering the raw corpus to

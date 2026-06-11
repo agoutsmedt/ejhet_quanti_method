@@ -343,7 +343,8 @@ A bibliographic coupling network of articles discussing rationality in economics
 
 # Appendix
 
-The goal of this appendix is to provide a detailed description of the methods used to build the meta-corpus, to compute the representative vectors, to build the sentences and documents corpora, and to perform the clustering analyses. It is technical and is primarily intended for readers interested in replicating our methods. It requires basic knowledge of natural language processing and bibliometric methods. Since fulltexts are not publicly available and are submitted to copyright, we cannot share a full replication package and, in particular, the data and the code to build the meta-corpus are not available. The rest of the code is available in the GitHub repository: [https://github.com/agoutsmedt/ejhet_quanti_method](https://github.com/agoutsmedt/ejhet_quanti_method). We refer to the companion application for the detailed results of the clustering analyses. The application can be downloaded here [https://www.doi.org/10.5281/zenodo.20558669](https://www.doi.org/10.5281/zenodo.20558669). A public and online version is available at the following URL: [https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/). If the URL is no longer active, a permanent archived version is available via the Zenodo link above. 
+The goal of this appendix is to provide a detailed description of the methods used to build the meta-corpus, to compute the representative vectors, to build the sentences and documents corpora, and to perform the clustering analyses. It is technical and is primarily intended for readers interested in replicating our methods. It requires basic knowledge of natural language processing and bibliometric methods. Since fulltexts are not publicly available and are submitted to copyright, we cannot share a full replication package and, in particular, the data and the code to build the meta-corpus are not available. The the code to build reprensentative vectors and perform the clustering analyses is available here: [https://www.doi.org/10.5281/zenodo.20641721](https://www.doi.org/10.5281/zenodo.20641721). We also provide an interactive application to explore the results of the clustering analyses, which includes the code to build the networks and perform community detection. The code is available in the companion application and can be downloaded here: [https://www.doi.org/10.5281/zenodo.20558669](https://www.doi.org/10.5281/zenodo.20558669). A public and online version is available at the following URL: [https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/](https://019adac8-81d4-aa0e-808c-08861c261fd2.share.connect.posit.cloud/). If the URL is no longer active, a permanent archived version is available via the Zenodo link above.
+
 
 
 ## Building the meta-corpus
@@ -528,7 +529,9 @@ Distribution of noisy vs clustered sentences and number of clusters per time win
 
 ::: {#fig-alluvial layout-nrow="1"}
 
-![Alluvial diagram of the intertemporal bibliometric communities](images/alluvial_named.jpeg){width="100%"}
+![](images/alluvial_named.jpeg){width="100%"}
+
+Alluvial diagram of the intertemporal bibliometric communities (1960--2009). Each vertical band represents an 8-year time window. Flows trace how articles move between bibliometric communities across consecutive windows. Colors identify persistent intertemporal communities.
 
 :::
 
